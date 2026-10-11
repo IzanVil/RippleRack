@@ -43,7 +43,11 @@ def build_graph(datacenter: Datacenter) -> nx.DiGraph[str]:
                 graph.add_edge(server.id, service.id, relation="hosts")
 
     for pipeline in datacenter.pipelines:
-        graph.add_node(pipeline.id, kind=NodeKind.PIPELINE, schema_version=pipeline.schema_.version)
+        graph.add_node(
+            pipeline.id,
+            kind=NodeKind.PIPELINE,
+            data_schema_version=pipeline.schema_.version,
+        )
         graph.add_edge(pipeline.runs_on, pipeline.id, relation="runs")
 
     for pipeline in datacenter.pipelines:
@@ -80,7 +84,11 @@ def to_dot(graph: nx.DiGraph[str]) -> str:
 
 
 def to_json(graph: nx.DiGraph[str]) -> str:
-    """Serialize ``graph`` as a JSON document with ``nodes`` and ``edges``."""
+    """Serialize ``graph`` as a JSON document with ``nodes`` and ``edges``.
+
+    Attribute names are emitted in camelCase like every other JSON document
+    produced by RippleRack (``data_schema_version`` becomes ``dataSchemaVersion``).
+    """
     payload = {
         "name": graph.graph.get("name"),
         "nodes": [{"id": node, **_plain(data)} for node, data in graph.nodes(data=True)],
@@ -93,4 +101,9 @@ def to_json(graph: nx.DiGraph[str]) -> str:
 
 
 def _plain(data: dict[str, object]) -> dict[str, object]:
-    return {key: str(value) for key, value in data.items()}
+    return {_camel_case(key): str(value) for key, value in data.items()}
+
+
+def _camel_case(name: str) -> str:
+    head, *tail = name.split("_")
+    return head + "".join(part.capitalize() for part in tail)
