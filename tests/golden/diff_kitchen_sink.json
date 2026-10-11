@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "ripplerack",
+    "version": "<version>"
+  },
+  "command": "diff",
+  "base": {
+    "name": "mini-datacenter"
+  },
+  "head": {
+    "name": "mini-datacenter-next"
+  },
+  "severity": "high",
+  "summary": {
+    "added": 3,
+    "removed": 2,
+    "modified": 1,
+    "dependenciesAdded": 2,
+    "dependenciesRemoved": 1,
+    "dependenciesModified": 0,
+    "schemaChanges": 1,
+    "brokenConsumers": 1,
+    "warnings": 3
+  },
+  "metadata": [
+    {
+      "attribute": "name",
+      "before": "mini-datacenter",
+      "after": "mini-datacenter-next"
+    },
+    {
+      "attribute": "description",
+      "before": "Two racks running an e-commerce order analytics stack.",
+      "after": "Kitchen sink."
+    }
+  ],
+  "components": {
+    "added": [
+      {
+        "id": "broker",
+        "kind": "service",
+        "parent": "srv-a1"
+      },
+      {
+        "id": "redis",
+        "kind": "service",
+        "parent": "srv-b1"
+      },
+      {
+        "id": "dashboard",
+        "kind": "pipeline",
+        "parent": "spark"
+      }
+    ],
+    "removed": [
+      {
+        "id": "dashboard",
+        "kind": "service",
+        "parent": "srv-b1"
+      },
+      {
+        "id": "kafka",
+        "kind": "service",
+        "parent": "srv-a1"
+      }
+    ],
+    "modified": [
+      {
+        "id": "orders-ingest",
+        "kind": "pipeline",
+        "changes": [
+          {
+            "attribute": "runs_on",
+            "before": "kafka",
+            "after": "broker"
+          },
+          {
+            "attribute": "schema.version",
+            "before": "1.2.0",
+            "after": "1.2.1"
+          },
+          {
+            "attribute": "schema.fields",
+            "before": [
+              {
+                "name": "order_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "customer_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "amount",
+                "type": "float",
+                "nullable": false,
+                "description": "Order total in original currency"
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "coupon_code",
+                "type": "string",
+                "nullable": true,
+                "description": ""
+              }
+            ],
+            "after": [
+              {
+                "name": "order_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "customer_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "amount",
+                "type": "float",
+                "nullable": false,
+                "description": "Order total in original currency"
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp",
+                "nullable": false,
+                "description": ""
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "added": [
+      {
+        "source": "api",
+        "target": "redis",
+        "kind": "runtime"
+      },
+      {
+        "source": "spark",
+        "target": "broker",
+        "kind": "network"
+      }
+    ],
+    "removed": [
+      {
+        "source": "spark",
+        "target": "kafka",
+        "kind": "network"
+      }
+    ],
+    "modified": []
+  },
+  "schemaChanges": [
+    {
+      "pipeline": "orders-ingest",
+      "severity": "high",
+      "schema": {
+        "name": "orders",
+        "oldVersion": "1.2.0",
+        "newVersion": "1.2.1",
+        "level": "major",
+        "suggestedVersion": "2.0.0",
+        "versionConsistent": false,
+        "changes": [
+          {
+            "kind": "field_removed",
+            "level": "major",
+            "field": "coupon_code",
+            "message": "field 'coupon_code' removed",
+            "breaksReaders": true
+          }
+        ]
+      },
+      "brokenConsumers": [
+        {
+          "pipeline": "customer-360",
+          "fields": [
+            "coupon_code"
+          ],
+          "changes": [
+            {
+              "kind": "field_removed",
+              "field": "coupon_code"
+            }
+          ]
+        }
+      ],
+      "atRisk": [
+        "api"
+      ],
+      "affected": [
+        {
+          "id": "customer-360",
+          "kind": "pipeline",
+          "distance": 1,
+          "path": [
+            "orders-ingest",
+            "customer-360"
+          ],
+          "status": "broken"
+        },
+        {
+          "id": "orders-enriched",
+          "kind": "pipeline",
+          "distance": 1,
+          "path": [
+            "orders-ingest",
+            "orders-enriched"
+          ],
+          "status": "affected"
+        },
+        {
+          "id": "api",
+          "kind": "service",
+          "distance": 2,
+          "path": [
+            "orders-ingest",
+            "customer-360",
+            "api"
+          ],
+          "status": "at_risk"
+        },
+        {
+          "id": "revenue-daily",
+          "kind": "pipeline",
+          "distance": 2,
+          "path": [
+            "orders-ingest",
+            "orders-enriched",
+            "revenue-daily"
+          ],
+          "status": "affected"
+        },
+        {
+          "id": "dashboard",
+          "kind": "pipeline",
+          "distance": 3,
+          "path": [
+            "orders-ingest",
+            "orders-enriched",
+            "revenue-daily",
+            "dashboard"
+          ],
+          "status": "affected"
+        }
+      ],
+      "summary": {
+        "affected": 5,
+        "broken": 1,
+        "atRisk": 1,
+        "breakingChanges": 1
+      }
+    }
+  ],
+  "removedWithDependents": [
+    {
+      "id": "kafka",
+      "kind": "service",
+      "dependents": [
+        "orders-ingest",
+        "spark"
+      ]
+    }
+  ],
+  "possibleRenames": [
+    {
+      "kind": "service",
+      "from": "kafka",
+      "to": "broker"
+    }
+  ],
+  "warnings": [
+    {
+      "code": "datacenter_name_changed",
+      "message": "datacenter name changed from 'mini-datacenter' to 'mini-datacenter-next': are you comparing different datacenters?"
+    },
+    {
+      "code": "component_kind_changed",
+      "message": "'dashboard' changed from service to pipeline; it is reported as removed and added"
+    },
+    {
+      "code": "schema_version_too_low",
+      "message": "pipeline 'orders-ingest': declared version 1.2.1 is too low for a major change (expected >= 2.0.0)"
+    }
+  ]
+}

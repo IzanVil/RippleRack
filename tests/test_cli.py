@@ -268,3 +268,108 @@ def test_graph_json_uses_camel_case_keys(examples_dir: Path) -> None:
     nodes = {node["id"]: node for node in json.loads(result.stdout)["nodes"]}
     assert nodes["orders-ingest"]["dataSchemaVersion"] == "1.2.0"
     assert "schema_version" not in result.stdout
+
+
+def diff_args(examples_dir: Path, *extra: str) -> list[str]:
+    return [
+        "diff",
+        str(examples_dir / "mini_datacenter.yaml"),
+        str(examples_dir / "mini_datacenter_v2.yaml"),
+        *extra,
+    ]
+
+
+class TestDiff:
+    def test_text_report(self, examples_dir: Path) -> None:
+        # A wide terminal keeps Rich from wrapping the text inside table cells.
+        result = runner.invoke(app, diff_args(examples_dir), env={"COLUMNS": "200"})
+        assert result.exit_code == 0, result.output
+        text = plain(result.stdout)
+        assert (
+            "2 added · 0 removed · 3 modified · 1 schema change(s) · 1 broken consumer(s)" in text
+        )
+        for expected in (
+            "Components",
+            "orders-audit",
+            "redis",
+            "memory_gb: 96 → 64",
+            "inputs: orders-ingest: -amount +amount_cents",
+            "api → redis",
+            "network → data",
+            "customer-360",
+            "At risk: api",
+            "HIGH",
+        ):
+            assert expected in text, expected
+
+    def test_identical_files(self, examples_dir: Path) -> None:
+        path = str(examples_dir / "mini_datacenter.yaml")
+        result = runner.invoke(app, ["diff", path, path])
+        assert result.exit_code == 0
+        assert "No differences." in plain(result.stdout)
+        assert "NONE" in plain(result.stdout)
+
+    def test_json_matches_golden(self, examples_dir: Path) -> None:
+        result = runner.invoke(app, diff_args(examples_dir, "--format", "json"))
+        assert result.exit_code == 0, result.output
+        assert result.stderr == ""
+        assert_json_golden("diff_mini_datacenter_v2.json", json.loads(result.stdout))
+        assert result.stdout == dumps(json.loads(result.stdout))
+
+    def test_fail_on_breaking_sets_exit_code_2_and_still_prints(self, examples_dir: Path) -> None:
+        result = runner.invoke(app, diff_args(examples_dir, "-F", "json", "--fail-on-breaking"))
+        assert result.exit_code == 2
+        assert json.loads(result.stdout)["summary"]["brokenConsumers"] == 1
+
+    def test_fail_on_breaking_passes_when_nothing_breaks(self, examples_dir: Path) -> None:
+        path = str(examples_dir / "mini_datacenter.yaml")
+        assert runner.invoke(app, ["diff", path, path, "--fail-on-breaking"]).exit_code == 0
+
+    def test_json_errors_name_the_command_and_leave_stdout_empty(
+        self, examples_dir: Path, tmp_path: Path
+    ) -> None:
+        missing = runner.invoke(
+            app,
+            ["diff", str(tmp_path / "missing.yaml"), str(tmp_path / "other.yaml"), "-F", "json"],
+        )
+        assert missing.exit_code == 1
+        assert missing.stdout == ""
+        error = json.loads(missing.stderr)
+        assert error["command"] == "diff"
+        assert error["error"]["code"] == "file_not_found"
+
+        broken = write(tmp_path / "broken.yaml", "racks: [a, b\n")
+        head_error = runner.invoke(
+            app,
+            ["diff", str(examples_dir / "mini_datacenter.yaml"), str(broken), "--format", "json"],
+        )
+        assert head_error.exit_code == 1
+        assert head_error.stdout == ""
+        document = json.loads(head_error.stderr)
+        assert document["error"]["code"] == "invalid_yaml"
+        assert "broken.yaml" in document["error"]["message"]
+
+    def test_text_error_names_the_failing_file(
+        self, examples_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        write(tmp_path / "head.yaml", "racks: [a, b\n")
+        result = runner.invoke(
+            app, ["diff", str(examples_dir / "mini_datacenter.yaml"), "head.yaml"]
+        )
+        assert result.exit_code == 1
+        assert "head.yaml" in plain(result.stderr)
+
+    def test_head_is_required(self, examples_dir: Path) -> None:
+        result = runner.invoke(app, ["diff", str(examples_dir / "mini_datacenter.yaml")])
+        assert result.exit_code == 2
+
+    def test_free_text_that_looks_like_markup_is_printed_verbatim(
+        self, examples_dir: Path, tmp_path: Path
+    ) -> None:
+        data = yaml.safe_load((examples_dir / "mini_datacenter.yaml").read_text())
+        data["description"] = "Notes [abc] and [/bold] here"
+        head = write(tmp_path / "head.yaml", yaml.safe_dump(data))
+        result = runner.invoke(app, ["diff", str(examples_dir / "mini_datacenter.yaml"), str(head)])
+        assert result.exit_code == 0, result.output
+        assert "[abc] and [/bold] here" in plain(result.stdout)
