@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "ripplerack",
+    "version": "<version>"
+  },
+  "command": "impact",
+  "datacenter": "mini-datacenter",
+  "pipeline": "orders-ingest",
+  "severity": "critical",
+  "schema": {
+    "name": "orders",
+    "oldVersion": "1.2.0",
+    "newVersion": "2.0.0",
+    "level": "major",
+    "suggestedVersion": "2.0.0",
+    "versionConsistent": true,
+    "changes": [
+      {
+        "kind": "field_removed",
+        "level": "major",
+        "field": "amount",
+        "message": "field 'amount' removed",
+        "breaksReaders": true
+      },
+      {
+        "kind": "field_added",
+        "level": "major",
+        "field": "amount_cents",
+        "message": "required field 'amount_cents' added",
+        "breaksReaders": false
+      }
+    ]
+  },
+  "brokenConsumers": [
+    {
+      "pipeline": "customer-360",
+      "fields": [
+        "amount"
+      ],
+      "changes": [
+        {
+          "kind": "field_removed",
+          "field": "amount"
+        }
+      ]
+    },
+    {
+      "pipeline": "orders-enriched",
+      "fields": [
+        "amount"
+      ],
+      "changes": [
+        {
+          "kind": "field_removed",
+          "field": "amount"
+        }
+      ]
+    }
+  ],
+  "atRisk": [
+    "api",
+    "dashboard",
+    "revenue-daily"
+  ],
+  "affected": [
+    {
+      "id": "customer-360",
+      "kind": "pipeline",
+      "distance": 1,
+      "path": [
+        "orders-ingest",
+        "customer-360"
+      ],
+      "status": "broken"
+    },
+    {
+      "id": "orders-enriched",
+      "kind": "pipeline",
+      "distance": 1,
+      "path": [
+        "orders-ingest",
+        "orders-enriched"
+      ],
+      "status": "broken"
+    },
+    {
+      "id": "api",
+      "kind": "service",
+      "distance": 2,
+      "path": [
+        "orders-ingest",
+        "customer-360",
+        "api"
+      ],
+      "status": "at_risk"
+    },
+    {
+      "id": "revenue-daily",
+      "kind": "pipeline",
+      "distance": 2,
+      "path": [
+        "orders-ingest",
+        "orders-enriched",
+        "revenue-daily"
+      ],
+      "status": "at_risk"
+    },
+    {
+      "id": "dashboard",
+      "kind": "service",
+      "distance": 3,
+      "path": [
+        "orders-ingest",
+        "orders-enriched",
+        "revenue-daily",
+        "dashboard"
+      ],
+      "status": "at_risk"
+    }
+  ],
+  "summary": {
+    "affected": 5,
+    "broken": 2,
+    "atRisk": 3,
+    "breakingChanges": 2
+  }
+}

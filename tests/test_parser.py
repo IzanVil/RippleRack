@@ -7,7 +7,13 @@ from typing import Any
 import pytest
 import yaml
 
-from ripplerack.parser import RippleRackError, load_datacenter, load_schema, parse_datacenter
+from ripplerack.parser import (
+    ErrorCode,
+    RippleRackError,
+    load_datacenter,
+    load_schema,
+    parse_datacenter,
+)
 
 
 @pytest.fixture
@@ -89,3 +95,42 @@ def test_load_schema_rejects_duplicate_fields(tmp_path: Path) -> None:
     )
     with pytest.raises(RippleRackError, match="duplicate fields"):
         load_schema(path)
+
+
+@pytest.mark.parametrize(
+    ("content", "code"),
+    [
+        (b"racks: [a, b\n", ErrorCode.INVALID_YAML),
+        (b"- a\n- list\n", ErrorCode.INVALID_DOCUMENT),
+        (b"name: x\nbogus: 1\n", ErrorCode.VALIDATION_FAILED),
+        (b"\xff\xfe not utf-8", ErrorCode.IO_ERROR),
+    ],
+)
+def test_errors_carry_a_stable_code(tmp_path: Path, content: bytes, code: ErrorCode) -> None:
+    path = tmp_path / "dc.yaml"
+    path.write_bytes(content)
+    with pytest.raises(RippleRackError) as excinfo:
+        load_datacenter(path)
+    assert excinfo.value.code is code
+
+
+def test_missing_file_has_its_own_code(tmp_path: Path) -> None:
+    with pytest.raises(RippleRackError) as excinfo:
+        load_datacenter(tmp_path / "missing.yaml")
+    assert excinfo.value.code is ErrorCode.FILE_NOT_FOUND
+
+
+def test_cycle_has_its_own_code(raw: dict[str, Any]) -> None:
+    data = copy.deepcopy(raw)
+    data["dependencies"].append({"source": "kafka", "target": "dashboard"})
+    with pytest.raises(RippleRackError) as excinfo:
+        parse_datacenter(data)
+    assert excinfo.value.code is ErrorCode.DEPENDENCY_CYCLE
+
+
+def test_invalid_schema_file_has_a_validation_code(tmp_path: Path) -> None:
+    path = tmp_path / "schema.yaml"
+    path.write_text("name: s\n")
+    with pytest.raises(RippleRackError) as excinfo:
+        load_schema(path)
+    assert excinfo.value.code is ErrorCode.VALIDATION_FAILED
