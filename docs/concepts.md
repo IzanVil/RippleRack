@@ -59,3 +59,53 @@ every server's power draw) by `--load`, then compares them with capacity:
 `ok` < 80% ≤ `warning` ≤ 100% < `overloaded`. Components passed with `--fail`
 are taken down together with their whole blast radius; their resources are
 released.
+
+## Comparing two datacenters
+
+`ripplerack diff BASE HEAD` answers "what does this change do to my datacenter?". It
+compares two files and reports the differences between them, together with the impact
+of every schema change.
+
+**Identity.** Components are matched by `id`, which is unique across the whole file.
+The order in which things are written never matters. A component that exists in only
+one file is *added* or *removed*; one that exists in both with different attributes is
+*modified*. Explicit dependencies are matched by `(source, target)`; a different `kind`
+is a modification. The compared attributes are listed in
+[output-formats.md](output-formats.md#components).
+
+**Renames are not guessed.** An id that changes is a removal plus an addition, so the
+severity is never silently understated. When a removed and an added component are
+identical apart from their id, and no other component looks the same, the report adds
+a *possible rename* hint. A removed component that something still in head depended
+on is also flagged, so a rename always draws a reviewer's attention.
+
+**Impact is judged in head.** For every pipeline whose schema fields changed, the
+SemVer rules above decide which changes break readers, and the impact rules decide
+which consumers break. This is done on the *head* datacenter, because that is the one
+that will run:
+
+* a consumer that was adapted in the same change (it no longer lists the removed field)
+  is fine;
+* a consumer that was not touched and still reads a broken field, or reads every field,
+  is broken;
+* a consumer that exists only in head was written against the new schema and is never
+  reported;
+* a consumer removed in head cannot break.
+
+The YAML does not describe what a pipeline *does* with its inputs, so "adapted" is
+inferred from the fields it declares. When in doubt the comparison errs on the side of
+reporting a break.
+
+**Severity.** The overall severity is the highest of:
+
+| severity   | condition |
+|------------|-----------|
+| `none`     | the two files are equivalent |
+| `low`      | any difference at all: additions, attribute edits, dependency changes, or a patch or minor schema change |
+| `medium`   | a major schema change that breaks no consumer, or a removed component that something in head used to depend on |
+| `high`     | at least one direct consumer breaks |
+| `critical` | a broken consumer feeds further pipelines |
+
+**Warnings.** A declared schema version that is lower than the change requires, an id
+that changed kind, and two files with different datacenter names are reported as
+warnings. They do not change the severity.
