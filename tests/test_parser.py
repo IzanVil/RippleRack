@@ -134,3 +134,11 @@ def test_invalid_schema_file_has_a_validation_code(tmp_path: Path) -> None:
     with pytest.raises(RippleRackError) as excinfo:
         load_schema(path)
     assert excinfo.value.code is ErrorCode.VALIDATION_FAILED
+
+
+@pytest.mark.parametrize("value", [float("inf"), float("-inf"), float("nan")])
+def test_non_finite_numbers_are_rejected(raw: dict[str, Any], value: float) -> None:
+    data = copy.deepcopy(raw)
+    data["racks"][0]["power_capacity_kw"] = value
+    with pytest.raises(RippleRackError, match="finite number"):
+        parse_datacenter(data)

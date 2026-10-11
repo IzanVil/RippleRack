@@ -24,9 +24,13 @@ SemVerString = Annotated[str, StringConstraints(strip_whitespace=True, pattern=S
 
 
 class StrictModel(BaseModel):
-    """Base model that rejects unknown keys so typos in YAML are reported."""
+    """Base model that rejects unknown keys so typos in YAML are reported.
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    Infinite and NaN numbers are rejected too: they make no sense for capacities and
+    cannot be represented in the JSON documents the CLI produces.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False)
 
 
 class FieldType(StrEnum):
