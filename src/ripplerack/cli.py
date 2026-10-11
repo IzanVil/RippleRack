@@ -15,6 +15,7 @@ from rich.tree import Tree
 from ripplerack import __version__
 from ripplerack.graph import NodeKind, to_dot, to_json
 from ripplerack.impact import ImpactReport, Severity, analyze_schema_change
+from ripplerack.mermaid import MermaidHighlight, to_mermaid
 from ripplerack.parser import (
     ErrorCode,
     LoadedDatacenter,
@@ -64,11 +65,13 @@ class GraphFormat(StrEnum):
     TREE = "tree"
     DOT = "dot"
     JSON = "json"
+    MERMAID = "mermaid"
 
 
 class ImpactFormat(StrEnum):
     TEXT = "text"
     JSON = "json"
+    MERMAID = "mermaid"
 
 
 def _version_callback(value: bool) -> None:
@@ -139,7 +142,12 @@ def impact(
     ],
     output_format: Annotated[
         ImpactFormat,
-        typer.Option("--format", "-F", help="Output format (json is documented and versioned)."),
+        typer.Option(
+            "--format",
+            "-F",
+            help="Output format: text, json (documented, versioned) or a mermaid diagram "
+            "of the graph with the impact highlighted.",
+        ),
     ] = ImpactFormat.TEXT,
     fail_on_breaking: Annotated[
         bool,
@@ -164,6 +172,9 @@ def impact(
 
     if json_mode:
         typer.echo(dumps(impact_to_dict(loaded.datacenter.name, report)), nl=False)
+    elif output_format is ImpactFormat.MERMAID:
+        highlight = MermaidHighlight.from_impact(report)
+        typer.echo(to_mermaid(loaded.graph, highlight), nl=False)
     else:
         _print_impact(report)
     if fail_on_breaking and report.broken_consumers:
@@ -205,12 +216,17 @@ def graph(
     loaded = _load(file, command="graph")
     if output_format is GraphFormat.TREE:
         if output is not None:
-            err_console.print("[bold red]error:[/] --output requires --format dot or json")
+            err_console.print("[bold red]error:[/] --output requires --format dot, json or mermaid")
             raise typer.Exit(code=1)
         console.print(_render_tree(loaded))
         return
 
-    text = to_dot(loaded.graph) if output_format is GraphFormat.DOT else to_json(loaded.graph)
+    if output_format is GraphFormat.DOT:
+        text = to_dot(loaded.graph)
+    elif output_format is GraphFormat.MERMAID:
+        text = to_mermaid(loaded.graph)
+    else:
+        text = to_json(loaded.graph)
     if output is None:
         typer.echo(text, nl=False)
     else:
