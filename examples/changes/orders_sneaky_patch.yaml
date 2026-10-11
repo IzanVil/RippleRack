@@ -1,0 +1,9 @@
+# Declared as a patch, but dropping `coupon_code` is a breaking change.
+name: orders
+version: 1.2.1
+fields:
+  - { name: order_id, type: integer }
+  - { name: customer_id, type: integer }
+  - { name: amount, type: float, description: Order total in original currency }
+  - { name: currency, type: string }
+  - { name: created_at, type: timestamp }

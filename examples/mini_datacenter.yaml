@@ -1,0 +1,111 @@
+# A tiny datacenter used to demo RippleRack.
+#
+#   ripplerack validate examples/mini_datacenter.yaml
+#   ripplerack graph    examples/mini_datacenter.yaml
+#   ripplerack impact   examples/mini_datacenter.yaml -p orders-ingest -s examples/changes/orders_v2.yaml
+#   ripplerack simulate examples/mini_datacenter.yaml --load 1.5 --fail srv-a2
+
+name: mini-datacenter
+description: Two racks running an e-commerce order analytics stack.
+
+racks:
+  - id: rack-a
+    power_capacity_kw: 2.8
+    servers:
+      - id: srv-a1
+        cpu_cores: 32
+        memory_gb: 128
+        power_kw: 1.2
+        services:
+          - id: postgres
+            cpu_cores: 12
+            memory_gb: 48
+            description: Primary OLTP database
+          - id: kafka
+            cpu_cores: 8
+            memory_gb: 32
+            description: Event broker
+      - id: srv-a2
+        cpu_cores: 16
+        memory_gb: 64
+        power_kw: 0.8
+        services:
+          - id: spark
+            cpu_cores: 12
+            memory_gb: 40
+            description: Batch processing cluster
+
+  - id: rack-b
+    power_capacity_kw: 4.0
+    servers:
+      - id: srv-b1
+        cpu_cores: 24
+        memory_gb: 96
+        power_kw: 1.0
+        services:
+          - id: api
+            cpu_cores: 6
+            memory_gb: 16
+            description: Public REST API
+          - id: dashboard
+            cpu_cores: 4
+            memory_gb: 8
+            description: BI dashboards
+
+pipelines:
+  - id: orders-ingest
+    runs_on: kafka
+    schema:
+      name: orders
+      version: 1.2.0
+      fields:
+        - { name: order_id, type: integer }
+        - { name: customer_id, type: integer }
+        - { name: amount, type: float, description: Order total in original currency }
+        - { name: currency, type: string }
+        - { name: created_at, type: timestamp }
+        - { name: coupon_code, type: string, nullable: true }
+
+  - id: orders-enriched
+    runs_on: spark
+    inputs:
+      - pipeline: orders-ingest
+        fields: [order_id, customer_id, amount, currency, created_at]
+    schema:
+      name: orders_enriched
+      version: 1.0.0
+      fields:
+        - { name: order_id, type: integer }
+        - { name: customer_segment, type: string }
+        - { name: amount_eur, type: float }
+        - { name: created_date, type: date }
+
+  - id: revenue-daily
+    runs_on: spark
+    inputs:
+      - pipeline: orders-enriched
+        fields: [customer_segment, amount_eur, created_date]
+    schema:
+      name: revenue_daily
+      version: 2.1.0
+      fields:
+        - { name: day, type: date }
+        - { name: customer_segment, type: string }
+        - { name: revenue_eur, type: float }
+
+  - id: customer-360
+    runs_on: postgres
+    inputs: [orders-ingest]   # reads every field
+    schema:
+      name: customer_profile
+      version: 0.4.0
+      fields:
+        - { name: customer_id, type: integer }
+        - { name: lifetime_orders, type: integer }
+        - { name: last_coupon, type: string, nullable: true }
+
+dependencies:
+  - { source: api, target: postgres, kind: runtime }
+  - { source: api, target: customer-360, kind: data }
+  - { source: dashboard, target: revenue-daily, kind: data }
+  - { source: spark, target: kafka, kind: network }

@@ -1,0 +1,10 @@
+# Breaking change: `amount` (float) becomes `amount_cents` (integer).
+name: orders
+version: 2.0.0
+fields:
+  - { name: order_id, type: integer }
+  - { name: customer_id, type: integer }
+  - { name: amount_cents, type: integer, description: Order total in cents }
+  - { name: currency, type: string }
+  - { name: created_at, type: timestamp }
+  - { name: coupon_code, type: string, nullable: true }
