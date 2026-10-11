@@ -2,7 +2,9 @@
 
 RippleRack prints human-friendly tables by default. For CI and other tooling, the
 commands below can emit **JSON** instead. This page is the reference for that JSON:
-its conventions, its stability guarantees, the error documents and the exit codes.
+its conventions, its stability guarantees, the error documents and the exit codes. The
+graph can also be drawn as a [Mermaid diagram](#mermaid), with or without the impact of
+a change highlighted.
 
 | command                               | JSON                        |
 |---------------------------------------|-----------------------------|
@@ -247,3 +249,65 @@ envelope, so it has **no** `schemaVersion`, and it follows the same key style:
 * `edges[].relation` is `hosts`, `runs`, `feeds`, `runtime`, `data` or `network`.
   Edges point in the direction an impact propagates.
 * Attribute values are strings.
+
+## Mermaid
+
+`ripplerack graph FILE -F mermaid` and `ripplerack impact ... -F mermaid` print a
+[Mermaid](https://mermaid.js.org) `flowchart LR` as plain text. It is meant to be read by
+people, so unlike the JSON documents it has no envelope and no `schemaVersion`. Output
+is deterministic and ends with a newline. Errors are reported as plain text, as with
+`--format text`, and the exit codes are the same as for `impact`.
+
+### Reading the diagram
+
+| element  | drawn as |
+|----------|----------|
+| rack     | the outermost box (a `subgraph`) |
+| server   | a box inside its rack |
+| service  | a rounded node inside its server |
+| pipeline | a hexagon in the `pipelines` group, labelled with the version of its schema |
+| arrow    | from a provider to what depends on it, the direction an impact travels, labelled `runs`, `feeds`, `runtime`, `data` or `network` |
+
+Hosting is expressed by nesting, so there are no `hosts` arrows. A rack without servers or
+a server without services is drawn as a plain node instead of an empty box. The label of
+every node is the original id from your file.
+
+### Impact highlight
+
+With `impact -F mermaid` each node that the change reaches gets one of these classes, the
+same statuses as `affected[].status` in the [impact document](#impact):
+
+| class      | meaning | colour |
+|------------|---------|--------|
+| `changed`  | the pipeline whose schema changes | purple, thick border |
+| `broken`   | a direct consumer that breaks | red |
+| `atRisk`   | downstream of a broken consumer | orange |
+| `affected` | reachable, but not known to break | yellow |
+
+Arrows along the shortest impact paths are coloured by the status of the node they lead
+to. A comment line states the severity: `%% impact of changing orders-ingest: critical`.
+Components the change does not reach keep the colour of their kind.
+
+### Using the output
+
+````bash
+# Markdown that GitHub renders as a diagram
+{ echo '```mermaid'; ripplerack graph dc.yaml -F mermaid; echo '```'; } > graph.md
+
+# An SVG with the Mermaid command line tool
+ripplerack impact dc.yaml -p orders-ingest -s new.yaml -F mermaid > impact.mmd
+mmdc -i impact.mmd -o impact.svg
+````
+
+### Notes
+
+* **Diagram ids are generated.** Component ids such as `end`, `graph` or `a.b` are valid in
+  a datacenter file but would break Mermaid, so nodes are named `rack_...`, `srv_...`,
+  `svc_...` and `pl_...` after their sanitized id (with a numeric suffix if two ids
+  collapse to the same text). Treat these ids as an implementation detail.
+* **No statement ends with `;`.** Mermaid reads `#`, word characters and `;` as an HTML
+  entity, so `fill:#f00;` would be corrupted.
+* **Validation.** RippleRack has no Mermaid dependency, so its tests check the structure of
+  the output (balanced boxes, declared ids, one class per node, valid arrow indexes) and
+  compare it with the golden files in [`tests/golden/`](../tests/golden). Those files
+  were also accepted by the Mermaid 11 parser, but the project does not check rendering.
