@@ -54,9 +54,54 @@ consumer:
 The `version` inside `tool` changes with every release and carries no contract
 meaning.
 
-> Data schema versions are always called `version`, `oldVersion`, `newVersion` or
-> `dataSchemaVersion`. The name `schemaVersion` is reserved for the contract
-> version in the envelope.
+> Data schema versions are always called `version`, `oldVersion`, `newVersion`,
+> `suggestedVersion` or `dataSchemaVersion`. The name `schemaVersion` is reserved for the
+> contract version in the envelope. The next section explains the difference.
+
+## `schemaVersion` and `dataSchemaVersion`
+
+Two version numbers in the output have similar names but version different things. They
+are set by different parties, change for different reasons and never influence each other.
+
+| | `schemaVersion` | `dataSchemaVersion` |
+|---|---|---|
+| **What it versions** | The JSON contract: the shape of the documents RippleRack prints (keys, types, what the values mean, ordering). | Your data: the version of the schema that a pipeline produces. |
+| **Who sets it** | RippleRack. It is fixed by the release you run. | You, as `schema.version` of the pipeline in the datacenter file. RippleRack only reads and reports it. |
+| **Format** | Integer: `1`. | String `MAJOR.MINOR.PATCH`: `"1.2.0"`. |
+| **Where it appears** | At the root of every [envelope](#envelope) document. | On pipeline nodes of the [graph export](#graph-json-export). |
+| **Goes up when** | RippleRack changes the JSON contract in a way that can break a consumer (see the [stability policy](#stability-policy)). | You change what a pipeline produces and bump its version. The [SemVer rules](concepts.md#schema-semver-rules) say how far: patch, minor or major. |
+| **Does not change when** | Your datacenter or your schemas change, or RippleRack only adds a key or an error code. | RippleRack's JSON contract changes. |
+
+The impact document reports data versions too, under other names: `schema.oldVersion`,
+`schema.newVersion` and `schema.suggestedVersion`. They are data versions, not contract
+versions. A third number, `tool.version`, is the release of RippleRack itself; it changes
+with every release and has no contract meaning.
+
+### They are independent
+
+| What happens | `schemaVersion` | Data versions |
+|---|---|---|
+| You rename a field and bump the pipeline from `1.2.0` to `2.0.0` | stays `1` | `dataSchemaVersion` is `"2.0.0"` once the file is updated; an impact run reports `oldVersion` `1.2.0` and `newVersion` `2.0.0` |
+| You propose a schema that removes a field but still declares `1.2.1` | stays `1` | `newVersion` is `1.2.1`, as declared; `versionConsistent` is `false` and `suggestedVersion` is `2.0.0` |
+| You upgrade RippleRack to a release that only adds keys or error codes | stays `1` | unchanged |
+| A release renames or removes a key, or changes what a value means | becomes `2` | unchanged: they still come from your file |
+
+The names never overlap either: `schemaVersion` appears only at the root of a document and
+`dataSchemaVersion` only on graph nodes, and the test suite checks all of this
+(`tests/test_versions.py`).
+
+### Reading them in a script
+
+```bash
+# Refuse a JSON contract this script was not written for
+jq -e '.schemaVersion == 1' impact.json > /dev/null || { echo "unsupported contract" >&2; exit 1; }
+
+# The data versions: before, after, and the version the change requires
+jq -r '.schema | "\(.oldVersion) -> \(.newVersion) (required: \(.suggestedVersion))"' impact.json
+
+# The version of the schema each pipeline produces today
+ripplerack graph dc.yaml -F json | jq -r '.nodes[] | select(.kind == "pipeline") | "\(.id) \(.dataSchemaVersion)"'
+```
 
 ## Impact
 
@@ -243,7 +288,8 @@ envelope, so it has **no** `schemaVersion`, and it follows the same key style:
 ```
 
 * `nodes[].kind` is `rack`, `server`, `service` or `pipeline`; only pipelines have
-  `dataSchemaVersion`, the version of the schema they produce.
+  `dataSchemaVersion`, the version of the schema they produce. It is a data version, not
+  the contract version: see [`schemaVersion` and `dataSchemaVersion`](#schemaversion-and-dataschemaversion).
 * `edges[].relation` is `hosts`, `runs`, `feeds`, `runtime`, `data` or `network`.
   Edges point in the direction an impact propagates.
 * Attribute values are strings.
