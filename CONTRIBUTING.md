@@ -27,6 +27,11 @@ uv run mypy src tests
 Format your code with `uv run ruff format .` (CI verifies it with
 `uv run ruff format --check .`).
 
+The JSON output is a documented contract (see [docs/output-formats.md](docs/output-formats.md))
+pinned by the files in `tests/golden/`. If you change it on purpose, regenerate them
+with `RIPPLERACK_UPDATE_GOLDEN=1 uv run pytest`, review the diff carefully and update
+the documentation.
+
 ## Commit convention
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):

@@ -121,6 +121,27 @@ Try the other examples in [`examples/changes/`](examples/changes):
 Add `--fail-on-breaking` to exit with code `2` whenever a consumer breaks. You
 can use it as a gate in CI.
 
+#### JSON output for CI
+
+`--format json` (`-F json`) prints a stable, versioned JSON document instead of
+tables, ready for `jq` or any CI tooling:
+
+```bash
+uv run ripplerack impact examples/mini_datacenter.yaml -p orders-ingest \
+  -s examples/changes/orders_v2.yaml --format json \
+  | jq -c '{severity, broken: [.brokenConsumers[].pipeline]}'
+```
+
+```json
+{"severity":"critical","broken":["customer-360","orders-enriched"]}
+```
+
+Every document starts with an envelope (`schemaVersion`, `tool`, `command`) and
+all keys are camelCase. If the command fails, stdout stays empty and stderr gets a
+JSON error with a stable `error.code`, such as `file_not_found` or
+`unknown_pipeline`. The full contract, the error codes and the exit codes are
+documented in [`docs/output-formats.md`](docs/output-formats.md).
+
 ### `simulate`: load surges and failures
 
 ```bash
@@ -142,6 +163,7 @@ YAML ──► Pydantic models ──► NetworkX DiGraph ──► semver diff 
 
 - [`docs/yaml-format.md`](docs/yaml-format.md) describes the file format and the validation rules.
 - [`docs/concepts.md`](docs/concepts.md) explains the graph, the SemVer rules and how severity is decided.
+- [`docs/output-formats.md`](docs/output-formats.md) is the reference for the JSON output, error codes and exit codes.
 
 | module | responsibility |
 |--------|----------------|
@@ -150,6 +172,7 @@ YAML ──► Pydantic models ──► NetworkX DiGraph ──► semver diff 
 | `graph.py` | Graph construction plus DOT/JSON export |
 | `semver.py` | Schema diff, change levels, version bumping |
 | `impact.py` | Blast radius, broken consumers, severity |
+| `report.py` | Versioned JSON documents for CI (impact results and errors) |
 | `simulate.py` | Capacity and failure simulation |
 | `cli.py` | Typer + Rich command line |
 
