@@ -174,6 +174,8 @@ CI runs all of the above on Python 3.11, 3.12 and 3.13.
 - Web UI to explore the graph
 
 Ideas and contributions are welcome. Please open an issue to discuss them.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and
+[CHANGELOG.md](CHANGELOG.md) for release notes.
 
 ## License
 
