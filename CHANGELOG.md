@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and servers as nested subgraphs and arrows labelled by relation.
 - `impact --format mermaid`: the same diagram with the impact highlighted: the changed
   pipeline, broken consumers, components at risk and the arrows along the impact paths.
+- Community files: a Code of Conduct (Contributor Covenant 2.1), a security policy, issue
+  templates for bug reports and feature requests, and a pull request template.
 
 ### Changed
 

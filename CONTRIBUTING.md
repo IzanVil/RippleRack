@@ -1,7 +1,8 @@
 # Contributing to RippleRack
 
 Thanks for your interest in RippleRack! This guide covers how to set up the
-project, the conventions we follow and how to propose changes.
+project, the conventions we follow and how to propose changes. By taking part you agree to
+follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development setup
 
@@ -15,17 +16,17 @@ uv sync
 
 ## Running the checks
 
-All three must pass before you open a pull request (CI runs them on Python
+All four must pass before you open a pull request (CI runs them on Python
 3.11, 3.12 and 3.13):
 
 ```bash
 uv run pytest
 uv run ruff check .
+uv run ruff format --check .
 uv run mypy src tests
 ```
 
-Format your code with `uv run ruff format .` (CI verifies it with
-`uv run ruff format --check .`).
+`uv run ruff format .` fixes formatting problems for you.
 
 The JSON output is a documented contract (see [docs/output-formats.md](docs/output-formats.md))
 pinned by the files in `tests/golden/`. If you change it on purpose, regenerate them
@@ -76,13 +77,15 @@ other AI-tool signature. Commits are attributed solely to the human author.
 2. Create a descriptively named branch from `main`, e.g. `feat/diff-two-datacenters`
    or `fix/cycle-detection-message`.
 3. Make your change in small, conventional commits and make sure the checks pass.
-4. Open a pull request against `main`. Describe what changed and why, and link
-   the related issue if there is one.
+4. Open a pull request against `main`. The pull request template lists what to check;
+   describe what changed and why, and link the related issue if there is one.
 5. Update [CHANGELOG.md](CHANGELOG.md) under `[Unreleased]` for user-visible changes.
 
 ## Reporting bugs and requesting features
 
-Use [GitHub issues](https://github.com/IzanVil/RippleRack/issues).
+Use [GitHub issues](https://github.com/IzanVil/RippleRack/issues); the templates ask for
+the details described below. Security problems are the exception: do not open a public
+issue, follow [SECURITY.md](SECURITY.md).
 
 **Bugs**: include the RippleRack version (`ripplerack --version`), your Python
 version and OS, the smallest YAML file that reproduces the problem, the exact
