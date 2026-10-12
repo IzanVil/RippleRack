@@ -15,16 +15,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 from typer.testing import CliRunner
 
 import ripplerack.report as report_module
 from ripplerack.cli import app
 from ripplerack.graph import to_json
-from ripplerack.impact import analyze_schema_change
-from ripplerack.parser import LoadedDatacenter, load_schema, parse_datacenter
+from ripplerack.parser import LoadedDatacenter, parse_datacenter
 from ripplerack.report import SCHEMA_VERSION, error_to_dict, impact_to_dict
-from tests.conftest import EXAMPLES
+from tests.helpers import impact_report, raw_datacenter
 
 runner = CliRunner()
 SEMVER = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
@@ -46,7 +44,7 @@ def paths_of(value: Any, key: str, path: str = "$") -> Iterator[str]:
 
 def datacenter_data(data_version: str | None = None) -> dict[str, Any]:
     """The mini datacenter as raw data, with every pipeline's schema set to ``data_version``."""
-    data: dict[str, Any] = yaml.safe_load((EXAMPLES / "mini_datacenter.yaml").read_text())
+    data = raw_datacenter()
     if data_version is not None:
         for pipeline in data["pipelines"]:
             pipeline["schema"]["version"] = data_version
@@ -58,9 +56,7 @@ def datacenter_with(data_version: str) -> LoadedDatacenter:
 
 
 def impact_document(loaded: LoadedDatacenter) -> dict[str, Any]:
-    new_schema = load_schema(EXAMPLES / "changes" / "orders_v2.yaml")
-    report = analyze_schema_change(loaded.datacenter, loaded.graph, "orders-ingest", new_schema)
-    return impact_to_dict(loaded.datacenter.name, report)
+    return impact_to_dict(loaded.datacenter.name, impact_report(loaded))
 
 
 def graph_document(loaded: LoadedDatacenter) -> dict[str, Any]:
@@ -208,9 +204,6 @@ class TestTheyAreIndependent:
         schemas = ("orders_v2.yaml", "orders_v1_3_0.yaml", "orders_sneaky_patch.yaml")
         versions = set()
         for name in schemas:
-            new_schema = load_schema(EXAMPLES / "changes" / name)
-            report = analyze_schema_change(
-                mini_dc.datacenter, mini_dc.graph, "orders-ingest", new_schema
-            )
+            report = impact_report(mini_dc, name.removesuffix(".yaml"))
             versions.add(impact_to_dict("dc", report)["schemaVersion"])
         assert versions == {1}

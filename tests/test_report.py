@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -11,9 +10,9 @@ import pytest
 from ripplerack import __version__
 from ripplerack.diff import DatacenterDiff, WarningCode, diff_datacenters
 from ripplerack.graph import to_json
-from ripplerack.impact import ImpactReport, analyze_schema_change
+from ripplerack.impact import analyze_schema_change
 from ripplerack.models import Schema
-from ripplerack.parser import ErrorCode, LoadedDatacenter, load_datacenter, load_schema
+from ripplerack.parser import ErrorCode, LoadedDatacenter, load_datacenter
 from ripplerack.report import (
     SCHEMA_VERSION,
     diff_to_dict,
@@ -23,9 +22,10 @@ from ripplerack.report import (
     schema_diff_to_dict,
 )
 from ripplerack.semver import ChangeKind, diff_schemas
-from tests.conftest import (
+from tests.helpers import (
     EXAMPLES,
     assert_json_golden,
+    impact_report,
     load_variant,
     make_schema,
     pipeline_of,
@@ -49,14 +49,9 @@ def all_keys(value: Any) -> Iterator[str]:
             yield from all_keys(item)
 
 
-def make_report(mini_dc: LoadedDatacenter, examples_dir: Path, change: str) -> ImpactReport:
-    schema = load_schema(examples_dir / "changes" / f"{change}.yaml")
-    return analyze_schema_change(mini_dc.datacenter, mini_dc.graph, "orders-ingest", schema)
-
-
 @pytest.fixture
-def v2_payload(mini_dc: LoadedDatacenter, examples_dir: Path) -> dict[str, Any]:
-    report = make_report(mini_dc, examples_dir, "orders_v2")
+def v2_payload(mini_dc: LoadedDatacenter) -> dict[str, Any]:
+    report = impact_report(mini_dc, "orders_v2")
     return impact_to_dict(mini_dc.datacenter.name, report)
 
 
@@ -112,9 +107,9 @@ class TestImpactPayload:
 
     @pytest.mark.parametrize("change", CHANGE_FILES)
     def test_enumerations_are_lowercase_strings(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path, change: str
+        self, mini_dc: LoadedDatacenter, change: str
     ) -> None:
-        payload = impact_to_dict("dc", make_report(mini_dc, examples_dir, change))
+        payload = impact_to_dict("dc", impact_report(mini_dc, change))
         assert payload["severity"] in SEVERITIES
         assert payload["schema"]["level"] in LEVELS
         for item in payload["schema"]["changes"]:
@@ -135,9 +130,9 @@ class TestImpactPayload:
         }
 
     def test_compatible_change_marks_everything_as_merely_affected(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
-        payload = impact_to_dict("dc", make_report(mini_dc, examples_dir, "orders_v1_3_0"))
+        payload = impact_to_dict("dc", impact_report(mini_dc, "orders_v1_3_0"))
         assert payload["severity"] == "low"
         assert payload["brokenConsumers"] == []
         assert payload["atRisk"] == []
@@ -153,10 +148,8 @@ class TestImpactPayload:
         assert payload["schema"]["changes"] == []
         assert payload["summary"]["breakingChanges"] == 0
 
-    def test_understated_version_is_reported(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
-    ) -> None:
-        payload = impact_to_dict("dc", make_report(mini_dc, examples_dir, "orders_sneaky_patch"))
+    def test_understated_version_is_reported(self, mini_dc: LoadedDatacenter) -> None:
+        payload = impact_to_dict("dc", impact_report(mini_dc, "orders_sneaky_patch"))
         assert payload["schema"]["newVersion"] == "1.2.1"
         assert payload["schema"]["suggestedVersion"] == "2.0.0"
         assert payload["schema"]["versionConsistent"] is False
@@ -191,10 +184,8 @@ class TestImpactPayload:
         assert order == sorted(order)
 
     @pytest.mark.parametrize("change", CHANGE_FILES)
-    def test_golden(self, mini_dc: LoadedDatacenter, examples_dir: Path, change: str) -> None:
-        payload = impact_to_dict(
-            mini_dc.datacenter.name, make_report(mini_dc, examples_dir, change)
-        )
+    def test_golden(self, mini_dc: LoadedDatacenter, change: str) -> None:
+        payload = impact_to_dict(mini_dc.datacenter.name, impact_report(mini_dc, change))
         assert_json_golden(f"impact_{change}.json", payload)
 
 
@@ -202,8 +193,8 @@ class TestKeyStyle:
     """All JSON produced by RippleRack uses camelCase keys."""
 
     @pytest.mark.parametrize("change", CHANGE_FILES)
-    def test_impact_keys(self, mini_dc: LoadedDatacenter, examples_dir: Path, change: str) -> None:
-        payload = impact_to_dict("dc", make_report(mini_dc, examples_dir, change))
+    def test_impact_keys(self, mini_dc: LoadedDatacenter, change: str) -> None:
+        payload = impact_to_dict("dc", impact_report(mini_dc, change))
         assert all(CAMEL_CASE.match(key) for key in all_keys(payload)), set(all_keys(payload))
 
     def test_error_keys(self) -> None:
@@ -236,9 +227,9 @@ class TestDumps:
         assert text.isascii()
         assert json.loads(text) == {"name": "Centro de datos ñ"}
 
-    def test_output_is_deterministic(self, mini_dc: LoadedDatacenter, examples_dir: Path) -> None:
-        first = dumps(impact_to_dict("dc", make_report(mini_dc, examples_dir, "orders_v2")))
-        second = dumps(impact_to_dict("dc", make_report(mini_dc, examples_dir, "orders_v2")))
+    def test_output_is_deterministic(self, mini_dc: LoadedDatacenter) -> None:
+        first = dumps(impact_to_dict("dc", impact_report(mini_dc, "orders_v2")))
+        second = dumps(impact_to_dict("dc", impact_report(mini_dc, "orders_v2")))
         assert first == second
 
 

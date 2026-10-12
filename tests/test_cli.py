@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from ripplerack.cli import app
 from ripplerack.report import dumps
-from tests.conftest import assert_json_golden, assert_text_golden
+from tests.helpers import assert_json_golden, assert_text_golden, raw_datacenter
 
 runner = CliRunner()
 CHANGE_FILES = ["orders_v1_3_0", "orders_v2", "orders_sneaky_patch"]
@@ -169,8 +169,8 @@ def write(path: Path, content: str | bytes) -> Path:
     return path
 
 
-def cyclic_datacenter(examples_dir: Path, path: Path) -> Path:
-    data: dict[str, Any] = yaml.safe_load((examples_dir / "mini_datacenter.yaml").read_text())
+def cyclic_datacenter(path: Path) -> Path:
+    data = raw_datacenter()
     data["dependencies"].append({"source": "kafka", "target": "dashboard"})
     return write(path, yaml.safe_dump(data))
 
@@ -227,7 +227,7 @@ class TestImpactJsonErrors:
 
     def test_dependency_cycle(self, examples_dir: Path, tmp_path: Path) -> None:
         args = impact_args(examples_dir)
-        args[1] = str(cyclic_datacenter(examples_dir, tmp_path / "cycle.yaml"))
+        args[1] = str(cyclic_datacenter(tmp_path / "cycle.yaml"))
         document = self.assert_error(args, "dependency_cycle")
         assert "kafka" in document["error"]["message"]
 
@@ -367,7 +367,7 @@ class TestDiff:
     def test_free_text_that_looks_like_markup_is_printed_verbatim(
         self, examples_dir: Path, tmp_path: Path
     ) -> None:
-        data = yaml.safe_load((examples_dir / "mini_datacenter.yaml").read_text())
+        data = raw_datacenter()
         data["description"] = "Notes [abc] and [/bold] here"
         head = write(tmp_path / "head.yaml", yaml.safe_dump(data))
         result = runner.invoke(app, ["diff", str(examples_dir / "mini_datacenter.yaml"), str(head)])
