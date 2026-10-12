@@ -1,19 +1,15 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 import networkx as nx
-import yaml
 
 from ripplerack.graph import NodeKind
-from ripplerack.impact import ImpactReport, analyze_schema_change
 from ripplerack.mermaid import MermaidHighlight, to_mermaid
-from ripplerack.parser import LoadedDatacenter, load_schema, parse_datacenter
-from tests.conftest import EXAMPLES, assert_text_golden
+from ripplerack.parser import LoadedDatacenter
+from tests.helpers import assert_text_golden, impact_report, load_variant, server_of
 
 RESERVED = {
     "end",
@@ -108,26 +104,6 @@ def parse(text: str) -> Diagram:
     return diagram
 
 
-def load_variant(mutate: Callable[[dict[str, Any]], None]) -> LoadedDatacenter:
-    """Load the mini datacenter after applying ``mutate`` to its raw YAML data."""
-    data: dict[str, Any] = yaml.safe_load((EXAMPLES / "mini_datacenter.yaml").read_text())
-    mutate(data)
-    return parse_datacenter(data)
-
-
-def srv_b1(data: dict[str, Any]) -> dict[str, Any]:
-    server: dict[str, Any] = data["racks"][1]["servers"][0]
-    assert server["id"] == "srv-b1"
-    return server
-
-
-def impact_report(
-    mini_dc: LoadedDatacenter, examples_dir: Path, change: str = "orders_v2"
-) -> ImpactReport:
-    schema = load_schema(examples_dir / "changes" / f"{change}.yaml")
-    return analyze_schema_change(mini_dc.datacenter, mini_dc.graph, "orders-ingest", schema)
-
-
 class TestStructure:
     def test_every_line_belongs_to_the_expected_grammar(self, mini_dc: LoadedDatacenter) -> None:
         diagram = parse(to_mermaid(mini_dc.graph))
@@ -207,10 +183,10 @@ class TestStructure:
 
 class TestMermaidPitfalls:
     def test_no_statement_ends_with_a_semicolon_after_a_colour(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
         # Mermaid reads "#" + word characters + ";" as an HTML entity: "fill:#f00;" breaks.
-        highlight = MermaidHighlight.from_impact(impact_report(mini_dc, examples_dir))
+        highlight = MermaidHighlight.from_impact(impact_report(mini_dc))
         for text in (to_mermaid(mini_dc.graph), to_mermaid(mini_dc.graph, highlight)):
             assert set(re.findall(r"#\w+;", text)) <= {"#quot;", "#lt;", "#gt;"}
             assert not any(line.endswith(";") for line in text.splitlines())
@@ -237,7 +213,7 @@ class TestMermaidPitfalls:
         ]
 
         def mutate(data: dict[str, Any]) -> None:
-            srv_b1(data)["services"].extend(
+            server_of(data, "srv-b1")["services"].extend(
                 {"id": name, "cpu_cores": 0, "memory_gb": 0} for name in names
             )
 
@@ -293,15 +269,15 @@ class TestMermaidPitfalls:
 
 
 class TestImpactHighlight:
-    def classes(self, mini_dc: LoadedDatacenter, examples_dir: Path, change: str) -> dict[str, str]:
-        report = impact_report(mini_dc, examples_dir, change)
+    def classes(self, mini_dc: LoadedDatacenter, change: str) -> dict[str, str]:
+        report = impact_report(mini_dc, change)
         diagram = parse(to_mermaid(mini_dc.graph, MermaidHighlight.from_impact(report)))
         return diagram.node_class
 
     def test_changed_broken_and_at_risk_nodes_get_their_own_class(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
-        classes = self.classes(mini_dc, examples_dir, "orders_v2")
+        classes = self.classes(mini_dc, "orders_v2")
         assert classes["pl_orders_ingest"] == "changed"
         assert {classes[n] for n in ("pl_orders_enriched", "pl_customer_360")} == {"broken"}
         assert {classes[n] for n in ("svc_api", "svc_dashboard", "pl_revenue_daily")} == {"atRisk"}
@@ -310,9 +286,9 @@ class TestImpactHighlight:
         assert classes["svc_postgres"] == "service"
 
     def test_a_compatible_change_only_marks_what_is_reachable(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
-        classes = self.classes(mini_dc, examples_dir, "orders_v1_3_0")
+        classes = self.classes(mini_dc, "orders_v1_3_0")
         assert classes["pl_orders_ingest"] == "changed"
         assert {classes[n] for n in ("pl_orders_enriched", "svc_api", "svc_dashboard")} == {
             "affected"
@@ -321,17 +297,17 @@ class TestImpactHighlight:
         assert "atRisk" not in classes.values()
 
     def test_a_partial_break_does_not_color_what_is_unaffected(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
-        classes = self.classes(mini_dc, examples_dir, "orders_sneaky_patch")
+        classes = self.classes(mini_dc, "orders_sneaky_patch")
         assert classes["pl_customer_360"] == "broken"
         assert classes["svc_api"] == "atRisk"
         assert classes["pl_orders_enriched"] == "affected"
 
     def test_arrows_on_impact_paths_are_styled_by_the_status_of_their_target(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
-        report = impact_report(mini_dc, examples_dir)
+        report = impact_report(mini_dc)
         diagram = parse(to_mermaid(mini_dc.graph, MermaidHighlight.from_impact(report)))
         styled = {diagram.edges[i][:2]: style for i, style in diagram.link_styles.items()}
         assert set(styled) == {
@@ -348,30 +324,28 @@ class TestImpactHighlight:
         assert styled[("pl_customer_360", "svc_api")] == orange
 
     def test_link_indexes_refer_to_the_arrows_that_are_drawn(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
-        report = impact_report(mini_dc, examples_dir)
+        report = impact_report(mini_dc)
         diagram = parse(to_mermaid(mini_dc.graph, MermaidHighlight.from_impact(report)))
         assert diagram.link_styles
         assert all(0 <= index < len(diagram.edges) for index in diagram.link_styles)
 
-    def test_the_comment_states_the_severity(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
-    ) -> None:
-        report = impact_report(mini_dc, examples_dir)
+    def test_the_comment_states_the_severity(self, mini_dc: LoadedDatacenter) -> None:
+        report = impact_report(mini_dc)
         diagram = parse(to_mermaid(mini_dc.graph, MermaidHighlight.from_impact(report)))
         assert "%% impact of changing orders-ingest: critical" in diagram.comments
 
     def test_the_highlighted_diagram_has_the_same_shape_as_the_plain_one(
-        self, mini_dc: LoadedDatacenter, examples_dir: Path
+        self, mini_dc: LoadedDatacenter
     ) -> None:
-        report = impact_report(mini_dc, examples_dir)
+        report = impact_report(mini_dc)
         plain = parse(to_mermaid(mini_dc.graph))
         highlighted = parse(to_mermaid(mini_dc.graph, MermaidHighlight.from_impact(report)))
         assert plain.edges == highlighted.edges
         assert plain.parent == highlighted.parent
         assert plain.nodes == highlighted.nodes
 
-    def test_golden(self, mini_dc: LoadedDatacenter, examples_dir: Path) -> None:
-        highlight = MermaidHighlight.from_impact(impact_report(mini_dc, examples_dir))
+    def test_golden(self, mini_dc: LoadedDatacenter) -> None:
+        highlight = MermaidHighlight.from_impact(impact_report(mini_dc))
         assert_text_golden("mermaid_impact_orders_v2.mmd", to_mermaid(mini_dc.graph, highlight))

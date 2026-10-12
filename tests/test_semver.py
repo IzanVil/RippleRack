@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from ripplerack.semver import ChangeKind, ChangeLevel, Version, diff_schemas
-from tests.conftest import make_schema
+from tests.helpers import make_schema
 
 BASE = make_schema(
     "1.0.0",

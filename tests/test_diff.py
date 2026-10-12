@@ -20,7 +20,7 @@ from ripplerack.impact import Severity
 from ripplerack.models import DependencyKind
 from ripplerack.parser import LoadedDatacenter, load_datacenter
 from ripplerack.semver import ChangeLevel, diff_schemas
-from tests.conftest import EXAMPLES, load_variant, pipeline_of, rack_of, server_of
+from tests.helpers import EXAMPLES, load_variant, pipeline_of, rack_of, server_of
 
 
 def changes_of(diff: DatacenterDiff, component_id: str) -> dict[str, tuple[object, object]]:

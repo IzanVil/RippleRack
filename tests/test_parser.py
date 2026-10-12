@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 
 from ripplerack.parser import (
     ErrorCode,
@@ -16,14 +15,8 @@ from ripplerack.parser import (
 )
 
 
-@pytest.fixture
-def raw(examples_dir: Path) -> dict[str, Any]:
-    data: dict[str, Any] = yaml.safe_load((examples_dir / "mini_datacenter.yaml").read_text())
-    return data
-
-
-def test_example_builds_graph(raw: dict[str, Any]) -> None:
-    loaded = parse_datacenter(raw)
+def test_example_builds_graph(raw_mini: dict[str, Any]) -> None:
+    loaded = parse_datacenter(raw_mini)
     graph = loaded.graph
     assert graph.nodes["rack-a"]["kind"] == "rack"
     assert graph.has_edge("kafka", "orders-ingest")  # runs
@@ -32,8 +25,8 @@ def test_example_builds_graph(raw: dict[str, Any]) -> None:
     assert graph.edges["postgres", "api"]["relation"] == "runtime"
 
 
-def test_inputs_shorthand(raw: dict[str, Any]) -> None:
-    pipeline = parse_datacenter(raw).datacenter.pipeline("customer-360")
+def test_inputs_shorthand(raw_mini: dict[str, Any]) -> None:
+    pipeline = parse_datacenter(raw_mini).datacenter.pipeline("customer-360")
     assert pipeline.inputs[0].pipeline == "orders-ingest"
     assert pipeline.inputs[0].fields is None
 
@@ -58,8 +51,8 @@ def test_inputs_shorthand(raw: dict[str, Any]) -> None:
         ),
     ],
 )
-def test_invalid_documents(raw: dict[str, Any], mutate: Any, message: str) -> None:
-    data = copy.deepcopy(raw)
+def test_invalid_documents(raw_mini: dict[str, Any], mutate: Any, message: str) -> None:
+    data = copy.deepcopy(raw_mini)
     mutate(data)
     with pytest.raises(RippleRackError, match=message):
         parse_datacenter(data)
@@ -120,8 +113,8 @@ def test_missing_file_has_its_own_code(tmp_path: Path) -> None:
     assert excinfo.value.code is ErrorCode.FILE_NOT_FOUND
 
 
-def test_cycle_has_its_own_code(raw: dict[str, Any]) -> None:
-    data = copy.deepcopy(raw)
+def test_cycle_has_its_own_code(raw_mini: dict[str, Any]) -> None:
+    data = copy.deepcopy(raw_mini)
     data["dependencies"].append({"source": "kafka", "target": "dashboard"})
     with pytest.raises(RippleRackError) as excinfo:
         parse_datacenter(data)
@@ -137,8 +130,8 @@ def test_invalid_schema_file_has_a_validation_code(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("value", [float("inf"), float("-inf"), float("nan")])
-def test_non_finite_numbers_are_rejected(raw: dict[str, Any], value: float) -> None:
-    data = copy.deepcopy(raw)
+def test_non_finite_numbers_are_rejected(raw_mini: dict[str, Any], value: float) -> None:
+    data = copy.deepcopy(raw_mini)
     data["racks"][0]["power_capacity_kw"] = value
     with pytest.raises(RippleRackError, match="finite number"):
         parse_datacenter(data)
