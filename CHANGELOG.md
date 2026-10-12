@@ -36,7 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `schemaVersion`, which versions the envelope (see `docs/output-formats.md`). Consumers
   must read `dataSchemaVersion` instead of `schema_version`. The in-memory NetworkX node
   attribute is renamed too, to `data_schema_version`.
-- The CI workflow runs on pushes to any branch, not only `main`.
+- CI runs on every push to any branch, not only `main`, and on pull requests from forks. A
+  pull request from a branch of this repository is no longer run a second time, and runs
+  made obsolete by a newer push to the same branch are cancelled (never on `main`).
 
 ### Fixed
 
