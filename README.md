@@ -11,7 +11,8 @@ RippleRack tells you what happens when something changes:
   should have declared.
 - 🌊 **Cascading impact analysis**: walk the dependency graph to find every
   downstream pipeline, service and dashboard, which consumers actually break
-  and how severe the whole change is.
+  and how severe the whole change is. Compare two versions of a whole
+  datacenter file to review a change before you merge it.
 - 🏗️ **Infrastructure simulation**: push the load up, take a server down and
   see what overloads and what goes offline with it.
 
@@ -142,6 +143,72 @@ JSON error with a stable `error.code`, such as `file_not_found` or
 `unknown_pipeline`. The full contract, the error codes and the exit codes are
 documented in [`docs/output-formats.md`](docs/output-formats.md).
 
+### `diff`: what does this change do to my datacenter?
+
+```bash
+uv run ripplerack diff examples/mini_datacenter.yaml examples/mini_datacenter_v2.yaml
+```
+
+Compares two datacenter files and reports what was added, removed and modified, which
+dependencies changed, and the impact of every schema change on the pipelines that read
+it. Components are matched by `id`, so reordering a file is not a change.
+
+```text
+──────────── Diff examples/mini_datacenter.yaml → examples/mini_datacenter_v2.yaml ─────────────
+mini-datacenter → mini-datacenter
+2 added · 0 removed · 3 modified · 1 schema change(s) · 1 broken consumer(s)
+Components
+┏━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃   ┃ kind     ┃ id              ┃ details                                      ┃
+┡━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ + │ service  │ redis           │ on srv-b1                                    │
+│ + │ pipeline │ orders-audit    │ runs on postgres                             │
+│ ~ │ server   │ srv-b1          │ memory_gb: 96 → 64                           │
+│ ~ │ pipeline │ orders-enriched │ inputs: orders-ingest: -amount +amount_cents │
+│ ~ │ pipeline │ orders-ingest   │ schema.version: 1.2.0 → 2.0.0                │
+│   │          │                 │ schema.fields: changed (see below)           │
+└───┴──────────┴─────────────────┴──────────────────────────────────────────────┘
+Dependencies
+┏━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃   ┃ dependency    ┃ kind           ┃
+┡━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ + │ api → redis   │ runtime        │
+│ ~ │ spark → kafka │ network → data │
+└───┴───────────────┴────────────────┘
+
+orders-ingest
+Schema orders 1.2.0 → 2.0.0   change: major   suggested version: 2.0.0
+Schema changes
+┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ level ┃ kind          ┃ detail                              ┃
+┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ major │ field_removed │ field 'amount' removed              │
+│ major │ field_added   │ required field 'amount_cents' added │
+└───────┴───────────────┴─────────────────────────────────────┘
+Broken consumers
+┏━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ pipeline     ┃ fields ┃ reason                 ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ customer-360 │ amount │ field 'amount' removed │
+└──────────────┴────────┴────────────────────────┘
+At risk: api
+Severity:  HIGH
+```
+
+Here `orders-enriched` was updated in the same change to read `amount_cents`, so it is
+fine. `customer-360` was not touched and reads every field, so it breaks, and `api`,
+which depends on it, is at risk. `orders-audit` is new and was written against the new
+schema, so it is never reported.
+
+Add `--format json` for the [documented JSON](docs/output-formats.md#diff) or
+`--fail-on-breaking` to exit with code `2` when a consumer breaks, which makes the
+command a good pull request gate:
+
+```bash
+git show main:datacenter.yaml > /tmp/base.yaml
+uv run ripplerack diff /tmp/base.yaml datacenter.yaml --fail-on-breaking
+```
+
 ### `simulate`: load surges and failures
 
 ```bash
@@ -172,6 +239,7 @@ YAML ──► Pydantic models ──► NetworkX DiGraph ──► semver diff 
 | `graph.py` | Graph construction plus DOT/JSON export |
 | `semver.py` | Schema diff, change levels, version bumping |
 | `impact.py` | Blast radius, broken consumers, severity |
+| `diff.py` | Comparison of two datacenter files: components, dependencies, schema impact |
 | `report.py` | Versioned JSON documents for CI (impact results and errors) |
 | `simulate.py` | Capacity and failure simulation |
 | `cli.py` | Typer + Rich command line |
@@ -190,7 +258,6 @@ CI runs all of the above on Python 3.11, 3.12 and 3.13.
 
 ## Roadmap
 
-- Compare two full datacenter files (`ripplerack diff old.yaml new.yaml`)
 - Import schemas from JSON Schema / Avro / SQL DDL
 - Throughput and latency modelling for pipelines
 - JSON/Markdown reports for CI comments

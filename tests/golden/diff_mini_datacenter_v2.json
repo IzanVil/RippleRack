@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "ripplerack",
+    "version": "<version>"
+  },
+  "command": "diff",
+  "base": {
+    "name": "mini-datacenter"
+  },
+  "head": {
+    "name": "mini-datacenter"
+  },
+  "severity": "high",
+  "summary": {
+    "added": 2,
+    "removed": 0,
+    "modified": 3,
+    "dependenciesAdded": 1,
+    "dependenciesRemoved": 0,
+    "dependenciesModified": 1,
+    "schemaChanges": 1,
+    "brokenConsumers": 1,
+    "warnings": 0
+  },
+  "metadata": [],
+  "components": {
+    "added": [
+      {
+        "id": "redis",
+        "kind": "service",
+        "parent": "srv-b1"
+      },
+      {
+        "id": "orders-audit",
+        "kind": "pipeline",
+        "parent": "postgres"
+      }
+    ],
+    "removed": [],
+    "modified": [
+      {
+        "id": "srv-b1",
+        "kind": "server",
+        "changes": [
+          {
+            "attribute": "memory_gb",
+            "before": 96.0,
+            "after": 64.0
+          }
+        ]
+      },
+      {
+        "id": "orders-enriched",
+        "kind": "pipeline",
+        "changes": [
+          {
+            "attribute": "inputs",
+            "before": [
+              {
+                "pipeline": "orders-ingest",
+                "fields": [
+                  "amount",
+                  "created_at",
+                  "currency",
+                  "customer_id",
+                  "order_id"
+                ]
+              }
+            ],
+            "after": [
+              {
+                "pipeline": "orders-ingest",
+                "fields": [
+                  "amount_cents",
+                  "created_at",
+                  "currency",
+                  "customer_id",
+                  "order_id"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "orders-ingest",
+        "kind": "pipeline",
+        "changes": [
+          {
+            "attribute": "schema.version",
+            "before": "1.2.0",
+            "after": "2.0.0"
+          },
+          {
+            "attribute": "schema.fields",
+            "before": [
+              {
+                "name": "order_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "customer_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "amount",
+                "type": "float",
+                "nullable": false,
+                "description": "Order total in original currency"
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "coupon_code",
+                "type": "string",
+                "nullable": true,
+                "description": ""
+              }
+            ],
+            "after": [
+              {
+                "name": "order_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "customer_id",
+                "type": "integer",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "amount_cents",
+                "type": "integer",
+                "nullable": false,
+                "description": "Order total in cents"
+              },
+              {
+                "name": "currency",
+                "type": "string",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "created_at",
+                "type": "timestamp",
+                "nullable": false,
+                "description": ""
+              },
+              {
+                "name": "coupon_code",
+                "type": "string",
+                "nullable": true,
+                "description": ""
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "added": [
+      {
+        "source": "api",
+        "target": "redis",
+        "kind": "runtime"
+      }
+    ],
+    "removed": [],
+    "modified": [
+      {
+        "source": "spark",
+        "target": "kafka",
+        "before": "network",
+        "after": "data"
+      }
+    ]
+  },
+  "schemaChanges": [
+    {
+      "pipeline": "orders-ingest",
+      "severity": "high",
+      "schema": {
+        "name": "orders",
+        "oldVersion": "1.2.0",
+        "newVersion": "2.0.0",
+        "level": "major",
+        "suggestedVersion": "2.0.0",
+        "versionConsistent": true,
+        "changes": [
+          {
+            "kind": "field_removed",
+            "level": "major",
+            "field": "amount",
+            "message": "field 'amount' removed",
+            "breaksReaders": true
+          },
+          {
+            "kind": "field_added",
+            "level": "major",
+            "field": "amount_cents",
+            "message": "required field 'amount_cents' added",
+            "breaksReaders": false
+          }
+        ]
+      },
+      "brokenConsumers": [
+        {
+          "pipeline": "customer-360",
+          "fields": [
+            "amount"
+          ],
+          "changes": [
+            {
+              "kind": "field_removed",
+              "field": "amount"
+            }
+          ]
+        }
+      ],
+      "atRisk": [
+        "api"
+      ],
+      "affected": [
+        {
+          "id": "customer-360",
+          "kind": "pipeline",
+          "distance": 1,
+          "path": [
+            "orders-ingest",
+            "customer-360"
+          ],
+          "status": "broken"
+        },
+        {
+          "id": "orders-audit",
+          "kind": "pipeline",
+          "distance": 1,
+          "path": [
+            "orders-ingest",
+            "orders-audit"
+          ],
+          "status": "affected"
+        },
+        {
+          "id": "orders-enriched",
+          "kind": "pipeline",
+          "distance": 1,
+          "path": [
+            "orders-ingest",
+            "orders-enriched"
+          ],
+          "status": "affected"
+        },
+        {
+          "id": "api",
+          "kind": "service",
+          "distance": 2,
+          "path": [
+            "orders-ingest",
+            "customer-360",
+            "api"
+          ],
+          "status": "at_risk"
+        },
+        {
+          "id": "revenue-daily",
+          "kind": "pipeline",
+          "distance": 2,
+          "path": [
+            "orders-ingest",
+            "orders-enriched",
+            "revenue-daily"
+          ],
+          "status": "affected"
+        },
+        {
+          "id": "dashboard",
+          "kind": "service",
+          "distance": 3,
+          "path": [
+            "orders-ingest",
+            "orders-enriched",
+            "revenue-daily",
+            "dashboard"
+          ],
+          "status": "affected"
+        }
+      ],
+      "summary": {
+        "affected": 6,
+        "broken": 1,
+        "atRisk": 1,
+        "breakingChanges": 2
+      }
+    }
+  ],
+  "removedWithDependents": [],
+  "possibleRenames": [],
+  "warnings": []
+}

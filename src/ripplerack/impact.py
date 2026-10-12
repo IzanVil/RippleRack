@@ -7,6 +7,7 @@ fields they read) and derive an overall severity.
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from enum import IntEnum
 
@@ -96,9 +97,26 @@ def analyze_schema_change(
     """Compute the impact of replacing ``pipeline_id``'s schema with ``new_schema``."""
     pipeline = datacenter.pipeline(pipeline_id)
     diff = diff_schemas(pipeline.schema_, new_schema)
+    return analyze_diff(datacenter, graph, pipeline_id, diff)
+
+
+def analyze_diff(
+    datacenter: Datacenter,
+    graph: nx.DiGraph[str],
+    pipeline_id: str,
+    diff: SchemaDiff,
+    *,
+    ignore_consumers: Collection[str] = (),
+) -> ImpactReport:
+    """Compute the impact of an already computed schema ``diff`` of ``pipeline_id``.
+
+    ``datacenter`` and ``graph`` describe the world the consumers live in. Pipelines
+    listed in ``ignore_consumers`` are never reported as broken, which is how callers
+    exclude consumers that were written against the new schema.
+    """
     affected = blast_radius(graph, pipeline_id)
 
-    broken = _broken_consumers(datacenter, pipeline_id, diff)
+    broken = _broken_consumers(datacenter, pipeline_id, diff, set(ignore_consumers))
     broken_ids = {consumer.pipeline for consumer in broken}
     at_risk: set[str] = set()
     for consumer in broken_ids:
@@ -116,7 +134,7 @@ def analyze_schema_change(
 
 
 def _broken_consumers(
-    datacenter: Datacenter, pipeline_id: str, diff: SchemaDiff
+    datacenter: Datacenter, pipeline_id: str, diff: SchemaDiff, ignored: set[str]
 ) -> list[BrokenConsumer]:
     breaking = diff.reader_breaking_changes
     if not breaking:
@@ -124,6 +142,8 @@ def _broken_consumers(
 
     result: list[BrokenConsumer] = []
     for consumer in datacenter.pipelines:
+        if consumer.id in ignored:
+            continue
         for item in consumer.inputs:
             if item.pipeline != pipeline_id:
                 continue

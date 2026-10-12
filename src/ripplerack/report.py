@@ -17,6 +17,7 @@ import json
 from typing import Any
 
 from ripplerack import __version__
+from ripplerack.diff import AttributeChange, ComponentRef, DatacenterDiff
 from ripplerack.impact import ImpactReport
 from ripplerack.semver import SchemaChange, SchemaDiff
 
@@ -50,6 +51,79 @@ def impact_to_dict(datacenter_name: str, report: ImpactReport) -> dict[str, Any]
         "datacenter": datacenter_name,
         **impact_body(report),
     }
+
+
+def diff_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
+    """Build the ``diff`` document for ``diff``."""
+    return {
+        **envelope("diff"),
+        "base": {"name": diff.base_name},
+        "head": {"name": diff.head_name},
+        "severity": str(diff.severity),
+        "summary": {
+            "added": len(diff.added),
+            "removed": len(diff.removed),
+            "modified": len(diff.modified),
+            "dependenciesAdded": len(diff.dependencies_added),
+            "dependenciesRemoved": len(diff.dependencies_removed),
+            "dependenciesModified": len(diff.dependencies_modified),
+            "schemaChanges": len(diff.schema_impacts),
+            "brokenConsumers": len(diff.broken_consumers),
+            "warnings": len(diff.warnings),
+        },
+        "metadata": [_attribute_to_dict(change) for change in diff.metadata],
+        "components": {
+            "added": [_component_ref_to_dict(ref) for ref in diff.added],
+            "removed": [_component_ref_to_dict(ref) for ref in diff.removed],
+            "modified": [
+                {
+                    "id": component.id,
+                    "kind": str(component.kind),
+                    "changes": [_attribute_to_dict(change) for change in component.changes],
+                }
+                for component in diff.modified
+            ],
+        },
+        "dependencies": {
+            "added": [
+                {"source": dep.source, "target": dep.target, "kind": str(dep.kind)}
+                for dep in diff.dependencies_added
+            ],
+            "removed": [
+                {"source": dep.source, "target": dep.target, "kind": str(dep.kind)}
+                for dep in diff.dependencies_removed
+            ],
+            "modified": [
+                {
+                    "source": dep.source,
+                    "target": dep.target,
+                    "before": str(dep.before),
+                    "after": str(dep.after),
+                }
+                for dep in diff.dependencies_modified
+            ],
+        },
+        "schemaChanges": [impact_body(report) for report in diff.schema_impacts],
+        "removedWithDependents": [
+            {"id": item.id, "kind": str(item.kind), "dependents": item.dependents}
+            for item in diff.removed_with_dependents
+        ],
+        "possibleRenames": [
+            {"kind": str(rename.kind), "from": rename.old, "to": rename.new}
+            for rename in diff.possible_renames
+        ],
+        "warnings": [
+            {"code": str(warning.code), "message": warning.message} for warning in diff.warnings
+        ],
+    }
+
+
+def _attribute_to_dict(change: AttributeChange) -> dict[str, Any]:
+    return {"attribute": change.attribute, "before": change.before, "after": change.after}
+
+
+def _component_ref_to_dict(ref: ComponentRef) -> dict[str, Any]:
+    return {"id": ref.id, "kind": str(ref.kind), "parent": ref.parent}
 
 
 def impact_body(report: ImpactReport) -> dict[str, Any]:

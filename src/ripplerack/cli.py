@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, Any, NoReturn
 
 import typer
 from rich.console import Console
@@ -13,6 +13,12 @@ from rich.table import Table
 from rich.tree import Tree
 
 from ripplerack import __version__
+from ripplerack.diff import (
+    AttributeChange,
+    ComponentRef,
+    DatacenterDiff,
+    diff_datacenters,
+)
 from ripplerack.graph import NodeKind, to_dot, to_json
 from ripplerack.impact import ImpactReport, Severity, analyze_schema_change
 from ripplerack.parser import (
@@ -22,8 +28,8 @@ from ripplerack.parser import (
     load_datacenter,
     load_schema,
 )
-from ripplerack.report import dumps, error_to_dict, impact_to_dict
-from ripplerack.semver import ChangeLevel
+from ripplerack.report import diff_to_dict, dumps, error_to_dict, impact_to_dict
+from ripplerack.semver import ChangeLevel, SchemaDiff
 from ripplerack.simulate import SimulationReport, Status, simulate
 
 app = typer.Typer(
@@ -67,6 +73,11 @@ class GraphFormat(StrEnum):
 
 
 class ImpactFormat(StrEnum):
+    TEXT = "text"
+    JSON = "json"
+
+
+class DiffFormat(StrEnum):
     TEXT = "text"
     JSON = "json"
 
@@ -170,6 +181,39 @@ def impact(
         raise typer.Exit(code=2)
 
 
+@app.command()
+def diff(
+    base: Annotated[
+        Path,
+        typer.Argument(help="Base datacenter file (before).", dir_okay=False, show_default=False),
+    ],
+    head: Annotated[
+        Path,
+        typer.Argument(help="Head datacenter file (after).", dir_okay=False, show_default=False),
+    ],
+    output_format: Annotated[
+        DiffFormat,
+        typer.Option("--format", "-F", help="Output format (json is documented and versioned)."),
+    ] = DiffFormat.TEXT,
+    fail_on_breaking: Annotated[
+        bool,
+        typer.Option("--fail-on-breaking", help="Exit with code 2 if any consumer breaks."),
+    ] = False,
+) -> None:
+    """Compare two datacenter files: components, schemas and cascading impact."""
+    json_mode = output_format is DiffFormat.JSON
+    base_loaded = _load(base, command="diff", json_mode=json_mode)
+    head_loaded = _load(head, command="diff", json_mode=json_mode)
+    result = diff_datacenters(base_loaded, head_loaded)
+
+    if json_mode:
+        typer.echo(dumps(diff_to_dict(result)), nl=False)
+    else:
+        _print_diff(result, base, head)
+    if fail_on_breaking and result.broken_consumers:
+        raise typer.Exit(code=2)
+
+
 @app.command("simulate")
 def simulate_command(
     file: DatacenterFile,
@@ -218,10 +262,8 @@ def graph(
         console.print(f"[green]✓[/] graph written to {output}")
 
 
-def _print_impact(report: ImpactReport) -> None:
-    diff = report.diff
+def _print_schema_summary(diff: SchemaDiff) -> None:
     level_style = LEVEL_STYLES[diff.level]
-    console.rule(f"[bold]Impact of changing [cyan]{report.pipeline}[/]")
     console.print(
         f"Schema [bold]{diff.old.name}[/] {diff.old.version} → {diff.new.version}   "
         f"change: [{level_style}]{diff.level}[/]   "
@@ -233,30 +275,44 @@ def _print_impact(report: ImpactReport) -> None:
             f"{diff.level} change (expected ≥ {diff.suggested_version})[/]"
         )
 
+
+def _schema_changes_table(diff: SchemaDiff) -> Table:
+    changes = Table(title="Schema changes", title_justify="left")
+    changes.add_column("level")
+    changes.add_column("kind")
+    changes.add_column("detail")
+    for change in sorted(diff.changes, key=lambda c: c.level, reverse=True):
+        style = LEVEL_STYLES[change.level]
+        changes.add_row(f"[{style}]{change.level}[/]", str(change.kind), change.message)
+    return changes
+
+
+def _broken_consumers_table(report: ImpactReport) -> Table:
+    broken = Table(title="Broken consumers", title_justify="left")
+    broken.add_column("pipeline", style="bold red")
+    broken.add_column("fields")
+    broken.add_column("reason")
+    for consumer in report.broken_consumers:
+        broken.add_row(
+            consumer.pipeline,
+            ", ".join(consumer.fields) or "-",
+            "; ".join(change.message for change in consumer.changes),
+        )
+    return broken
+
+
+def _print_impact(report: ImpactReport) -> None:
+    diff = report.diff
+    console.rule(f"[bold]Impact of changing [cyan]{report.pipeline}[/]")
+    _print_schema_summary(diff)
+
     if diff.changes:
-        changes = Table(title="Schema changes", title_justify="left")
-        changes.add_column("level")
-        changes.add_column("kind")
-        changes.add_column("detail")
-        for change in sorted(diff.changes, key=lambda c: c.level, reverse=True):
-            style = LEVEL_STYLES[change.level]
-            changes.add_row(f"[{style}]{change.level}[/]", str(change.kind), change.message)
-        console.print(changes)
+        console.print(_schema_changes_table(diff))
     else:
         console.print("[dim]No schema changes detected.[/]")
 
     if report.broken_consumers:
-        broken = Table(title="Broken consumers", title_justify="left")
-        broken.add_column("pipeline", style="bold red")
-        broken.add_column("fields")
-        broken.add_column("reason")
-        for consumer in report.broken_consumers:
-            broken.add_row(
-                consumer.pipeline,
-                ", ".join(consumer.fields) or "-",
-                "; ".join(change.message for change in consumer.changes),
-            )
-        console.print(broken)
+        console.print(_broken_consumers_table(report))
 
     if report.affected:
         affected = Table(title="Downstream components", title_justify="left")
@@ -277,6 +333,147 @@ def _print_impact(report: ImpactReport) -> None:
 
     severity_style = SEVERITY_STYLES[report.severity]
     console.print(f"Severity: [{severity_style}] {str(report.severity).upper()} [/]")
+
+
+PARENT_LABELS = {NodeKind.SERVER: "in", NodeKind.SERVICE: "on", NodeKind.PIPELINE: "runs on"}
+
+
+def _print_diff(result: DatacenterDiff, base: Path, head: Path) -> None:
+    console.rule(f"[bold]Diff[/] {escape(str(base))} → {escape(str(head))}")
+    console.print(f"[bold]{escape(result.base_name)}[/] → [bold]{escape(result.head_name)}[/]")
+    if not result.has_differences:
+        console.print("[dim]No differences.[/]")
+    else:
+        console.print(
+            f"{len(result.added)} added · {len(result.removed)} removed · "
+            f"{len(result.modified)} modified · {len(result.schema_impacts)} schema change(s) · "
+            f"{len(result.broken_consumers)} broken consumer(s)"
+        )
+
+    for change in result.metadata:
+        console.print(f"[yellow]~[/] datacenter {_describe_change(change)}")
+
+    if result.added or result.removed or result.modified:
+        components = Table(title="Components", title_justify="left")
+        components.add_column("")
+        components.add_column("kind")
+        components.add_column("id")
+        components.add_column("details")
+        for ref in result.added:
+            components.add_row("[green]+[/]", str(ref.kind), ref.id, _parent_label(ref))
+        for ref in result.removed:
+            components.add_row("[red]-[/]", str(ref.kind), ref.id, _parent_label(ref))
+        for component in result.modified:
+            details = "\n".join(_describe_change(change) for change in component.changes)
+            components.add_row("[yellow]~[/]", str(component.kind), component.id, details)
+        console.print(components)
+
+    if result.dependencies_added or result.dependencies_removed or result.dependencies_modified:
+        dependencies = Table(title="Dependencies", title_justify="left")
+        dependencies.add_column("")
+        dependencies.add_column("dependency")
+        dependencies.add_column("kind")
+        for dep in result.dependencies_added:
+            dependencies.add_row("[green]+[/]", f"{dep.source} → {dep.target}", str(dep.kind))
+        for dep in result.dependencies_removed:
+            dependencies.add_row("[red]-[/]", f"{dep.source} → {dep.target}", str(dep.kind))
+        for changed in result.dependencies_modified:
+            dependencies.add_row(
+                "[yellow]~[/]",
+                f"{changed.source} → {changed.target}",
+                f"{changed.before} → {changed.after}",
+            )
+        console.print(dependencies)
+
+    for report in result.schema_impacts:
+        console.print()
+        console.print(f"[bold cyan]{report.pipeline}[/]")
+        _print_schema_summary(report.diff)
+        console.print(_schema_changes_table(report.diff))
+        if report.broken_consumers:
+            console.print(_broken_consumers_table(report))
+        if report.at_risk:
+            console.print(f"[yellow]At risk:[/] {', '.join(report.at_risk)}")
+
+    if result.removed_with_dependents:
+        removed = Table(title="Removed, but still depended on", title_justify="left")
+        removed.add_column("component", style="bold")
+        removed.add_column("kind")
+        removed.add_column("dependents")
+        for item in result.removed_with_dependents:
+            removed.add_row(item.id, str(item.kind), ", ".join(item.dependents))
+        console.print(removed)
+
+    for rename in result.possible_renames:
+        console.print(
+            f"[dim]hint: {rename.kind} '{rename.old}' may have been renamed to '{rename.new}'[/]"
+        )
+    for warning in result.warnings:
+        console.print(f"[yellow]⚠ {escape(warning.message)}[/]")
+
+    severity_style = SEVERITY_STYLES[result.severity]
+    console.print(f"Severity: [{severity_style}] {str(result.severity).upper()} [/]")
+
+
+def _parent_label(ref: ComponentRef) -> str:
+    if ref.parent is None:
+        return ""
+    return f"{PARENT_LABELS[ref.kind]} {ref.parent}"
+
+
+def _describe_change(change: AttributeChange) -> str:
+    if change.attribute == "schema.fields":
+        return "schema.fields: changed (see below)"
+    if (
+        change.attribute == "inputs"
+        and isinstance(change.before, list)
+        and isinstance(change.after, list)
+    ):
+        return escape(f"inputs: {_describe_inputs_change(change.before, change.after)}")
+    before, after = _format_value(change.before), _format_value(change.after)
+    return escape(f"{change.attribute}: {before} → {after}")
+
+
+def _describe_inputs_change(before: list[Any], after: list[Any]) -> str:
+    """Summarize how a pipeline's inputs changed, e.g. ``orders: -amount +amount_cents``."""
+    old = {item["pipeline"]: item["fields"] for item in before}
+    new = {item["pipeline"]: item["fields"] for item in after}
+    if len(old) != len(before) or len(new) != len(after):  # same upstream listed twice
+        return f"{_format_value(before)} → {_format_value(after)}"
+
+    parts: list[str] = []
+    for upstream in sorted(old.keys() | new.keys()):
+        if upstream not in new:
+            parts.append(f"-{upstream}")
+        elif upstream not in old:
+            parts.append(f"+{upstream}")
+        elif old[upstream] != new[upstream]:
+            was, now = old[upstream], new[upstream]
+            if was is None or now is None:
+                shown = [", ".join(f) if f is not None else "all fields" for f in (was, now)]
+                parts.append(f"{upstream}: {shown[0]} → {shown[1]}")
+            else:
+                gone, new_fields = sorted(set(was) - set(now)), sorted(set(now) - set(was))
+                deltas = [*(f"-{f}" for f in gone), *(f"+{f}" for f in new_fields)]
+                parts.append(f"{upstream}: {' '.join(deltas)}")
+    return "; ".join(parts)
+
+
+def _format_value(value: object) -> str:
+    if isinstance(value, float):
+        return f"{value:g}"
+    if isinstance(value, list):
+        return ", ".join(_format_input(item) for item in value) or "(none)"
+    return str(value) if value != "" else "(empty)"
+
+
+def _format_input(item: object) -> str:
+    if not isinstance(item, dict):
+        return str(item)
+    fields = item.get("fields")
+    if isinstance(fields, list):
+        return f"{item.get('pipeline')}({', '.join(fields)})"
+    return str(item.get("pipeline"))
 
 
 def _print_simulation(report: SimulationReport) -> None:

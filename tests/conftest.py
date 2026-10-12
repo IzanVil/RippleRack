@@ -3,13 +3,15 @@ from __future__ import annotations
 import copy
 import json
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 
 from ripplerack.models import Schema
-from ripplerack.parser import LoadedDatacenter, load_datacenter
+from ripplerack.parser import LoadedDatacenter, load_datacenter, parse_datacenter
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 GOLDEN = Path(__file__).resolve().parent / "golden"
@@ -52,3 +54,32 @@ def assert_json_golden(name: str, payload: dict[str, Any]) -> None:
         path.parent.mkdir(exist_ok=True)
         path.write_text(json.dumps(actual, indent=2) + "\n", encoding="utf-8")
     assert actual == json.loads(path.read_text(encoding="utf-8")), f"{name} differs"
+
+
+def load_variant(mutate: Callable[[dict[str, Any]], None]) -> LoadedDatacenter:
+    """Load the mini datacenter after applying ``mutate`` to its raw YAML data."""
+    data: dict[str, Any] = yaml.safe_load((EXAMPLES / "mini_datacenter.yaml").read_text())
+    mutate(data)
+    return parse_datacenter(data)
+
+
+def rack_of(data: dict[str, Any], rack_id: str) -> dict[str, Any]:
+    """Find a rack in raw datacenter data."""
+    found: dict[str, Any] = next(r for r in data["racks"] if r["id"] == rack_id)
+    return found
+
+
+def server_of(data: dict[str, Any], server_id: str) -> dict[str, Any]:
+    """Find a server in raw datacenter data."""
+    for rack in data["racks"]:
+        for server in rack["servers"]:
+            if server["id"] == server_id:
+                found: dict[str, Any] = server
+                return found
+    raise KeyError(server_id)
+
+
+def pipeline_of(data: dict[str, Any], pipeline_id: str) -> dict[str, Any]:
+    """Find a pipeline in raw datacenter data."""
+    found: dict[str, Any] = next(p for p in data["pipelines"] if p["id"] == pipeline_id)
+    return found

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `ripplerack diff BASE HEAD`: compares two datacenter files and reports added,
+  removed and modified components, changed dependencies, schema changes (through the
+  SemVer and impact engines, evaluated against the head datacenter), possible renames,
+  warnings and an overall severity. Supports `--format json` and `--fail-on-breaking`.
+- `examples/mini_datacenter_v2.yaml`, a revised version of the mini datacenter to try
+  `diff` with.
 - `impact --format json` (`-F json`): machine-readable output with a versioned
   envelope (`schemaVersion`, `tool`, `command`), documented in
   `docs/output-formats.md`.
@@ -30,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Infinite and NaN numbers (`.inf`, `.nan`) in a datacenter file are rejected instead of
+  being accepted as capacities.
 - Text-mode error messages no longer lose text that looks like Rich markup, such as
   `[abc]` in a file path.
 - Files that cannot be read (permissions, invalid UTF-8) now produce a regular error

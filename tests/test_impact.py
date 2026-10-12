@@ -4,10 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from ripplerack.impact import ImpactReport, Severity, analyze_schema_change, blast_radius
+from ripplerack.impact import (
+    ImpactReport,
+    Severity,
+    analyze_diff,
+    analyze_schema_change,
+    blast_radius,
+)
 from ripplerack.models import Schema
 from ripplerack.parser import LoadedDatacenter, load_schema
-from ripplerack.semver import ChangeLevel
+from ripplerack.semver import ChangeLevel, diff_schemas
 
 
 def run(mini_dc: LoadedDatacenter, schema: Schema, pipeline: str = "orders-ingest") -> ImpactReport:
@@ -127,3 +133,38 @@ class TestAnalyzeSchemaChange:
         report = run(mini_dc, load_schema(examples_dir / "changes" / file))
         assert report.severity is severity
         assert report.diff.version_is_consistent is consistent
+
+
+class TestAnalyzeDiff:
+    @pytest.mark.parametrize(
+        "change", ["orders_v1_3_0.yaml", "orders_v2.yaml", "orders_sneaky_patch.yaml"]
+    )
+    def test_gives_the_same_result_as_analyze_schema_change(
+        self, mini_dc: LoadedDatacenter, examples_dir: Path, change: str
+    ) -> None:
+        new = load_schema(examples_dir / "changes" / change)
+        old = mini_dc.datacenter.pipeline("orders-ingest").schema_
+        expected = run(mini_dc, new)
+        actual = analyze_diff(
+            mini_dc.datacenter, mini_dc.graph, "orders-ingest", diff_schemas(old, new)
+        )
+        assert actual == expected
+
+    def test_ignored_consumers_are_never_broken(
+        self, mini_dc: LoadedDatacenter, examples_dir: Path
+    ) -> None:
+        new = load_schema(examples_dir / "changes" / "orders_v2.yaml")
+        old = mini_dc.datacenter.pipeline("orders-ingest").schema_
+        report = analyze_diff(
+            mini_dc.datacenter,
+            mini_dc.graph,
+            "orders-ingest",
+            diff_schemas(old, new),
+            ignore_consumers={"customer-360"},
+        )
+        assert report.broken_ids == {"orders-enriched"}
+        # api is only downstream of the ignored consumer, so it is no longer at risk.
+        assert set(report.at_risk) == {"revenue-daily", "dashboard"}
+        assert report.severity is Severity.CRITICAL
+        # Ignoring a consumer does not hide it from the blast radius.
+        assert "customer-360" in {node.id for node in report.affected}
