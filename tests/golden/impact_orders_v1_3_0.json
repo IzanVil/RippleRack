@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "ripplerack",
+    "version": "<version>"
+  },
+  "command": "impact",
+  "datacenter": "mini-datacenter",
+  "pipeline": "orders-ingest",
+  "severity": "low",
+  "schema": {
+    "name": "orders",
+    "oldVersion": "1.2.0",
+    "newVersion": "1.3.0",
+    "level": "minor",
+    "suggestedVersion": "1.3.0",
+    "versionConsistent": true,
+    "changes": [
+      {
+        "kind": "field_added",
+        "level": "minor",
+        "field": "sales_channel",
+        "message": "optional field 'sales_channel' added",
+        "breaksReaders": false
+      }
+    ]
+  },
+  "brokenConsumers": [],
+  "atRisk": [],
+  "affected": [
+    {
+      "id": "customer-360",
+      "kind": "pipeline",
+      "distance": 1,
+      "path": [
+        "orders-ingest",
+        "customer-360"
+      ],
+      "status": "affected"
+    },
+    {
+      "id": "orders-enriched",
+      "kind": "pipeline",
+      "distance": 1,
+      "path": [
+        "orders-ingest",
+        "orders-enriched"
+      ],
+      "status": "affected"
+    },
+    {
+      "id": "api",
+      "kind": "service",
+      "distance": 2,
+      "path": [
+        "orders-ingest",
+        "customer-360",
+        "api"
+      ],
+      "status": "affected"
+    },
+    {
+      "id": "revenue-daily",
+      "kind": "pipeline",
+      "distance": 2,
+      "path": [
+        "orders-ingest",
+        "orders-enriched",
+        "revenue-daily"
+      ],
+      "status": "affected"
+    },
+    {
+      "id": "dashboard",
+      "kind": "service",
+      "distance": 3,
+      "path": [
+        "orders-ingest",
+        "orders-enriched",
+        "revenue-daily",
+        "dashboard"
+      ],
+      "status": "affected"
+    }
+  ],
+  "summary": {
+    "affected": 5,
+    "broken": 0,
+    "atRisk": 0,
+    "breakingChanges": 0
+  }
+}

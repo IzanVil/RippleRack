@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `impact --format json` (`-F json`): machine-readable output with a versioned
+  envelope (`schemaVersion`, `tool`, `command`), documented in
+  `docs/output-formats.md`.
+- With `--format json`, errors are reported as JSON documents on stderr with stable
+  `error.code` values (`file_not_found`, `io_error`, `invalid_yaml`,
+  `invalid_document`, `validation_failed`, `dependency_cycle`, `unknown_pipeline`).
+- `docs/output-formats.md`: JSON conventions, stability policy, error codes, exit codes
+  and the difference between `schemaVersion` and `dataSchemaVersion`.
+
+### Changed
+
+- **BREAKING:** `graph --format json` now uses camelCase keys like every other JSON
+  document. The pipeline node attribute `schema_version` is now `dataSchemaVersion`, the
+  version of the data schema the pipeline produces. It is not the JSON contract version
+  `schemaVersion`, which versions the envelope (see `docs/output-formats.md`). Consumers
+  must read `dataSchemaVersion` instead of `schema_version`. The in-memory NetworkX node
+  attribute is renamed too, to `data_schema_version`.
+- The CI workflow runs on pushes to any branch, not only `main`.
+
+### Fixed
+
+- Text-mode error messages no longer lose text that looks like Rich markup, such as
+  `[abc]` in a file path.
+- Files that cannot be read (permissions, invalid UTF-8) now produce a regular error
+  instead of a traceback.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added

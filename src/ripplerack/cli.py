@@ -4,17 +4,25 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 from rich.tree import Tree
 
 from ripplerack import __version__
 from ripplerack.graph import NodeKind, to_dot, to_json
 from ripplerack.impact import ImpactReport, Severity, analyze_schema_change
-from ripplerack.parser import LoadedDatacenter, RippleRackError, load_datacenter, load_schema
+from ripplerack.parser import (
+    ErrorCode,
+    LoadedDatacenter,
+    RippleRackError,
+    load_datacenter,
+    load_schema,
+)
+from ripplerack.report import dumps, error_to_dict, impact_to_dict
 from ripplerack.semver import ChangeLevel
 from ripplerack.simulate import SimulationReport, Status, simulate
 
@@ -58,6 +66,11 @@ class GraphFormat(StrEnum):
     JSON = "json"
 
 
+class ImpactFormat(StrEnum):
+    TEXT = "text"
+    JSON = "json"
+
+
 def _version_callback(value: bool) -> None:
     if value:
         console.print(f"ripplerack {__version__}")
@@ -74,18 +87,31 @@ def main(
     """RippleRack: datacenter simulation + data SemVer + impact analysis."""
 
 
-def _load(path: Path) -> LoadedDatacenter:
+def _fail(message: str, *, code: ErrorCode, command: str, json_mode: bool = False) -> NoReturn:
+    """Report an error and exit with status 1.
+
+    In JSON mode the error is a JSON document on stderr (stdout stays empty);
+    otherwise it is a human-readable line. The message is escaped so that text
+    that looks like Rich markup, such as ``[abc]`` in a path, is printed verbatim.
+    """
+    if json_mode:
+        typer.echo(dumps(error_to_dict(command, code, message)), err=True, nl=False)
+    else:
+        err_console.print(f"[bold red]error:[/] {escape(message)}")
+    raise typer.Exit(code=1)
+
+
+def _load(path: Path, *, command: str, json_mode: bool = False) -> LoadedDatacenter:
     try:
         return load_datacenter(path)
     except RippleRackError as exc:
-        err_console.print(f"[bold red]error:[/] {exc}")
-        raise typer.Exit(code=1) from exc
+        _fail(str(exc), code=exc.code, command=command, json_mode=json_mode)
 
 
 @app.command()
 def validate(file: DatacenterFile) -> None:
     """Validate a datacenter file and print a summary."""
-    loaded = _load(file)
+    loaded = _load(file, command="validate")
     dc = loaded.datacenter
     servers = list(dc.iter_servers())
     services = list(dc.iter_services())
@@ -111,24 +137,35 @@ def impact(
     schema: Annotated[
         Path, typer.Option("--schema", "-s", help="YAML file with the new schema.", dir_okay=False)
     ],
+    output_format: Annotated[
+        ImpactFormat,
+        typer.Option("--format", "-F", help="Output format (json is documented and versioned)."),
+    ] = ImpactFormat.TEXT,
     fail_on_breaking: Annotated[
         bool,
         typer.Option("--fail-on-breaking", help="Exit with code 2 if any consumer breaks."),
     ] = False,
 ) -> None:
     """Compute the cascading impact of a schema change on a pipeline."""
-    loaded = _load(file)
+    json_mode = output_format is ImpactFormat.JSON
+    loaded = _load(file, command="impact", json_mode=json_mode)
     try:
         new_schema = load_schema(schema)
         report = analyze_schema_change(loaded.datacenter, loaded.graph, pipeline, new_schema)
     except RippleRackError as exc:
-        err_console.print(f"[bold red]error:[/] {exc}")
-        raise typer.Exit(code=1) from exc
-    except KeyError as exc:
-        err_console.print(f"[bold red]error:[/] unknown pipeline '{pipeline}'")
-        raise typer.Exit(code=1) from exc
+        _fail(str(exc), code=exc.code, command="impact", json_mode=json_mode)
+    except KeyError:
+        _fail(
+            f"unknown pipeline '{pipeline}'",
+            code=ErrorCode.UNKNOWN_PIPELINE,
+            command="impact",
+            json_mode=json_mode,
+        )
 
-    _print_impact(report)
+    if json_mode:
+        typer.echo(dumps(impact_to_dict(loaded.datacenter.name, report)), nl=False)
+    else:
+        _print_impact(report)
     if fail_on_breaking and report.broken_consumers:
         raise typer.Exit(code=2)
 
@@ -145,7 +182,7 @@ def simulate_command(
     ] = None,
 ) -> None:
     """Simulate capacity under load and the cascade of component failures."""
-    loaded = _load(file)
+    loaded = _load(file, command="simulate")
     try:
         report = simulate(loaded.datacenter, loaded.graph, load_factor=load, failures=fail)
     except KeyError as exc:
@@ -165,7 +202,7 @@ def graph(
     ] = None,
 ) -> None:
     """Show or export the dependency graph."""
-    loaded = _load(file)
+    loaded = _load(file, command="graph")
     if output_format is GraphFormat.TREE:
         if output is not None:
             err_console.print("[bold red]error:[/] --output requires --format dot or json")
