@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   warnings and an overall severity. Supports `--format json` and `--fail-on-breaking`.
 - `examples/mini_datacenter_v2.yaml`, a revised version of the mini datacenter to try
   `diff` with.
+- `graph --format mermaid`: exports the dependency graph as a Mermaid flowchart with racks
+  and servers as nested subgraphs and arrows labelled by relation.
+- `impact --format mermaid`: the same diagram with the impact highlighted: the changed
+  pipeline, broken consumers, components at risk and the arrows along the impact paths.
 - `impact --format json` (`-F json`): machine-readable output with a versioned
   envelope (`schemaVersion`, `tool`, `command`), documented in
   `docs/output-formats.md`.

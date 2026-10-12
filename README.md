@@ -71,7 +71,13 @@ being silently ignored.
 uv run ripplerack graph examples/mini_datacenter.yaml            # tree in the terminal
 uv run ripplerack graph examples/mini_datacenter.yaml -F dot -o dc.dot   # Graphviz
 uv run ripplerack graph examples/mini_datacenter.yaml -F json    # machine readable
+uv run ripplerack graph examples/mini_datacenter.yaml -F mermaid # Mermaid flowchart
 ```
+
+`-F mermaid` prints a [Mermaid](https://mermaid.js.org) flowchart: racks and servers are
+nested boxes, services and pipelines have their own shapes, and arrows are labelled with
+the relation. Paste it between `mermaid` code fences in any Markdown file (GitHub renders
+it) or save it with `-o graph.mmd` and render it with `mmdc`.
 
 ### `impact`: what breaks if this schema changes?
 
@@ -121,6 +127,65 @@ Try the other examples in [`examples/changes/`](examples/changes):
 
 Add `--fail-on-breaking` to exit with code `2` whenever a consumer breaks. You
 can use it as a gate in CI.
+
+#### Diagram of the impact
+
+`--format mermaid` draws the whole graph with the impact highlighted: the changed pipeline
+(purple), the consumers that break (red), everything downstream of them that is at risk
+(orange), and the arrows along the way. This is the `orders_v2.yaml` change from above:
+
+```mermaid
+flowchart LR
+  %% mini-datacenter
+  %% impact of changing orders-ingest: critical
+  subgraph rack_rack_a["rack-a"]
+    subgraph srv_srv_a1["srv-a1"]
+      svc_postgres("postgres")
+      svc_kafka("kafka")
+    end
+    subgraph srv_srv_a2["srv-a2"]
+      svc_spark("spark")
+    end
+  end
+  subgraph rack_rack_b["rack-b"]
+    subgraph srv_srv_b1["srv-b1"]
+      svc_api("api")
+      svc_dashboard("dashboard")
+    end
+  end
+  subgraph grp_pipelines["pipelines"]
+    pl_orders_ingest{{"orders-ingest<br/>schema 1.2.0"}}
+    pl_orders_enriched{{"orders-enriched<br/>schema 1.0.0"}}
+    pl_revenue_daily{{"revenue-daily<br/>schema 2.1.0"}}
+    pl_customer_360{{"customer-360<br/>schema 0.4.0"}}
+  end
+  svc_postgres -->|runs| pl_customer_360
+  svc_postgres -->|runtime| svc_api
+  svc_kafka -->|runs| pl_orders_ingest
+  svc_kafka -->|network| svc_spark
+  svc_spark -->|runs| pl_orders_enriched
+  svc_spark -->|runs| pl_revenue_daily
+  pl_orders_ingest -->|feeds| pl_orders_enriched
+  pl_orders_ingest -->|feeds| pl_customer_360
+  pl_orders_enriched -->|feeds| pl_revenue_daily
+  pl_revenue_daily -->|data| svc_dashboard
+  pl_customer_360 -->|data| svc_api
+  classDef service fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+  class svc_postgres,svc_kafka,svc_spark service
+  classDef changed fill:#ede7f6,stroke:#4527a0,stroke-width:4px,color:#311b92
+  class pl_orders_ingest changed
+  classDef broken fill:#ffcdd2,stroke:#c62828,stroke-width:3px,color:#b71c1c
+  class pl_orders_enriched,pl_customer_360 broken
+  classDef atRisk fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#e65100
+  class svc_api,svc_dashboard,pl_revenue_daily atRisk
+  style srv_srv_a1 fill:#e8eaf6,stroke:#283593,color:#1a237e
+  style srv_srv_a2 fill:#e8eaf6,stroke:#283593,color:#1a237e
+  style rack_rack_a fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
+  style srv_srv_b1 fill:#e8eaf6,stroke:#283593,color:#1a237e
+  style rack_rack_b fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
+  linkStyle 6,7 stroke:#c62828,stroke-width:3px
+  linkStyle 8,9,10 stroke:#ef6c00,stroke-width:3px
+```
 
 #### JSON output for CI
 
@@ -237,6 +302,7 @@ YAML ──► Pydantic models ──► NetworkX DiGraph ──► semver diff 
 | `models.py` | Pydantic v2 models (`Datacenter`, `Rack`, `Server`, `Service`, `Pipeline`, `Schema`, `SchemaField`, `Dependency`) and reference validation |
 | `parser.py` | YAML loading, user-facing errors, cycle detection |
 | `graph.py` | Graph construction plus DOT/JSON export |
+| `mermaid.py` | Mermaid flowchart export, with optional impact highlighting |
 | `semver.py` | Schema diff, change levels, version bumping |
 | `impact.py` | Blast radius, broken consumers, severity |
 | `diff.py` | Comparison of two datacenter files: components, dependencies, schema impact |

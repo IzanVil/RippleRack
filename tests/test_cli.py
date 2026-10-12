@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from ripplerack.cli import app
 from ripplerack.report import dumps
-from tests.conftest import assert_json_golden
+from tests.conftest import assert_json_golden, assert_text_golden
 
 runner = CliRunner()
 CHANGE_FILES = ["orders_v1_3_0", "orders_v2", "orders_sneaky_patch"]
@@ -373,3 +373,68 @@ class TestDiff:
         result = runner.invoke(app, ["diff", str(examples_dir / "mini_datacenter.yaml"), str(head)])
         assert result.exit_code == 0, result.output
         assert "[abc] and [/bold] here" in plain(result.stdout)
+
+
+class TestMermaid:
+    def test_graph_mermaid_goes_to_stdout(self, examples_dir: Path) -> None:
+        result = runner.invoke(
+            app, ["graph", str(examples_dir / "mini_datacenter.yaml"), "--format", "mermaid"]
+        )
+        assert result.exit_code == 0, result.output
+        assert result.stdout.startswith("flowchart LR\n")
+        assert "subgraph rack_rack_a" in result.stdout
+        assert result.stderr == ""
+
+    def test_graph_mermaid_matches_the_golden_file(self, examples_dir: Path) -> None:
+        result = runner.invoke(
+            app, ["graph", str(examples_dir / "mini_datacenter.yaml"), "-F", "mermaid"]
+        )
+        assert_text_golden("mermaid_mini_datacenter.mmd", result.stdout)
+
+    def test_graph_mermaid_can_be_written_to_a_file(
+        self, examples_dir: Path, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "graph.mmd"
+        args = ["graph", str(examples_dir / "mini_datacenter.yaml"), "-F", "mermaid"]
+        result = runner.invoke(app, [*args, "-o", str(out)])
+        assert result.exit_code == 0, result.output
+        assert out.read_text() == runner.invoke(app, args).stdout
+
+    def test_the_tree_format_still_refuses_an_output_file(
+        self, examples_dir: Path, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["graph", str(examples_dir / "mini_datacenter.yaml"), "-o", str(tmp_path / "x.txt")],
+        )
+        assert result.exit_code == 1
+        assert "dot, json or mermaid" in plain(result.stderr)
+
+    def test_impact_mermaid_highlights_the_impact(self, examples_dir: Path) -> None:
+        result = runner.invoke(app, impact_args(examples_dir, "orders_v2", "--format", "mermaid"))
+        assert result.exit_code == 0, result.output
+        assert result.stdout.startswith("flowchart LR\n")
+        assert "classDef broken" in result.stdout
+        assert "%% impact of changing orders-ingest: critical" in result.stdout
+        assert_text_golden("mermaid_impact_orders_v2.mmd", result.stdout)
+
+    def test_impact_mermaid_honours_fail_on_breaking(self, examples_dir: Path) -> None:
+        args = impact_args(examples_dir, "orders_v2", "-F", "mermaid", "--fail-on-breaking")
+        result = runner.invoke(app, args)
+        assert result.exit_code == 2
+        assert result.stdout.startswith("flowchart LR\n")
+
+    def test_impact_mermaid_reports_errors_as_text(
+        self, examples_dir: Path, tmp_path: Path
+    ) -> None:
+        args = impact_args(examples_dir, "orders_v2", "-F", "mermaid")
+        args[1] = str(tmp_path / "missing.yaml")
+        result = runner.invoke(app, args)
+        assert result.exit_code == 1
+        assert result.stdout == ""
+        assert plain(result.stderr).startswith("error: file not found")
+
+    def test_other_graph_formats_are_unchanged(self, examples_dir: Path) -> None:
+        dc = str(examples_dir / "mini_datacenter.yaml")
+        assert runner.invoke(app, ["graph", dc, "-F", "dot"]).stdout.startswith("digraph")
+        assert "nodes" in json.loads(runner.invoke(app, ["graph", dc, "-F", "json"]).stdout)

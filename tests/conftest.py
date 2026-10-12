@@ -40,6 +40,15 @@ def make_schema(version: str, *fields: dict[str, object], name: str = "orders") 
     )
 
 
+def assert_text_golden(name: str, actual: str) -> None:
+    """Compare ``actual`` with ``tests/golden/<name>``; see :func:`assert_json_golden`."""
+    path = GOLDEN / name
+    if os.environ.get("RIPPLERACK_UPDATE_GOLDEN") == "1":
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(actual, encoding="utf-8")
+    assert actual == path.read_text(encoding="utf-8"), f"{name} differs"
+
+
 def assert_json_golden(name: str, payload: dict[str, Any]) -> None:
     """Compare ``payload`` with ``tests/golden/<name>``.
 
