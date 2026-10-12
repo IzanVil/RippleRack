@@ -2,6 +2,11 @@
 
 **See the ripple before you make the splash.**
 
+[![CI](https://github.com/IzanVil/RippleRack/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/IzanVil/RippleRack/actions/workflows/ci.yml)
+[![Python versions](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FIzanVil%2FRippleRack%2Fmain%2Fpyproject.toml&query=%24.project.version&label=version)](CHANGELOG.md)
+
 RippleRack is a local-first simulator for datacenters and data pipelines. You
 describe your racks, servers, services and pipelines in a single YAML file and
 RippleRack tells you what happens when something changes:
@@ -19,8 +24,24 @@ RippleRack tells you what happens when something changes:
 Everything runs locally from a text file. There are no agents, no cloud
 accounts and no databases.
 
-> Status: **MVP 0.1**. The CLI and core engines work and are tested. The file
-> format may still change.
+> Status: **alpha**. The CLI and the engines work and are tested. The file format and the
+> JSON output may still change before 1.0; JSON changes bump `schemaVersion` and are listed in
+> the [changelog](CHANGELOG.md).
+
+## In 10 seconds
+
+From a checkout (see [Installation](#installation)):
+
+```bash
+# What breaks if orders-ingest renames `amount` to `amount_cents`?
+uv run ripplerack impact examples/mini_datacenter.yaml -p orders-ingest \
+  -s examples/changes/orders_v2.yaml --format json \
+  | jq -c '{severity, broken: [.brokenConsumers[].pipeline]}'
+# {"severity":"critical","broken":["customer-360","orders-enriched"]}
+
+# Gate a pull request on a change to the whole datacenter (exit code 2 if a consumer breaks)
+uv run ripplerack diff examples/mini_datacenter.yaml examples/mini_datacenter_v2.yaml --fail-on-breaking
+```
 
 ## Why?
 
@@ -48,6 +69,16 @@ To install the CLI globally from a checkout:
 uv tool install .
 ripplerack --help
 ```
+
+## Documentation
+
+| Guide | What you will find |
+|-------|--------------------|
+| [Datacenter file format](docs/yaml-format.md) | The YAML you write and the validation rules |
+| [Concepts](docs/concepts.md) | The impact graph, the schema SemVer rules, severity, `diff` and `simulate` |
+| [Output formats](docs/output-formats.md) | The JSON documents, error codes, exit codes and Mermaid diagrams |
+| [Changelog](CHANGELOG.md) | What changed in each version |
+| [Contributing](CONTRIBUTING.md) | Setup, checks and conventions |
 
 ## Quick tour
 
@@ -288,14 +319,22 @@ on it. Each rack and server is then reported as `ok`, `warning` (≥ 80%),
 
 ## How it works
 
-```
-YAML ──► Pydantic models ──► NetworkX DiGraph ──► semver diff ──► impact report
-            (validate)        (provider → dependent)   (patch/minor/major)   (severity)
+```mermaid
+flowchart LR
+  yaml[/"datacenter.yaml<br/>(one or two files)"/] --> parse["parse and validate<br/>Pydantic models"]
+  parse --> dag["dependency graph<br/>NetworkX"]
+  schema[/"new schema.yaml"/] --> semver["schema SemVer diff<br/>patch, minor, major"]
+  dag --> impact["impact<br/>blast radius, broken consumers, severity"]
+  semver --> impact
+  dag --> diff["diff<br/>added, removed, modified, impact"]
+  semver --> diff
+  dag --> simulate["simulate<br/>load and failures"]
+  impact --> out(["tables, JSON, Mermaid"])
+  diff --> out
+  simulate --> out
 ```
 
-- [`docs/yaml-format.md`](docs/yaml-format.md) describes the file format and the validation rules.
-- [`docs/concepts.md`](docs/concepts.md) explains the graph, the SemVer rules and how severity is decided.
-- [`docs/output-formats.md`](docs/output-formats.md) is the reference for the JSON output, error codes and exit codes.
+Each module has one job; the [concepts guide](docs/concepts.md) explains the ideas behind them.
 
 | module | responsibility |
 |--------|----------------|
@@ -306,7 +345,7 @@ YAML ──► Pydantic models ──► NetworkX DiGraph ──► semver diff 
 | `semver.py` | Schema diff, change levels, version bumping |
 | `impact.py` | Blast radius, broken consumers, severity |
 | `diff.py` | Comparison of two datacenter files: components, dependencies, schema impact |
-| `report.py` | Versioned JSON documents for CI (impact results and errors) |
+| `report.py` | Versioned JSON documents for CI (impact and diff results, errors) |
 | `simulate.py` | Capacity and failure simulation |
 | `cli.py` | Typer + Rich command line |
 
@@ -316,7 +355,7 @@ YAML ──► Pydantic models ──► NetworkX DiGraph ──► semver diff 
 uv sync
 uv run pytest           # tests
 uv run ruff check .     # lint
-uv run ruff format .    # format
+uv run ruff format --check .   # formatting ("uv run ruff format ." fixes it)
 uv run mypy src tests   # strict type checking
 ```
 
@@ -326,12 +365,14 @@ CI runs all of the above on Python 3.11, 3.12 and 3.13.
 
 - Import schemas from JSON Schema / Avro / SQL DDL
 - Throughput and latency modelling for pipelines
-- JSON/Markdown reports for CI comments
+- Markdown reports for CI comments
 - Web UI to explore the graph
 
 Ideas and contributions are welcome. Please open an issue to discuss them.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and
-[CHANGELOG.md](CHANGELOG.md) for release notes.
+[CHANGELOG.md](CHANGELOG.md) for release notes. Everyone taking part is expected to follow
+the [Code of Conduct](CODE_OF_CONDUCT.md); please report vulnerabilities privately, as
+described in [SECURITY.md](SECURITY.md).
 
 ## License
 
