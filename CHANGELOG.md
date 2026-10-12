@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `impact --format json` (`-F json`): machine-readable output with a versioned
+  envelope (`schemaVersion`, `tool`, `command`), documented in
+  `docs/output-formats.md`.
+- With `--format json`, errors are reported as JSON documents on stderr with stable
+  `error.code` values (`file_not_found`, `io_error`, `invalid_yaml`,
+  `invalid_document`, `validation_failed`, `dependency_cycle`, `unknown_pipeline`).
+- `docs/output-formats.md`: JSON conventions, stability policy, error codes, exit codes
+  and the difference between `schemaVersion` and `dataSchemaVersion`.
 - `ripplerack diff BASE HEAD`: compares two datacenter files and reports added,
   removed and modified components, changed dependencies, schema changes (through the
   SemVer and impact engines, evaluated against the head datacenter), possible renames,
@@ -19,14 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and servers as nested subgraphs and arrows labelled by relation.
 - `impact --format mermaid`: the same diagram with the impact highlighted: the changed
   pipeline, broken consumers, components at risk and the arrows along the impact paths.
-- `impact --format json` (`-F json`): machine-readable output with a versioned
-  envelope (`schemaVersion`, `tool`, `command`), documented in
-  `docs/output-formats.md`.
-- With `--format json`, errors are reported as JSON documents on stderr with stable
-  `error.code` values (`file_not_found`, `io_error`, `invalid_yaml`,
-  `invalid_document`, `validation_failed`, `dependency_cycle`, `unknown_pipeline`).
-- `docs/output-formats.md`: JSON conventions, stability policy, error codes, exit codes
-  and the difference between `schemaVersion` and `dataSchemaVersion`.
 
 ### Changed
 
