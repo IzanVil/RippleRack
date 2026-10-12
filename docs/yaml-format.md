@@ -33,7 +33,7 @@ pipelines:
       fields:
         - name: order_id
           type: integer      # string | integer | float | boolean | timestamp | date | json
-          nullable: false    # default
+          nullable: false    # default; true means the field may be null (optional)
           description: optional
 
   - id: orders-enriched
@@ -52,6 +52,19 @@ dependencies:
     target: postgres
     kind: runtime            # runtime | data | network
 ```
+
+## Schema fields
+
+| key           | meaning |
+|---------------|---------|
+| `name`        | The field name; unique within its schema. |
+| `type`        | One of `string`, `integer`, `float`, `boolean`, `timestamp`, `date` or `json`. |
+| `nullable`    | `false` (the default) makes the field *required*: it holds a value of type `T`. `true` makes it *optional*: it holds either a `T` value or `None`. |
+| `description` | Free text. |
+
+`nullable` is the only way a schema says that a field is optional. Changing it, like every
+other change to a schema, is classified by the
+[SemVer rules](concepts.md#schema-semver-rules).
 
 ## Validation rules
 

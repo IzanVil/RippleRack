@@ -16,22 +16,67 @@ The *blast radius* of a component is the set of nodes reachable from it.
 
 ## Schema SemVer rules
 
-Every elementary change gets a level; the schema change level is the highest one.
+A schema field is *required* unless it declares `nullable: true`, in which case it is
+*optional* (see [yaml-format.md](yaml-format.md#schema-fields)). Seen as a type, a required
+field holds a value of type `T` and an optional one holds `T | None`.
 
-| change                                  | level | breaks readers of the field? |
-|-----------------------------------------|-------|------------------------------|
-| field removed                           | major | yes |
-| field type changed                      | major | yes |
-| required field made nullable            | major | yes (readers may now get nulls) |
-| required field added                    | major | no (but old data/producers can't satisfy it) |
-| optional field added                    | minor | no |
-| nullable field made required            | minor | no |
-| description changed, fields reordered   | patch | no |
+RippleRack decides the level of a change from the two schemas alone; it never looks at the
+data. Every elementary change gets a level, and the level of a schema change is the highest
+of them. Each change also says whether it **breaks readers**: the pipelines that consume the
+affected field.
+
+| change | level | breaks readers? | why |
+|--------|-------|-----------------|-----|
+| field removed | major | yes | readers of that field lose it |
+| field type changed | major | yes | readers receive a value of another type |
+| nullability widened (required → optional) | major | yes | readers may now receive a null they never had to handle |
+| required field added | major | no | no reader is affected, but every record must now carry a value that earlier records do not have |
+| optional field added | minor | no | nothing is demanded and no reader is affected |
+| nullability narrowed (optional → required) | minor | no | readers get a stronger guarantee |
+| description changed or fields reordered | patch | no | no structural change |
 
 RippleRack also suggests the next version and warns when the declared version
 is lower than the required bump (e.g. a breaking change shipped as `1.2.1`).
 
 A rename is detected as *remove + add*, which is correctly a major change.
+
+### Widening and narrowing nullability
+
+Making a field nullable *widens* the values it can hold (`T` → `T | None`); making it
+required *narrows* them (`T | None` → `T`). The two directions are classified differently on
+purpose:
+
+* **Widening is major.** A reader written for `T` has no code for `None`, so a null that
+  appears where there never was one can break it.
+* **Narrowing is minor.** A reader written for `T | None` already copes with a field that is
+  never null, so a stronger guarantee cannot break it.
+
+This is a design decision, not an oversight. RippleRack takes the point of view of the
+pipelines that read a schema: the pipeline that owns a schema produces the data and the
+others consume it. Two consequences follow:
+
+* Adding a **required** field is still major although no reader breaks, because it changes
+  what every record must contain: records written before the change cannot satisfy it.
+* Narrowing an optional field is **not** treated the same way. RippleRack does not inspect
+  the data, so it cannot know whether earlier records hold nulls, and what readers receive
+  only gets stronger. If your history does contain nulls, plan for them when you tighten a
+  field.
+
+Other ecosystems see the same change from the same two sides:
+
+* **TypeScript.** `T` is assignable to `T | null`, not the other way round. For a value that
+  is *read* (a function result, a property), widening breaks callers under
+  `strictNullChecks` and narrowing is compatible; for a value that is *written* (a
+  parameter) it is the reverse. A schema field is read by its consumers, so RippleRack
+  follows the first case.
+* **Rust.** `T` and `Option<T>` are unrelated types with no implicit conversion, so changing
+  a public type in either direction breaks callers. RippleRack is more permissive when
+  narrowing, because a data pipeline has no compiler and a stronger guarantee cannot break
+  a reader.
+* **JSON Schema.** Adding `null` to the accepted types *loosens* the schema and removing it
+  *tightens* it. Which direction counts as breaking depends on who relies on the schema:
+  loosening affects consumers that assumed non-null values, tightening affects producers and
+  existing documents. RippleRack reports from the consumers' side.
 
 ## Impact severity
 
