@@ -8,9 +8,21 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same ref makes the run in progress obsolete, so cancel it.
+# Never cancel runs on main: every commit there should finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   check:
     name: Lint, type-check & test (Python ${{ matrix.python-version }})
+    # Every push to any branch of this repository is already tested, so a pull request from
+    # one of those branches would run the same commit a second time. Pull requests from
+    # forks have no push here, so they are the only ones that run on the pull_request event.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
