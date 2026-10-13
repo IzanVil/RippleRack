@@ -38,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `schemaVersion`, which versions the envelope (see `docs/output-formats.md`). Consumers
   must read `dataSchemaVersion` instead of `schema_version`. The in-memory NetworkX node
   attribute is renamed too, to `data_schema_version`.
+- **BREAKING (Python API):** `ripplerack.parser.RippleRackError` now takes a second argument,
+  `code`, one of the new `ripplerack.parser.ErrorCode` values. Code that only catches the
+  exception keeps working; code that raises it must pass a code. The command line is not
+  affected.
 - CI runs on every push to any branch, not only `main`, and on pull requests from forks. A
   pull request from a branch of this repository is no longer run a second time, and runs
   made obsolete by a newer push to the same branch are cancelled (never on `main`).
