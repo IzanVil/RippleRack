@@ -529,6 +529,121 @@ def test_a_oneof_at_the_root_is_only_a_constraint_when_there_are_properties() ->
     assert [name for name, *_ in fields(document)] == ["a", "b"]
 
 
+# --------------------------------------------- alternatives that would lose fields
+
+BASE = {
+    "type": "object",
+    "properties": {"id": {"type": "integer"}, "kind": {"type": "string"}},
+    "required": ["id"],
+}
+AMOUNT = {"properties": {"amount": {"type": "number"}}}
+
+
+@pytest.mark.parametrize("lenient", [False, True])
+@pytest.mark.parametrize(
+    ("extra", "keyword", "where"),
+    [
+        pytest.param({"oneOf": [AMOUNT]}, "oneOf", "#/oneOf/0", id="oneOf"),
+        pytest.param({"anyOf": [{"required": ["id"]}, AMOUNT]}, "anyOf", "#/anyOf/1", id="anyOf"),
+        pytest.param({"then": AMOUNT}, "then", "#/then", id="then"),
+        pytest.param({"else": AMOUNT}, "else", "#/else", id="else"),
+        pytest.param(
+            {"dependentSchemas": {"kind": AMOUNT}},
+            "dependentSchemas",
+            "#/dependentSchemas/kind",
+            id="dependentSchemas",
+        ),
+        pytest.param(
+            {"dependencies": {"kind": AMOUNT}},
+            "dependencies",
+            "#/dependencies/kind",
+            id="dependencies",
+        ),
+        pytest.param(
+            {"oneOf": [{"$ref": "#/$defs/V"}], "$defs": {"V": AMOUNT}},
+            "oneOf",
+            "#/oneOf/0",
+            id="through a $ref",
+        ),
+        pytest.param({"oneOf": [{"allOf": [AMOUNT]}]}, "oneOf", "#/oneOf/0", id="through an allOf"),
+    ],
+)
+def test_alternatives_that_declare_new_fields_are_refused(
+    extra: dict[str, Any], keyword: str, where: str, lenient: bool
+) -> None:
+    """Their fields would be dropped without a word, so neither mode takes them."""
+    message = fails(
+        {**BASE, **extra},
+        ErrorCode.UNSUPPORTED_JSON_SCHEMA,
+        where,
+        f"{keyword} declares properties that the schema does not ('amount')",
+        "their fields would be lost",
+        lenient=lenient,
+    )
+    assert "--lenient" not in message  # lenient would not help, so it is not suggested
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"oneOf": [{"required": ["id"]}, {"required": ["kind"]}]},
+        {"anyOf": [{"properties": {"kind": {"const": "a"}}}, {"properties": {"kind": {}}}]},
+        {"if": {"properties": {"kind": {"const": "card"}}}, "then": {"required": ["id"]}},
+        {"if": {"properties": {"elsewhere": {"const": 1}}}},  # a condition, not a declaration
+        {"then": {"properties": {"kind": {"type": "string"}}}},
+        {"dependentSchemas": {"kind": {"required": ["id"]}}},
+        {"dependencies": {"kind": ["id"]}},  # the array form lists names, it declares none
+        {"not": {"properties": {"other": {}}}},
+        {"oneOf": [{"$ref": "#/$defs/missing"}]},  # a reference that leads nowhere declares nothing
+        {"oneOf": [True, False, 5, "x", None]},
+    ],
+)
+def test_alternatives_that_only_constrain_declared_fields_change_nothing(
+    extra: dict[str, Any],
+) -> None:
+    assert fields({**BASE, **extra}) == fields(BASE)
+
+
+def test_alternatives_inside_an_allof_member_are_checked_too() -> None:
+    document = {"allOf": [{**BASE, "oneOf": [AMOUNT]}]}
+    fails(document, ErrorCode.UNSUPPORTED_JSON_SCHEMA, "#/allOf/0/oneOf/0", "'amount'")
+
+
+def test_a_field_declared_anywhere_in_the_schema_is_not_lost() -> None:
+    document = {**BASE, "allOf": [AMOUNT], "oneOf": [AMOUNT]}
+    assert [name for name, *_ in fields(document)] == ["amount", "id", "kind"]
+
+
+@pytest.mark.parametrize("keyword", ["$dynamicRef", "$recursiveRef"])
+def test_dynamic_references_are_not_followed(keyword: str) -> None:
+    fails(
+        record(value={keyword: "#node"}),
+        ErrorCode.UNSUPPORTED_JSON_SCHEMA,
+        f"#/properties/value/{keyword}",
+        f"{keyword} is not supported",
+    )
+
+
+@pytest.mark.parametrize("keyword", ["$dynamicRef", "$recursiveRef"])
+def test_lenient_imports_a_dynamic_reference_as_json_with_a_warning(keyword: str) -> None:
+    document = record(value={keyword: "#node", "description": "Any node"})
+    assert fields(document, lenient=True) == [("value", "json", False, "Any node")]
+    [issue] = issues(document, lenient=True)
+    assert (issue.code, issue.pointer) == (
+        IssueCode.DEGRADED_TO_JSON,
+        f"#/properties/value/{keyword}",
+    )
+
+
+@pytest.mark.parametrize("lenient", [False, True])
+@pytest.mark.parametrize("keyword", ["$dynamicRef", "$recursiveRef"])
+def test_a_dynamic_reference_at_the_root_is_an_error_in_both_modes(
+    keyword: str, lenient: bool
+) -> None:
+    document = {"type": "object", "properties": {"a": {}}, keyword: "#node"}
+    fails(document, ErrorCode.UNSUPPORTED_JSON_SCHEMA, f"#/{keyword}", lenient=lenient)
+
+
 # ------------------------------------------------------------------ field names
 
 

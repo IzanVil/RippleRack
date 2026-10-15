@@ -16,9 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   merges its members, and objects and arrays become `json` fields. `FILE` may be `-` for
   standard input and `-o FILE` writes a file, which is never overwritten without `--force`.
   `--name` and `--version` name and version the schema.
-- Strict by default: a construct that decides a field's type but has no equivalent (a
-  `oneOf` of several types, a reference to another file...) is an error that says where. With
-  `--lenient` it becomes a `json` field and a warning.
+- Strict by default: a construct that decides which fields exist or what type they have, but
+  has no equivalent (a `oneOf` of several types, a reference to another file, `oneOf`
+  alternatives that add fields...), is an error that says where. With `--lenient` a property
+  that cannot be typed becomes a `json` field and a warning.
 - Warnings on standard error as `warning[code] pointer: message`, with the stable codes
   `additional_properties_ignored` (for `additionalProperties: false` and
   `unevaluatedProperties: false`, in both modes),

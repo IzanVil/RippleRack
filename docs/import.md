@@ -173,7 +173,7 @@ In words:
 | Construct | Default (strict) | With `--lenient` |
 |-----------|------------------|------------------|
 | `$ref` inside the document: `#/$defs/Name`, `#/definitions/Name`, any JSON pointer | Followed. Keywords next to the `$ref` win over the target's. | the same |
-| `$ref` to another file or a URL, an `$anchor`, a reference that refers back to itself | error | `json` field + warning |
+| `$ref` to another file or a URL, an `$anchor`, a `$dynamicRef` or `$recursiveRef`, a reference that refers back to itself | error | `json` field + warning |
 | `$ref` that points to nothing | error | error |
 | `allOf` with one member, the usual way to add text to a `$ref` | Merged. | the same |
 | `allOf` with several members at the root | The objects are merged: their properties and `required` lists are joined, and fields from what is extended come first. A property declared differently by two members is an error. | the same |
@@ -182,8 +182,15 @@ In words:
 | any other `oneOf` or `anyOf` | error | `json` field + warning |
 | `type` with several types besides `null`, or `type: "null"` alone | error | `json` field + warning |
 | a name in `required` that `properties` does not declare | error | a required `json` field + warning |
+| `oneOf`, `anyOf`, `then`, `else` or `dependentSchemas` on the root that declare properties the schema does not | error | error |
 | a root that is not an object schema, or declares no properties | error | error |
 | a property name that is not a valid field name | error | error |
+
+Alternatives on the root that only constrain properties the schema declares, such as
+`oneOf: [{"required": ["a"]}, {"required": ["b"]}]` or an `if`/`then` that requires a
+field, change nothing and are ignored like any constraint. Alternatives that declare *other*
+properties are refused, because those fields would be lost: a schema that is a family of
+variants cannot be imported as one schema yet.
 
 References are never fetched: the importer reads one file and touches nothing else.
 
@@ -204,8 +211,10 @@ get a warning.
 
 ## Strict and lenient
 
-By default nothing that decides a field's type is lost without anyone noticing: if a construct
-has no equivalent, the import fails and says where, and every problem is listed at once.
+By default nothing that decides which fields exist or what type they have is lost without anyone
+noticing: if a construct has no equivalent, the import fails and says where. Every problem with a
+property is listed at once; a problem with the root of the schema, such as a `required` that is
+not a list, stops the import at the first.
 
 ```text
 error: lenient.schema.json: cannot import this JSON Schema:

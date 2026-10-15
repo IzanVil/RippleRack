@@ -255,7 +255,8 @@ class _Reader:
 
         properties: dict[str, tuple[Any, str]] = {}
         required: dict[str, str] = {}
-        for part, pointer in self._parts(root, "#", 0, frozenset()):
+        parts = self._parts(root, "#", 0, frozenset())
+        for part, pointer in parts:
             if "type" in part:
                 names = _type_names(part["type"], pointer)
                 if "object" not in names:
@@ -283,11 +284,68 @@ class _Reader:
             for item in names_required:
                 required.setdefault(item, _child(pointer, "required"))
 
+        for part, pointer in parts:
+            self._refuse_lost_fields(part, pointer, set(properties))
         if not properties and not required:
             raise _unsupported(
                 "#", "the schema declares no properties, so there are no fields to import"
             )
         return properties, list(required.items())
+
+    def _refuse_lost_fields(self, part: dict[str, Any], pointer: str, declared: set[str]) -> None:
+        """Refuse alternatives that declare fields the schema does not: they would be lost.
+
+        ``oneOf``, ``anyOf``, ``then``, ``else`` and ``dependentSchemas`` that only constrain the
+        properties the schema declares change nothing, and are ignored like any constraint.
+        """
+        alternatives: list[tuple[str, str, Any]] = []
+        for keyword in ("oneOf", "anyOf"):
+            members = part.get(keyword)
+            if isinstance(members, list):
+                for index, member in enumerate(members):
+                    alternatives.append((keyword, _child(pointer, keyword, index), member))
+        for keyword in ("then", "else"):
+            if keyword in part:
+                alternatives.append((keyword, _child(pointer, keyword), part[keyword]))
+        for keyword in ("dependentSchemas", "dependencies"):
+            conditions = part.get(keyword)
+            if isinstance(conditions, dict):
+                for name, member in conditions.items():
+                    alternatives.append((keyword, _child(pointer, keyword, name), member))
+        for keyword, where, alternative in alternatives:
+            extra = self._declared_names(alternative, where, 0, frozenset()) - declared
+            if extra:
+                shown = ", ".join(repr(name) for name in sorted(extra))
+                raise _unsupported(
+                    where,
+                    f"{keyword} declares properties that the schema does not ({shown}), "
+                    "so their fields would be lost",
+                    degradable=False,
+                )
+
+    def _declared_names(
+        self, schema: Any, pointer: str, depth: int, seen: frozenset[str]
+    ) -> set[str]:
+        """The names a schema declares in ``properties``, through ``$ref`` and ``allOf``."""
+        if depth > _MAX_DEPTH or not isinstance(schema, dict):
+            return set()
+        declared = schema.get("properties")
+        names: set[str] = set(declared) if isinstance(declared, dict) else set()
+        if "$ref" in schema:
+            try:
+                target, target_pointer = self._resolve(schema["$ref"], pointer, seen)
+            except _ReadError:  # a reference that cannot be followed declares nothing we know
+                pass
+            else:
+                reference = schema["$ref"]
+                names |= self._declared_names(target, target_pointer, depth + 1, seen | {reference})
+        members = schema.get("allOf")
+        if isinstance(members, list):
+            for index, member in enumerate(members):
+                names |= self._declared_names(
+                    member, _child(pointer, "allOf", index), depth + 1, seen
+                )
+        return names
 
     def _parts(
         self, schema: Any, pointer: str, depth: int, seen: frozenset[str]
@@ -308,6 +366,7 @@ class _Reader:
                 pointer, f"a schema must be an object or a boolean, found {_kind(schema)}"
             )
         self._see(schema, pointer)
+        _refuse_dynamic_references(schema, pointer)
 
         parts: list[tuple[dict[str, Any], str]] = []
         if "$ref" in schema:
@@ -352,6 +411,7 @@ class _Reader:
                 pointer, f"a schema must be an object or a boolean, found {_kind(schema)}"
             )
         self._see(schema, pointer)
+        _refuse_dynamic_references(schema, pointer)
 
         flat: dict[str, Any] = {}
         if "$ref" in schema:
@@ -663,6 +723,16 @@ def _child(pointer: str, *tokens: str | int) -> str:
     """Extend a JSON pointer, escaping ``~`` and ``/`` inside the tokens."""
     escaped = (str(token).replace("~", "~0").replace("/", "~1") for token in tokens)
     return "/".join([pointer, *escaped])
+
+
+def _refuse_dynamic_references(schema: dict[str, Any], pointer: str) -> None:
+    """``$dynamicRef`` and ``$recursiveRef`` depend on where a schema is used: not followed."""
+    for keyword in ("$dynamicRef", "$recursiveRef"):
+        if keyword in schema:
+            raise _unsupported(
+                _child(pointer, keyword),
+                f"{keyword} is not supported; only $ref to this document is followed",
+            )
 
 
 def _is_index(key: str, node: Any) -> bool:

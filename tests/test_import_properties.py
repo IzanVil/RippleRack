@@ -138,6 +138,8 @@ def keyword(children: st.SearchStrategy[Any]) -> st.SearchStrategy[tuple[str, An
         st.tuples(st.just("const"), values),
         st.tuples(st.just("format"), mostly(st.sampled_from(["date", "date-time", "uuid"]))),
         st.tuples(st.just("$ref"), mostly(references)),
+        st.tuples(st.just("$dynamicRef"), references),
+        st.tuples(st.just("$recursiveRef"), references),
         st.tuples(st.just("allOf"), members),
         st.tuples(st.just("oneOf"), members),
         st.tuples(st.just("anyOf"), members),
@@ -191,6 +193,10 @@ def object_documents(
         document["$id"] = draw(document_ids | st.text(max_size=8))
     if draw(st.integers(0, 4)) == 0:
         document["allOf"] = draw(st.lists(any_schema, min_size=1, max_size=2))
+    if draw(st.integers(0, 4)) == 0:
+        document["oneOf"] = draw(st.lists(any_schema, min_size=1, max_size=2))
+    if draw(st.integers(0, 6)) == 0:
+        document["then"] = draw(any_schema)
     return document
 
 
