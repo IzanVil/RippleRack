@@ -157,9 +157,15 @@ def test_description_is_kept_on_one_line() -> None:
     assert one(prop)[2] == "Order total, in cents"
 
 
-def test_title_stands_in_for_a_missing_description() -> None:
-    assert one({"type": "string", "title": "Customer name"})[2] == "Customer name"
+def test_a_title_on_a_property_is_not_a_description() -> None:
+    """It mostly repeats the name, so a field whose property has no description has none."""
+    assert one({"type": "string", "title": "Customer name"})[2] == ""
     assert one({"type": "string", "title": "T", "description": "D"})[2] == "D"
+    assert one({"type": "string", "title": 5})[2] == ""  # never read, so its shape is not checked
+
+
+def test_a_description_with_only_blanks_is_no_description() -> None:
+    assert one({"type": "string", "description": " \n\t "})[2] == ""
 
 
 def test_enum_values_are_added_to_the_description() -> None:

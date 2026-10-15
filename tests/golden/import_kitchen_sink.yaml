@@ -10,7 +10,7 @@ fields:
   - {name: amount, type: float, description: 'Total, in the order currency'}
   - {name: paid, type: boolean, nullable: true}
   - {name: coupon, type: string, nullable: true}
-  - {name: note, type: string, nullable: true, description: Free text note}
+  - {name: note, type: string, nullable: true}
   - {name: shipping, type: json}
   - {name: tags, type: json, nullable: true}
   - {name: metadata, type: json, nullable: true}

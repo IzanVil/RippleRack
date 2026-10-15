@@ -144,7 +144,7 @@ is the second. The rest is the field that comes out.
 | `{"type": "integer", "enum": [1, 2, 3]}` | yes | `integer` | `false` | `One of: 1, 2, 3` |
 | `{"const": "EUR"}` | yes | `string` | `false` | `Always: EUR` |
 | `{"type": "string", "description": "Customer name"}` | yes | `string` | `false` | `Customer name` |
-| `{"type": "string", "title": "Customer name"}` | yes | `string` | `false` | `Customer name` |
+| `{"type": "string", "title": "Customer name"}` | yes | `string` | `false` | — |
 | `{"type": "string", "description": "Status", "enum": ["new", "done"]}` | yes | `string` | `false` | `Status. One of: new, done` |
 | `{"type": "string", "minLength": 1, "pattern": "^a"}` | yes | `string` | `false` | — |
 
@@ -159,9 +159,10 @@ In words:
 * **`json` is for everything with structure.** Objects, arrays and schemas that say nothing
   about their type are `json` fields, and nested objects are not flattened (see the
   [limitations](#known-limitations)).
-* **Descriptions.** `description` is used, or `title` when there is none, with whitespace reduced
-  to single spaces so that it fits on one line. Enum values are added after it: up to ten, then
-  a count (`One of: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, … (25 values)`). `null` is not listed, because
+* **Descriptions.** `description` is used, with whitespace reduced to single spaces so that it fits
+  on one line. A property without one gives a field without one: its `title` is ignored, because it
+  mostly repeats the name. Enum values are added after the description: up to ten, then a count
+  (`One of: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, … (25 values)`). `null` is not listed, because
   `nullable` carries it.
 * **Names.** A property name that is not a valid field name (letters, digits, `_`, `.` and `-`:
   no spaces, accents or `@`) is an error. It is never renamed or skipped, because either would
@@ -196,11 +197,11 @@ References are never fetched: the importer reads one file and touches nothing el
 
 ### The keywords it reads
 
-`$id`, `title`, `description`, `type`, `format`, `enum`, `const`, `nullable`, `properties`,
-`required`, `$ref`, `allOf`, `oneOf`, `anyOf`, `additionalProperties` and
-`unevaluatedProperties`. When one has a value
-of the wrong shape, such as a `required` that is not a list of strings or an unknown `type`, the
-import fails with `invalid_json_schema`.
+`$id` and `title` on the root, where they name the schema, and `description`, `type`, `format`,
+`enum`, `const`, `nullable`, `properties`, `required`, `$ref`, `allOf`, `oneOf`, `anyOf`,
+`additionalProperties` and `unevaluatedProperties`. When one has a value of the wrong shape, such
+as a `required` that is not a list of strings or an unknown `type`, the import fails with
+`invalid_json_schema`.
 
 **Everything else is ignored without a warning**: value constraints (`minimum`, `maxLength`,
 `pattern`, `minItems`, `uniqueItems`...), annotations (`default`, `examples`, `deprecated`,

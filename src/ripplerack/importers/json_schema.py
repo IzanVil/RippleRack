@@ -627,26 +627,22 @@ def _is_null_schema(schema: Any) -> bool:
 
 
 def _description(flat: dict[str, Any], pointer: str) -> str:
-    """``description`` (else ``title``) on one line."""
-    for key in ("description", "title"):
-        value = flat.get(key)
-        if value is None:
-            continue
-        if not isinstance(value, str):
-            raise _invalid(_child(pointer, key), f"{key} must be a string")
-        if value.strip():
-            return " ".join(value.split())
-    return ""
+    """``description`` on one line.
+
+    A ``title`` on a property is not used in its place: it mostly repeats the name of the field.
+    """
+    value = flat.get("description")
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise _invalid(_child(pointer, "description"), "description must be a string")
+    return " ".join(value.split())
 
 
 def _own_description(schema: Any) -> str:
     """The same, for a schema that could not be read: keep the text if there is any."""
-    if isinstance(schema, dict):
-        for key in ("description", "title"):
-            value = schema.get(key)
-            if isinstance(value, str) and value.strip():
-                return " ".join(value.split())
-    return ""
+    value = schema.get("description") if isinstance(schema, dict) else None
+    return " ".join(value.split()) if isinstance(value, str) else ""
 
 
 def _flag(flat: dict[str, Any], key: str, pointer: str) -> bool:
