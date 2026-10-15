@@ -592,34 +592,62 @@ def test_keywords_of_the_wrong_shape_are_invalid(document: Any, fragment: str) -
     fails(document, ErrorCode.INVALID_JSON_SCHEMA, fragment)
 
 
-# -------------------------------------------------------- additionalProperties
+# ----------------------------------------- additionalProperties, unevaluatedProperties
+
+CLOSING = ["additionalProperties", "unevaluatedProperties"]
 
 
-def test_additional_properties_false_at_the_root_is_a_warning() -> None:
-    document = {**record(a={"type": "string"}), "additionalProperties": False}
+@pytest.mark.parametrize("keyword", CLOSING)
+def test_false_at_the_root_is_a_warning(keyword: str) -> None:
+    document = {**record(a={"type": "string"}), keyword: False}
     [issue] = issues(document)
     assert issue.code is IssueCode.ADDITIONAL_PROPERTIES_IGNORED
-    assert issue.pointer == "#/additionalProperties"
-    assert "additionalProperties: false" in issue.message
+    assert issue.pointer == f"#/{keyword}"
+    assert issue.message.startswith(f"{keyword}: false is ignored")
 
 
-def test_the_warning_does_not_change_the_imported_schema() -> None:
+def test_both_keywords_on_one_schema_are_two_warnings_with_one_code() -> None:
+    document = {
+        **record(a={"type": "string"}),
+        "additionalProperties": False,
+        "unevaluatedProperties": False,
+    }
+    assert [(i.code, i.pointer) for i in issues(document)] == [
+        (IssueCode.ADDITIONAL_PROPERTIES_IGNORED, "#/additionalProperties"),
+        (IssueCode.ADDITIONAL_PROPERTIES_IGNORED, "#/unevaluatedProperties"),
+    ]
+
+
+def test_unevaluated_properties_closes_a_composition_the_usual_way() -> None:
+    document = {
+        "allOf": [{"$ref": "#/$defs/Base"}, {"properties": {"extra": {"type": "string"}}}],
+        "unevaluatedProperties": False,
+        "$defs": {"Base": record(id={"type": "integer"})},
+    }
+    assert [name for name, *_ in fields(document)] == ["id", "extra"]
+    [issue] = issues(document)
+    assert issue.pointer == "#/unevaluatedProperties"
+
+
+@pytest.mark.parametrize("keyword", CLOSING)
+def test_the_warning_does_not_change_the_imported_schema(keyword: str) -> None:
     plain = record(a={"type": "string"}, b={"type": "integer"})
-    closed = {**plain, "additionalProperties": False}
-    assert fields(closed) == fields(plain)
+    assert fields({**plain, keyword: False}) == fields(plain)
 
 
 @pytest.mark.parametrize("lenient", [False, True])
-def test_the_warning_is_given_in_both_modes(lenient: bool) -> None:
-    document = {**record(a={"type": "string"}), "additionalProperties": False}
+@pytest.mark.parametrize("keyword", CLOSING)
+def test_the_warning_is_given_in_both_modes(keyword: str, lenient: bool) -> None:
+    document = {**record(a={"type": "string"}), keyword: False}
     assert [i.code for i in issues(document, lenient=lenient)] == [
         IssueCode.ADDITIONAL_PROPERTIES_IGNORED
     ]
 
 
 @pytest.mark.parametrize("value", [True, {"type": "string"}, None, 0, "false"])
-def test_other_values_of_additional_properties_say_nothing_to_warn_about(value: Any) -> None:
-    document = {**record(a={"type": "string"}), "additionalProperties": value}
+@pytest.mark.parametrize("keyword", CLOSING)
+def test_other_values_say_nothing_to_warn_about(keyword: str, value: Any) -> None:
+    document = {**record(a={"type": "string"}), keyword: value}
     assert issues(document) == []
 
 
@@ -627,43 +655,51 @@ def test_the_warning_covers_every_schema_that_is_read() -> None:
     document = {
         "allOf": [
             {"$ref": "#/$defs/Base"},
-            {"properties": {"x": {"type": "string"}}, "additionalProperties": False},
+            {"properties": {"x": {"type": "string"}}, "unevaluatedProperties": False},
         ],
         "properties": {
             "shipping": {"type": "object", "additionalProperties": False},
             "via_ref": {"$ref": "#/$defs/Closed"},
             "optional": {
-                "anyOf": [{"type": "object", "additionalProperties": False}, {"type": "null"}]
+                "anyOf": [{"type": "object", "unevaluatedProperties": False}, {"type": "null"}]
             },
-            "open": {"type": "object", "additionalProperties": True},
+            "open": {
+                "type": "object",
+                "additionalProperties": True,
+                "unevaluatedProperties": True,
+            },
         },
-        "additionalProperties": False,
+        "unevaluatedProperties": False,
         "$defs": {
             "Base": {"properties": {"id": {"type": "integer"}}, "additionalProperties": False},
-            "Closed": {"type": "object", "additionalProperties": False},
-            "Unused": {"additionalProperties": False},
+            "Closed": {"type": "object", "unevaluatedProperties": False},
+            "Unused": {"additionalProperties": False, "unevaluatedProperties": False},
         },
     }
     assert sorted(i.pointer for i in issues(document)) == [
         "#/$defs/Base/additionalProperties",
-        "#/$defs/Closed/additionalProperties",
-        "#/additionalProperties",
-        "#/allOf/1/additionalProperties",
-        "#/properties/optional/anyOf/0/additionalProperties",
+        "#/$defs/Closed/unevaluatedProperties",
+        "#/allOf/1/unevaluatedProperties",
+        "#/properties/optional/anyOf/0/unevaluatedProperties",
         "#/properties/shipping/additionalProperties",
+        "#/unevaluatedProperties",
     ]
 
 
-def test_a_closed_definition_used_twice_is_reported_once() -> None:
+@pytest.mark.parametrize("keyword", CLOSING)
+def test_a_closed_definition_used_twice_is_reported_once(keyword: str) -> None:
     document = record(a={"$ref": "#/$defs/C"}, b={"$ref": "#/$defs/C"})
-    document["$defs"] = {"C": {"type": "object", "additionalProperties": False}}
-    assert [i.pointer for i in issues(document)] == ["#/$defs/C/additionalProperties"]
+    document["$defs"] = {"C": {"type": "object", keyword: False}}
+    assert [i.pointer for i in issues(document)] == [f"#/$defs/C/{keyword}"]
 
 
-def test_issues_print_with_their_code_and_place() -> None:
-    document = {**record(a={"type": "string"}), "additionalProperties": False}
+@pytest.mark.parametrize("keyword", CLOSING)
+def test_issues_print_with_their_code_and_place(keyword: str) -> None:
+    document = {**record(a={"type": "string"}), keyword: False}
     [issue] = issues(document)
-    assert str(issue).startswith("warning[additional_properties_ignored] #/additionalProperties: ")
+    assert str(issue).startswith(
+        f"warning[additional_properties_ignored] #/{keyword}: {keyword}: false"
+    )
 
 
 # ------------------------------------------------------------- name and version

@@ -190,7 +190,8 @@ References are never fetched: the importer reads one file and touches nothing el
 ### The keywords it reads
 
 `$id`, `title`, `description`, `type`, `format`, `enum`, `const`, `nullable`, `properties`,
-`required`, `$ref`, `allOf`, `oneOf`, `anyOf` and `additionalProperties`. When one has a value
+`required`, `$ref`, `allOf`, `oneOf`, `anyOf`, `additionalProperties` and
+`unevaluatedProperties`. When one has a value
 of the wrong shape, such as a `required` that is not a list of strings or an unknown `type`, the
 import fails with `invalid_json_schema`.
 
@@ -198,7 +199,8 @@ import fails with `invalid_json_schema`.
 `pattern`, `minItems`, `uniqueItems`...), annotations (`default`, `examples`, `deprecated`,
 `$comment`...), `not`, `if`/`then`/`else`, `patternProperties`, and keywords of a vendor or of a
 later draft. A RippleRack schema is made of types and nullability, and has nowhere to put
-them. The one exception is `additionalProperties: false`, which gets a warning.
+them. The exception is `additionalProperties: false` and `unevaluatedProperties: false`, which
+get a warning.
 
 ## Strict and lenient
 
@@ -228,20 +230,21 @@ on standard error, `warning[code] pointer: message`, and the code is stable.
 
 | code | when | in modes |
 |------|------|----------|
-| `additional_properties_ignored` | A schema that is read says `additionalProperties: false`: it declares that no other fields exist, which a RippleRack schema cannot say. | strict and lenient |
+| `additional_properties_ignored` | A schema that is read says `additionalProperties: false` or `unevaluatedProperties: false` (the second is what the 2019-09 and later drafts use, notably next to `allOf`): it declares that no other fields exist, which a RippleRack schema cannot say. | strict and lenient |
 | `degraded_to_json` | A property has no equivalent type and was imported as a `json` field. | `--lenient` only |
 | `undeclared_required` | `required` names a property that `properties` does not declare; it was imported as a required `json` field. | `--lenient` only |
 
 ```text
 warning[additional_properties_ignored] #/additionalProperties: additionalProperties: false is ignored; a RippleRack schema cannot say that no other fields exist
+warning[additional_properties_ignored] #/$defs/Customer/unevaluatedProperties: unevaluatedProperties: false is ignored; a RippleRack schema cannot say that no other fields exist
 warning[degraded_to_json] #/properties/choice/oneOf: oneOf with 2 alternatives has no equivalent type; field 'choice' imported as json
 ```
 
-`additional_properties_ignored` is given for every schema the importer reads: the root, the
-members of an `allOf`, the target of a `$ref` and the schema of each property. It is not given
-for definitions that nothing refers to, nor for what is inside a property that becomes a
-`json` field, since that is not read. The imported schema is the same with or without it; the
-warning only tells you what the source said and the result does not.
+`additional_properties_ignored` is given, for each of the two keywords, for every schema the
+importer reads: the root, the members of an `allOf`, the target of a `$ref` and the schema of each
+property. It is not given for definitions that nothing refers to, nor for what is inside a
+property that becomes a `json` field, since that is not read. The imported schema is the same with
+or without it; the warning only tells you what the source said and the result does not.
 
 ## Errors
 

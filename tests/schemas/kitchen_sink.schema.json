@@ -40,7 +40,7 @@
     "Customer": {
       "type": "object",
       "properties": { "id": { "type": "integer" } },
-      "additionalProperties": false
+      "unevaluatedProperties": false
     },
     "NeverUsed": { "type": "object", "additionalProperties": false }
   }

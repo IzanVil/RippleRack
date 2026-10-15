@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `oneOf` of several types, a reference to another file...) is an error that says where. With
   `--lenient` it becomes a `json` field and a warning.
 - Warnings on standard error as `warning[code] pointer: message`, with the stable codes
-  `additional_properties_ignored` (for `additionalProperties: false`, in both modes),
+  `additional_properties_ignored` (for `additionalProperties: false` and
+  `unevaluatedProperties: false`, in both modes),
   `degraded_to_json` and `undeclared_required`.
 - Error codes `invalid_json`, `invalid_json_schema`, `unsupported_json_schema` and
   `output_exists`, listed in `docs/output-formats.md`.

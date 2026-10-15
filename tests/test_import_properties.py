@@ -145,6 +145,7 @@ def keyword(children: st.SearchStrategy[Any]) -> st.SearchStrategy[tuple[str, An
         st.tuples(st.just("description"), mostly(st.text(max_size=12))),
         st.tuples(st.just("title"), mostly(st.text(max_size=8))),
         st.tuples(st.just("additionalProperties"), st.booleans() | children),
+        st.tuples(st.just("unevaluatedProperties"), st.booleans() | children),
         st.tuples(st.just("items"), children),
     )
 
@@ -182,6 +183,8 @@ def object_documents(
         document["definitions"] = {"a": draw(any_schema)}
     if draw(st.booleans()):
         document["additionalProperties"] = draw(st.booleans())
+    if draw(st.booleans()):
+        document["unevaluatedProperties"] = draw(st.booleans())
     if draw(st.booleans()):
         document["title"] = draw(st.text(max_size=8))
     if draw(st.booleans()):

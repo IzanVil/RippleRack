@@ -336,7 +336,7 @@ uv run ripplerack impact examples/mini_datacenter.yaml --pipeline orders-ingest 
 Properties that `required` lists become required fields and the others become `nullable`;
 references inside the file are followed; objects and arrays become `json` fields. What cannot
 be represented is an error, or with `--lenient` a `json` field and a warning, and
-`additionalProperties: false` is reported as a warning. The
+`additionalProperties: false` and `unevaluatedProperties: false` are reported as warnings. The
 [import guide](docs/import.md) has the translation rules and the
 [known limitations](docs/import.md#known-limitations).
 

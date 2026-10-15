@@ -229,11 +229,14 @@ def test_square_brackets_in_a_message_are_not_taken_for_markup(tmp_path: Path) -
 # ----------------------------------------------------------------------- warnings
 
 
-def test_warnings_go_to_standard_error_and_leave_the_output_alone(tmp_path: Path) -> None:
-    result = run(write(tmp_path, CLOSED), "--from", "json-schema")
+@pytest.mark.parametrize("keyword", ["additionalProperties", "unevaluatedProperties"])
+def test_warnings_go_to_standard_error_and_leave_the_output_alone(
+    tmp_path: Path, keyword: str
+) -> None:
+    result = run(write(tmp_path, {**DOCUMENT, keyword: False}), "--from", "json-schema")
     assert result.exit_code == 0, result.output
     assert result.stdout == EXPECTED
-    assert "warning[additional_properties_ignored] #/additionalProperties:" in plain(result.stderr)
+    assert f"warning[additional_properties_ignored] #/{keyword}:" in plain(result.stderr)
 
 
 def test_lenient_imports_what_strict_refuses(tmp_path: Path) -> None:

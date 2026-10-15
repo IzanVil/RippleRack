@@ -37,6 +37,10 @@ _PLAIN_TYPES = {
 }
 _STRING_FORMATS = {"date-time": FieldType.TIMESTAMP, "date": FieldType.DATE}
 _NAME_SUFFIXES = (".json", ".schema")
+# Saying false for either of these closes an object: no other fields exist. A RippleRack schema
+# cannot say that. The 2019-09 drafts and later use ``unevaluatedProperties`` for it, notably
+# next to ``allOf``, where ``additionalProperties`` does not see the members' properties.
+_CLOSING_KEYWORDS = ("additionalProperties", "unevaluatedProperties")
 
 
 class _ReadError(Exception):
@@ -419,13 +423,14 @@ class _Reader:
 
     def _see(self, schema: dict[str, Any], pointer: str) -> None:
         """Note what a schema we are about to read says that RippleRack cannot keep."""
-        if schema.get("additionalProperties") is False:
-            self._warn(
-                IssueCode.ADDITIONAL_PROPERTIES_IGNORED,
-                _child(pointer, "additionalProperties"),
-                "additionalProperties: false is ignored; a RippleRack schema cannot say "
-                "that no other fields exist",
-            )
+        for keyword in _CLOSING_KEYWORDS:
+            if schema.get(keyword) is False:
+                self._warn(
+                    IssueCode.ADDITIONAL_PROPERTIES_IGNORED,
+                    _child(pointer, keyword),
+                    f"{keyword}: false is ignored; a RippleRack schema cannot say "
+                    "that no other fields exist",
+                )
 
     def _warn(self, code: IssueCode, pointer: str, message: str) -> None:
         if (code, pointer) not in self._noted:
