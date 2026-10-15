@@ -42,6 +42,12 @@ _NAME_SUFFIXES = (".json", ".schema")
 # next to ``allOf``, where ``additionalProperties`` does not see the members' properties.
 _CLOSING_KEYWORDS = ("additionalProperties", "unevaluatedProperties")
 
+# TODO (second phase): this module is close to 800 lines. The resolver of references
+# (``_Reader._resolve`` and ``_declared_names``, with the pointer helpers ``_child``, ``_visible``
+# and ``_is_index``) and the naming of the schema (``_schema_name``, ``_slug``, ``_file_name``,
+# ``_last_segment`` and ``_strip_suffixes``) can move to modules of their own. Each would be easier
+# to test and to review, and the importers for Avro and SQL DDL could reuse the naming.
+
 
 class _ReadError(Exception):
     """A problem found while reading, with the place in the document it was found."""
