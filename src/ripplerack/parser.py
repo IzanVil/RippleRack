@@ -25,6 +25,10 @@ class ErrorCode(StrEnum):
     VALIDATION_FAILED = "validation_failed"
     DEPENDENCY_CYCLE = "dependency_cycle"
     UNKNOWN_PIPELINE = "unknown_pipeline"
+    INVALID_JSON = "invalid_json"
+    INVALID_JSON_SCHEMA = "invalid_json_schema"
+    UNSUPPORTED_JSON_SCHEMA = "unsupported_json_schema"
+    OUTPUT_EXISTS = "output_exists"
 
 
 class RippleRackError(Exception):
