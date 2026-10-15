@@ -1,0 +1,13 @@
+{
+  "title": "Messy",
+  "type": "object",
+  "required": ["id", "ghost"],
+  "properties": {
+    "id": { "type": "integer" },
+    "choice": { "oneOf": [{ "type": "string" }, { "type": "integer" }], "description": "A or B" },
+    "far": { "$ref": "https://example.com/other.json#/$defs/thing" },
+    "both": { "allOf": [{ "type": "string" }, { "maxLength": 5 }] },
+    "mixed": { "type": ["string", "integer"] },
+    "nothing": { "type": "null" }
+  }
+}

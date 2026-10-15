@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/orders.schema.json",
+  "title": "Orders",
+  "description": "One order, as the orders-ingest pipeline publishes it from version 2.0.0.",
+  "type": "object",
+  "properties": {
+    "order_id": { "type": "integer", "minimum": 1 },
+    "customer_id": { "type": "integer", "minimum": 1 },
+    "amount_cents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Order total in cents"
+    },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "coupon_code": { "type": ["string", "null"] }
+  },
+  "required": ["order_id", "customer_id", "amount_cents", "currency", "created_at"],
+  "$defs": {
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/order-event.schema.json",
+  "title": "Order Event",
+  "description": "One property of every kind the importer reads.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id", "occurred_at", "status", "amount", "shipping"],
+  "properties": {
+    "event_id": { "type": "string", "format": "uuid", "description": "Unique id of the event" },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "occurred_at": { "$ref": "#/$defs/timestamp" },
+    "shipped_on": { "type": "string", "format": "date" },
+    "status": { "$ref": "#/$defs/Status" },
+    "priority": { "enum": [1, 2, 3] },
+    "amount": { "type": "number", "description": "Total, in the\n    order currency" },
+    "paid": { "type": "boolean" },
+    "coupon": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+    "note": { "type": ["string", "null"], "title": "Free text note" },
+    "shipping": { "$ref": "#/$defs/Address" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "metadata": { "type": "object" },
+    "payload": {},
+    "legacy_id": {
+      "allOf": [{ "$ref": "#/$defs/Identifier" }],
+      "description": "Id in the old system"
+    },
+    "customer": { "$ref": "#/$defs/Customer" },
+    "ignored_for_good": false
+  },
+  "$defs": {
+    "timestamp": { "type": "string", "format": "date-time" },
+    "Status": { "type": "string", "enum": ["pending", "paid", "refunded", "cancelled"] },
+    "Identifier": { "type": "integer" },
+    "Address": {
+      "type": "object",
+      "properties": { "street": { "type": "string" }, "city": { "type": "string" } },
+      "additionalProperties": false
+    },
+    "Customer": {
+      "type": "object",
+      "properties": { "id": { "type": "integer" } },
+      "additionalProperties": false
+    },
+    "NeverUsed": { "type": "object", "additionalProperties": false }
+  }
+}

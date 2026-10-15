@@ -1,0 +1,3 @@
+warning[additional_properties_ignored] #/additionalProperties: additionalProperties: false is ignored; a RippleRack schema cannot say that no other fields exist
+warning[additional_properties_ignored] #/$defs/Address/additionalProperties: additionalProperties: false is ignored; a RippleRack schema cannot say that no other fields exist
+warning[additional_properties_ignored] #/$defs/Customer/additionalProperties: additionalProperties: false is ignored; a RippleRack schema cannot say that no other fields exist
