@@ -529,6 +529,67 @@ def test_a_oneof_at_the_root_is_only_a_constraint_when_there_are_properties() ->
     assert [name for name, *_ in fields(document)] == ["a", "b"]
 
 
+# ------------------------------------------------- depth and pointers, left untested before
+
+
+def test_a_chain_of_references_at_the_root_is_cut_short_like_one_on_a_field() -> None:
+    defs: dict[str, Any] = {f"d{i}": {"$ref": f"#/$defs/d{i + 1}"} for i in range(60)}
+    defs["d60"] = record(a={})
+    fails(
+        {"$ref": "#/$defs/d0", "$defs": defs},
+        ErrorCode.UNSUPPORTED_JSON_SCHEMA,
+        "nested too deeply",
+    )
+
+
+def test_allof_nested_deeply_is_an_error_at_the_root_and_on_a_field() -> None:
+    deep: Any = {"type": "string"}
+    for _ in range(60):
+        deep = {"allOf": [deep]}
+    root = {"type": "object", "properties": {"a": {}}, "allOf": [deep]}
+    fails(root, ErrorCode.UNSUPPORTED_JSON_SCHEMA, "nested too deeply")
+    fails(record(value=deep), ErrorCode.UNSUPPORTED_JSON_SCHEMA, "nested too deeply")
+
+
+def test_unions_nested_deeply_are_an_error() -> None:
+    deep: Any = {"type": "string"}
+    for _ in range(60):
+        deep = {"anyOf": [deep, {"type": "null"}]}
+    fails(record(value=deep), ErrorCode.UNSUPPORTED_JSON_SCHEMA, "nested too deeply")
+
+
+def test_nesting_just_under_the_limit_is_accepted() -> None:
+    deep: Any = {"type": "string"}
+    for _ in range(30):
+        deep = {"allOf": [deep]}
+    assert fields(record(value=deep)) == [("value", "string", False, "")]
+
+
+def test_a_percent_encoded_slash_separates_and_a_tilde_escape_does_not() -> None:
+    document = record(nested={"$ref": "#/$defs/a%2Fb"}, flat={"$ref": "#/$defs/a~1b"})
+    document["$defs"] = {"a": {"b": {"type": "integer"}}, "a/b": {"type": "string"}}
+    assert [(name, kind) for name, kind, *_ in fields(document)] == [
+        ("nested", "integer"),
+        ("flat", "string"),
+    ]
+
+
+@pytest.mark.parametrize("ref", ["#/", "#//", "#/$defs//x"])
+def test_empty_pointer_tokens_point_nowhere(ref: str) -> None:
+    document = record(value={"$ref": ref})
+    document["$defs"] = {"x": {"type": "string"}}
+    fails(document, ErrorCode.INVALID_JSON_SCHEMA, "does not point to anything")
+
+
+def test_a_reference_to_true_is_a_json_field_and_one_to_false_cannot_be_imported() -> None:
+    document = record(anything={"$ref": "#/$defs/yes"})
+    document["$defs"] = {"yes": True, "no": False}
+    assert fields(document) == [("anything", "json", False, "")]
+    document = record(nothing={"$ref": "#/$defs/no"})
+    document["$defs"] = {"no": False}
+    fails(document, ErrorCode.UNSUPPORTED_JSON_SCHEMA, "accepts nothing")
+
+
 # --------------------------------------------- alternatives that would lose fields
 
 BASE = {

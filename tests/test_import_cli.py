@@ -193,6 +193,19 @@ def test_a_file_that_is_not_utf8(tmp_path: Path) -> None:
     assert "cannot read" in plain(result.stderr)
 
 
+def test_standard_input_that_is_not_utf8() -> None:
+    result = run("-", "--from", "json-schema", input=b'{"title": "caf\xe9"}')
+    assert result.exit_code == 1
+    assert "cannot read <stdin>" in plain(result.stderr)
+    assert result.stdout == ""
+
+
+def test_an_output_that_is_a_directory_is_a_usage_error(tmp_path: Path) -> None:
+    result = run(write(tmp_path), "--from", "json-schema", "-o", tmp_path)
+    assert result.exit_code == 2
+    assert result.stdout == ""
+
+
 def test_text_that_is_not_json(tmp_path: Path) -> None:
     path = tmp_path / "bad.json"
     path.write_text("{not json", encoding="utf-8")
