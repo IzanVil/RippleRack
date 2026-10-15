@@ -226,6 +226,16 @@ def test_square_brackets_in_a_message_are_not_taken_for_markup(tmp_path: Path) -
     assert "'[bold]x'" in plain(result.stderr)
 
 
+def test_a_name_with_an_escape_sequence_is_not_sent_to_the_terminal_as_it_is(
+    tmp_path: Path,
+) -> None:
+    document = {"type": "object", "properties": {"\x1b[31mRED\x1b[0m": {}}}
+    result = run(write(tmp_path, document), "--from", "json-schema")
+    assert result.exit_code == 1
+    assert "\x1b[31mRED" not in result.stderr  # the command's own colours are different codes
+    assert "#/properties/\\x1b[31mRED\\x1b[0m" in plain(result.stderr)
+
+
 # ----------------------------------------------------------------------- warnings
 
 

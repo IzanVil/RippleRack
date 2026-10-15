@@ -658,6 +658,32 @@ def test_names_with_dots_dashes_and_digits_are_fine() -> None:
     assert [name for name, *_ in fields(document)] == ["a.b", "c-d", "_e", "9"]
 
 
+@pytest.mark.parametrize(
+    ("name", "shown"),
+    [
+        ("\x1b[31mRED\x1b[0m", "\\x1b[31mRED\\x1b[0m"),  # colours
+        ("\x1b[2J\x1b[H", "\\x1b[2J\\x1b[H"),  # clear the screen
+        ("a\nb", "a\\nb"),
+        ("tab\there", "tab\\there"),
+        ("nul\x00", "nul\\x00"),
+        ("bidi\u202eoverride", "bidi\\u202eoverride"),  # reverses the text that follows
+    ],
+)
+def test_control_characters_in_a_name_are_written_out_in_a_message(name: str, shown: str) -> None:
+    document = {"type": "object", "properties": {"ok": {"type": "string"}, name: {}}}
+    message = fails(document, ErrorCode.UNSUPPORTED_JSON_SCHEMA, f"#/properties/{shown}")
+    assert not any(not char.isprintable() and char != "\n" for char in message)
+
+
+def test_control_characters_in_a_reference_and_its_target_are_written_out_too() -> None:
+    name = "\x1b[2J"
+    document = record(value={"$ref": f"#/$defs/{name}"})
+    document["$defs"] = {name: {"type": "object", "additionalProperties": False}}
+    [issue] = issues(document)
+    assert issue.pointer == "#/$defs/\\x1b[2J/additionalProperties"
+    assert "\x1b" not in str(issue)
+
+
 def test_every_problem_is_reported_at_once() -> None:
     document = {
         "type": "object",

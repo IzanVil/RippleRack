@@ -477,7 +477,7 @@ class _Reader:
                 node = node[int(key)]
             else:
                 raise _invalid(where, f"$ref {ref!r} does not point to anything in this document")
-        return node, ref
+        return node, _visible(ref)
 
     # ------------------------------------------------------------------ the report
 
@@ -721,8 +721,20 @@ def _kind(value: Any) -> str:
 
 def _child(pointer: str, *tokens: str | int) -> str:
     """Extend a JSON pointer, escaping ``~`` and ``/`` inside the tokens."""
-    escaped = (str(token).replace("~", "~0").replace("/", "~1") for token in tokens)
+    escaped = (_visible(str(token)).replace("~", "~0").replace("/", "~1") for token in tokens)
     return "/".join([pointer, *escaped])
+
+
+def _visible(text: str) -> str:
+    """``text`` with its control characters written out.
+
+    A pointer quotes names from the file, and a name can hold an escape sequence: printed as it
+    is, it could move the cursor or change the colours of the terminal that shows the message.
+    """
+    return "".join(
+        char if char.isprintable() else char.encode("unicode_escape").decode("ascii")
+        for char in text
+    )
 
 
 def _refuse_dynamic_references(schema: dict[str, Any], pointer: str) -> None:
