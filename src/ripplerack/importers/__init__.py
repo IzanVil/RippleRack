@@ -15,6 +15,7 @@ from ripplerack.importers.base import (
     SourceFormat,
 )
 from ripplerack.importers.json_schema import import_json_schema
+from ripplerack.importers.render import render_schema_yaml
 
 IMPORTERS: dict[SourceFormat, Importer] = {SourceFormat.JSON_SCHEMA: import_json_schema}
 
@@ -25,4 +26,5 @@ __all__ = [
     "Importer",
     "IssueCode",
     "SourceFormat",
+    "render_schema_yaml",
 ]
