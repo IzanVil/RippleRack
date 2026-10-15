@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import re
+import sys
 from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
 from typing import Protocol
 
 from pydantic import TypeAdapter, ValidationError
 
 from ripplerack.models import SEMVER_PATTERN, Identifier, Schema
+from ripplerack.parser import ErrorCode, RippleRackError
 
 _IDENTIFIER = TypeAdapter(Identifier)
+STDIN = Path("-")
 
 
 class SourceFormat(StrEnum):
@@ -58,6 +62,25 @@ class Importer(Protocol):
     def __call__(
         self, text: str, *, source: str, name: str | None, version: str, lenient: bool
     ) -> ImportResult: ...
+
+
+def source_label(path: Path) -> str:
+    """How a source is named in messages: its path, or ``<stdin>``."""
+    return "<stdin>" if path == STDIN else str(path)
+
+
+def read_text(path: Path) -> str:
+    """Read a source file as UTF-8 (a byte order mark is accepted); ``-`` is standard input."""
+    try:
+        if path == STDIN:
+            return sys.stdin.buffer.read().decode("utf-8-sig")
+        return path.read_text(encoding="utf-8-sig")
+    except FileNotFoundError as exc:
+        raise RippleRackError(f"file not found: {path}", ErrorCode.FILE_NOT_FOUND) from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        raise RippleRackError(
+            f"cannot read {source_label(path)}: {exc}", ErrorCode.IO_ERROR
+        ) from exc
 
 
 def is_identifier(text: str) -> bool:
