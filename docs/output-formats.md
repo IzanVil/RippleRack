@@ -12,6 +12,8 @@ a change highlighted.
 | `ripplerack diff BASE HEAD --format json` | [diff document](#diff)             |
 | `ripplerack graph ... -F json`            | [graph export](#graph-json-export) |
 
+`ripplerack import` writes YAML, not JSON: see [import.md](import.md).
+
 ## Conventions
 
 These rules apply to **every** JSON document RippleRack produces.
@@ -361,11 +363,19 @@ object:
 | `validation_failed` | A datacenter or schema file does not satisfy the model: unknown keys, wrong types, duplicate ids, references to missing components or fields. |
 | `dependency_cycle`  | The dependency graph contains a cycle. |
 | `unknown_pipeline`  | `--pipeline` names a pipeline that does not exist. |
+| `invalid_json`      | `import`: the input file is not valid JSON. |
+| `invalid_json_schema` | `import`: the input is JSON, but not a well-formed JSON Schema. |
+| `unsupported_json_schema` | `import`: the input is a JSON Schema that cannot be imported as it is. |
+| `output_exists`     | `import`: the output file exists, or it is the input file. |
 
 For file-related codes `error.message` names the offending file, and for
 `validation_failed` it lists every problem found. `diff` reads two files, so its
 message tells you whether `BASE` or `HEAD` was the problem. `unknown_pipeline` only
 applies to `impact`.
+
+The last four codes come from `ripplerack import`. It writes YAML and has no
+`--format json`, so for now they are not printed in a JSON document; they identify the error
+in the Python API (`RippleRackError.code`) and are explained in [import.md](import.md#errors).
 
 Two situations are **not** reported as JSON:
 

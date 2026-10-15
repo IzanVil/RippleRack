@@ -77,6 +77,7 @@ ripplerack --help
 | [Datacenter file format](docs/yaml-format.md) | The YAML you write and the validation rules |
 | [Concepts](docs/concepts.md) | The impact graph, the schema SemVer rules, severity, `diff` and `simulate` |
 | [Output formats](docs/output-formats.md) | The JSON documents, error codes, exit codes and Mermaid diagrams |
+| [Importing schemas](docs/import.md) | `ripplerack import`: turn a JSON Schema into a schema file, the translation rules, warnings and known limitations |
 | [Changelog](CHANGELOG.md) | What changed in each version |
 | [Contributing](CONTRIBUTING.md) | Setup, checks and conventions |
 
@@ -305,6 +306,40 @@ git show main:datacenter.yaml > /tmp/base.yaml
 uv run ripplerack diff /tmp/base.yaml datacenter.yaml --fail-on-breaking
 ```
 
+### `import`: write the schema from a JSON Schema
+
+```bash
+uv run ripplerack import examples/schemas/orders_v2.schema.json --from json-schema --version 2.0.0
+```
+
+```yaml
+name: orders
+version: 2.0.0
+fields:
+  - {name: order_id, type: integer}
+  - {name: customer_id, type: integer}
+  - {name: amount_cents, type: integer, description: Order total in cents}
+  - {name: currency, type: string}
+  - {name: created_at, type: timestamp}
+  - {name: coupon_code, type: string, nullable: true}
+```
+
+The output is a schema file, so nobody has to write it by hand and it goes straight into
+`impact`. This one is exactly `examples/changes/orders_v2.yaml`, so the report is the same
+`critical` one as above:
+
+```bash
+uv run ripplerack impact examples/mini_datacenter.yaml --pipeline orders-ingest \
+  --schema <(uv run ripplerack import examples/schemas/orders_v2.schema.json --from json-schema --version 2.0.0)
+```
+
+Properties that `required` lists become required fields and the others become `nullable`;
+references inside the file are followed; objects and arrays become `json` fields. What cannot
+be represented is an error, or with `--lenient` a `json` field and a warning, and
+`additionalProperties: false` is reported as a warning. The
+[import guide](docs/import.md) has the translation rules and the
+[known limitations](docs/import.md#known-limitations).
+
 ### `simulate`: load surges and failures
 
 ```bash
@@ -323,6 +358,7 @@ on it. Each rack and server is then reported as `ok`, `warning` (≥ 80%),
 flowchart LR
   yaml[/"datacenter.yaml<br/>(one or two files)"/] --> parse["parse and validate<br/>Pydantic models"]
   parse --> dag["dependency graph<br/>NetworkX"]
+  jsonschema[/"JSON Schema"/] -->|"import"| schema
   schema[/"new schema.yaml"/] --> semver["schema SemVer diff<br/>patch, minor, major"]
   dag --> impact["impact<br/>blast radius, broken consumers, severity"]
   semver --> impact
@@ -345,6 +381,7 @@ Each module has one job; the [concepts guide](docs/concepts.md) explains the ide
 | `semver.py` | Schema diff, change levels, version bumping |
 | `impact.py` | Blast radius, broken consumers, severity |
 | `diff.py` | Comparison of two datacenter files: components, dependencies, schema impact |
+| `importers/` | Schema importers (JSON Schema today) and the YAML writer for what they read |
 | `report.py` | Versioned JSON documents for CI (impact and diff results, errors) |
 | `simulate.py` | Capacity and failure simulation |
 | `cli.py` | Typer + Rich command line |
@@ -363,7 +400,7 @@ CI runs all of the above on Python 3.11, 3.12 and 3.13.
 
 ## Roadmap
 
-- Import schemas from JSON Schema / Avro / SQL DDL
+- Import schemas from Avro and SQL DDL (JSON Schema is supported)
 - Throughput and latency modelling for pipelines
 - Markdown reports for CI comments
 - Web UI to explore the graph
