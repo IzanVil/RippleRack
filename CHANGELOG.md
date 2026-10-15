@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ripplerack import FILE --from json-schema`: reads a JSON Schema and writes the RippleRack
+  schema it describes as YAML, a schema file that `impact --schema` reads as it is.
+  Properties that `required` lists become required fields and the others `nullable`;
+  references inside the file and a single-member `allOf` are followed, `allOf` at the root
+  merges its members, and objects and arrays become `json` fields. `FILE` may be `-` for
+  standard input and `-o FILE` writes a file, which is never overwritten without `--force`.
+  `--name` and `--version` name and version the schema.
+- Strict by default: a construct that decides a field's type but has no equivalent (a
+  `oneOf` of several types, a reference to another file...) is an error that says where. With
+  `--lenient` it becomes a `json` field and a warning.
+- Warnings on standard error as `warning[code] pointer: message`, with the stable codes
+  `additional_properties_ignored` (for `additionalProperties: false`, in both modes),
+  `degraded_to_json` and `undeclared_required`.
+- Error codes `invalid_json`, `invalid_json_schema`, `unsupported_json_schema` and
+  `output_exists`, listed in `docs/output-formats.md`.
+- `docs/import.md`, with the translation rules and the known limitations of an imported
+  schema, and `examples/schemas/orders_v2.schema.json`, a JSON Schema equivalent to
+  `examples/changes/orders_v2.yaml`.
+
+### Changed
+
+- The tests include properties checked with Hypothesis, now a development dependency.
+
 ## [0.2.0] - 2026-10-15
 
 ### Added
