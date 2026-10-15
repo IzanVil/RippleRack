@@ -12,7 +12,7 @@ Please do not open a public issue for a security problem.
 * **Preferred:** use GitHub's private vulnerability reporting. Open the repository's
   **Security** tab and choose **Report a vulnerability**
   ([direct link](https://github.com/IzanVil/RippleRack/security/advisories/new)).
-* **Otherwise:** email [CONTACT_EMAIL] with "RippleRack security" in the subject.
+* **Otherwise:** email soyoquienmas@outlook.com with "RippleRack security" in the subject.
 
 Please include the RippleRack version (`ripplerack --version`), the smallest input file
 that reproduces the problem, what you observed and the impact you see.
