@@ -875,6 +875,24 @@ def test_a_document_nested_beyond_any_interpreter_limit_is_an_error_not_a_crash(
     fails(record(value={"enum": [deep]}), ErrorCode.INVALID_JSON_SCHEMA, "nested too deeply")
 
 
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("dir/orders.json", "orders"),
+        ("C:\\Users\\ana\\schemas\\orders.schema.json", "orders"),
+        ("schemas\\Customer Data.json", "customer_data"),
+        ("C:/mixed\\separators/Events.json", "events"),
+        ("\\\\server\\share\\invoice.json", "invoice"),
+        ("dir/", "schema"),
+        ("C:\\dir\\", "schema"),
+    ],
+)
+def test_the_file_name_is_found_whichever_separator_the_path_uses(
+    source: str, expected: str
+) -> None:
+    assert make(record(a={}), source=source)[0] == expected
+
+
 def test_a_title_that_is_not_text_is_invalid() -> None:
     fails(
         {**record(a={}), "title": 5}, ErrorCode.INVALID_JSON_SCHEMA, "#/title", "must be a string"

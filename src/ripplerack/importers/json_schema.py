@@ -519,7 +519,7 @@ class _Reader:
             if identifier:
                 candidates.append(_strip_suffixes(_last_segment(identifier)))
         if not source.startswith("<"):
-            candidates.append(_strip_suffixes(PurePosixPath(source).name))
+            candidates.append(_strip_suffixes(_file_name(source)))
         return next((slug for slug in map(_slug, candidates) if slug), "schema")
 
     def _text(self, schema: dict[str, Any], key: str) -> str | None:
@@ -744,6 +744,15 @@ def _is_index(key: str, node: Any) -> bool:
         and len(key) < 10
         and (int(key) < len(node))
     )
+
+
+def _file_name(path: str) -> str:
+    """The last part of a path, whether it is written with ``/`` or with a backslash.
+
+    The command gives the importer ``str(path)``, which on Windows uses backslashes; a POSIX
+    path parser would take the whole of ``C:\\dir\\orders.json`` for the file name.
+    """
+    return re.split(r"[\\/]", path)[-1]
 
 
 def _last_segment(identifier: str) -> str:
