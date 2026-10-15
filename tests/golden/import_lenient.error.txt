@@ -1,0 +1,8 @@
+error: lenient.schema.json: cannot import this JSON Schema:
+  #/properties/choice/oneOf: oneOf with 2 alternatives has no equivalent type
+  #/properties/far/$ref: $ref 'https://example.com/other.json#/$defs/thing' points outside this document; only references to this document (#/...) are supported
+  #/properties/both/allOf: allOf with 2 members has no equivalent for a field
+  #/properties/mixed/type: type ['integer', 'string'] mixes several types in one field
+  #/properties/nothing/type: type 'null' on its own has no data type
+  #/required: required property 'ghost' is not declared in properties
+  hint: --lenient imports properties like these as json fields

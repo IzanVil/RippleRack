@@ -21,6 +21,16 @@ from ripplerack.diff import (
 )
 from ripplerack.graph import NodeKind, to_dot, to_json
 from ripplerack.impact import ImpactReport, Severity, analyze_schema_change
+from ripplerack.importers import (
+    IMPORTERS,
+    STDIN,
+    SourceFormat,
+    is_identifier,
+    is_version,
+    read_text,
+    render_schema_yaml,
+    source_label,
+)
 from ripplerack.mermaid import MermaidHighlight, to_mermaid
 from ripplerack.parser import (
     ErrorCode,
@@ -223,6 +233,117 @@ def diff(
         _print_diff(result, base, head)
     if fail_on_breaking and result.broken_consumers:
         raise typer.Exit(code=2)
+
+
+def _check_schema_name(value: str | None) -> str | None:
+    if value is not None and not is_identifier(value):
+        raise typer.BadParameter("use only letters, digits, '_', '.' and '-'")
+    return value
+
+
+def _check_schema_version(value: str) -> str:
+    if not is_version(value):
+        raise typer.BadParameter("expected MAJOR.MINOR.PATCH, for example 1.0.0")
+    return value
+
+
+def _check_output(output: Path, source: Path, *, force: bool) -> None:
+    """Refuse to overwrite the input, or any existing file unless ``--force`` is given."""
+    if source != STDIN and output.resolve() == source.resolve():
+        raise RippleRackError(
+            f"refusing to overwrite the input file {output}", ErrorCode.OUTPUT_EXISTS
+        )
+    if output.exists() and not force:
+        raise RippleRackError(
+            f"{output} already exists; use --force to overwrite it", ErrorCode.OUTPUT_EXISTS
+        )
+
+
+@app.command("import")
+def import_command(
+    file: Annotated[
+        Path,
+        typer.Argument(
+            help="File to import; - reads standard input.",
+            allow_dash=True,
+            dir_okay=False,
+            show_default=False,
+        ),
+    ],
+    source_format: Annotated[
+        SourceFormat, typer.Option("--from", help="Format of FILE.", show_default=False)
+    ],
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            allow_dash=True,
+            dir_okay=False,
+            help="Write the schema to this file instead of standard output (- is standard output).",
+        ),
+    ] = None,
+    name: Annotated[
+        str | None,
+        typer.Option(
+            "--name",
+            callback=_check_schema_name,
+            help="Name of the schema. Default: the title, then the last part of $id, "
+            "then the file name.",
+            show_default=False,
+        ),
+    ] = None,
+    version: Annotated[
+        str,
+        typer.Option(
+            "--version",
+            callback=_check_schema_version,
+            help="Version to give the schema; the source has none.",
+        ),
+    ] = "1.0.0",
+    lenient: Annotated[
+        bool,
+        typer.Option(
+            "--lenient",
+            help="Import what has no equivalent as json fields, with a warning, "
+            "instead of failing.",
+        ),
+    ] = False,
+    force: Annotated[
+        bool, typer.Option("--force", help="Overwrite the output file if it exists.")
+    ] = False,
+) -> None:
+    """Import a schema from another format and write it as RippleRack YAML.
+
+    The result is a schema file: `impact --schema` reads it as is, and under a pipeline's
+    `schema:` key it describes what the pipeline produces. Warnings go to standard error.
+    """
+    target = None if output is None or output == STDIN else output
+    try:
+        if target is not None:
+            _check_output(target, file, force=force)
+        result = IMPORTERS[source_format](
+            read_text(file), source=source_label(file), name=name, version=version, lenient=lenient
+        )
+        text = render_schema_yaml(result.schema)
+        if target is not None:
+            try:
+                target.write_text(text, encoding="utf-8")
+            except OSError as exc:
+                raise RippleRackError(f"cannot write {target}: {exc}", ErrorCode.IO_ERROR) from exc
+    except RippleRackError as exc:
+        _fail(str(exc), code=exc.code, command="import")
+
+    for issue in result.issues:
+        typer.secho(str(issue), err=True, fg=typer.colors.YELLOW)
+    if target is None:
+        typer.echo(text, nl=False)
+    else:
+        schema = result.schema
+        console.print(
+            f"[green]✓[/] schema [bold]{escape(schema.name)}[/] {schema.version} "
+            f"({len(schema.fields)} fields) written to {escape(str(target))}"
+        )
 
 
 @app.command("simulate")

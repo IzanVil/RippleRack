@@ -1,0 +1,6 @@
+warning[degraded_to_json] #/properties/choice/oneOf: oneOf with 2 alternatives has no equivalent type; field 'choice' imported as json
+warning[degraded_to_json] #/properties/far/$ref: $ref 'https://example.com/other.json#/$defs/thing' points outside this document; only references to this document (#/...) are supported; field 'far' imported as json
+warning[degraded_to_json] #/properties/both/allOf: allOf with 2 members has no equivalent for a field; field 'both' imported as json
+warning[degraded_to_json] #/properties/mixed/type: type ['integer', 'string'] mixes several types in one field; field 'mixed' imported as json
+warning[degraded_to_json] #/properties/nothing/type: type 'null' on its own has no data type; field 'nothing' imported as json
+warning[undeclared_required] #/required: required property 'ghost' is not declared in properties; imported as a json field

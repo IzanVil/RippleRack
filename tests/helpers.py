@@ -24,6 +24,7 @@ from ripplerack.parser import LoadedDatacenter, load_schema, parse_datacenter
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 GOLDEN = Path(__file__).resolve().parent / "golden"
+SCHEMAS = Path(__file__).resolve().parent / "schemas"
 VERSION_PLACEHOLDER = "<version>"
 
 

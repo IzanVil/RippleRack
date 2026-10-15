@@ -1,0 +1,10 @@
+name: messy
+version: 1.0.0
+fields:
+  - {name: id, type: integer}
+  - {name: choice, type: json, nullable: true, description: A or B}
+  - {name: far, type: json, nullable: true}
+  - {name: both, type: json, nullable: true}
+  - {name: mixed, type: json, nullable: true}
+  - {name: nothing, type: json, nullable: true}
+  - {name: ghost, type: json}
