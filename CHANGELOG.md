@@ -17,9 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   standard input and `-o FILE` writes a file, which is never overwritten without `--force`.
   `--name` and `--version` name and version the schema.
 - Strict by default: a construct that decides which fields exist or what type they have, but
-  has no equivalent (a `oneOf` of several types, a reference to another file, `oneOf`
-  alternatives that add fields...), is an error that says where. With `--lenient` a property
-  that cannot be typed becomes a `json` field and a warning.
+  has no equivalent (a `oneOf` of several types, a reference to another file...), is an error
+  that says where. With `--lenient` a property that cannot be typed becomes a `json` field and a
+  warning.
 - Warnings on standard error as `warning[code] pointer: message`, with the stable codes
   `additional_properties_ignored` (for `additionalProperties: false` and
   `unevaluatedProperties: false`, in both modes),
@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `ripplerack import` refuses a root `oneOf`, `anyOf`, `then`, `else`, `dependentSchemas` or
+  `dependencies` whose alternatives declare properties that the schema itself does not, in
+  strict mode and with `--lenient`, instead of importing the schema without those fields. A
+  schema that is a family of variants cannot be imported as one schema yet; alternatives that
+  only constrain properties the schema declares are still ignored.
 - The tests include properties checked with Hypothesis, now a development dependency.
 
 ## [0.2.0] - 2026-10-15

@@ -83,6 +83,7 @@ def test_the_known_limitations_come_before_the_translation_table() -> None:
     assert "**Enum values are not modelled structurally.**" in limits
     assert "**Nested objects and arrays are mapped to `json`.**" in limits
     assert "**A JSON Schema without `required` produces all fields nullable.**" in limits
+    assert "**A schema that is a family of variants cannot be imported as one schema.**" in limits
 
 
 # ---------------------------------------------------------------- what the docs show

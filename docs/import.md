@@ -16,8 +16,8 @@ pipeline produces.
 ## Known limitations
 
 A RippleRack schema is a flat list of fields, each with one of seven types and a `nullable`
-flag. A JSON Schema can say much more, so some of it cannot be carried over. Three limits are
-worth knowing before you rely on an imported schema:
+flag. A JSON Schema can say much more, so some of it cannot be carried over. Four limits are
+worth knowing before you rely on the importer:
 
 1. **Enum values are not modelled structurally.** The allowed values are written into the
    field's `description` (`One of: pending, paid`). A change in the values of an enum is
@@ -31,6 +31,12 @@ worth knowing before you rely on an imported schema:
    [Schema fields](yaml-format.md#schema-fields)), so every property that `required` does not
    list becomes `nullable: true`. Many schemas leave `required` out, and then every imported
    field is optional.
+4. **A schema that is a family of variants cannot be imported as one schema.** A `oneOf`,
+   `anyOf`, `then`, `else`, `dependentSchemas` or `dependencies` on the root whose alternatives
+   declare properties that the schema itself does not is an error, in strict mode and with
+   `--lenient`. Importing it would drop those fields without a word, and an honest error is
+   better than a silent loss. Alternatives that only constrain properties the schema already
+   declares are ignored.
 
 What the importer cannot represent, and what changes which fields exist, what type they have or
 whether they are optional, is an error or a [warning](#warnings). Value constraints such as
@@ -183,15 +189,15 @@ In words:
 | any other `oneOf` or `anyOf` | error | `json` field + warning |
 | `type` with several types besides `null`, or `type: "null"` alone | error | `json` field + warning |
 | a name in `required` that `properties` does not declare | error | a required `json` field + warning |
-| `oneOf`, `anyOf`, `then`, `else` or `dependentSchemas` on the root that declare properties the schema does not | error | error |
+| `oneOf`, `anyOf`, `then`, `else`, `dependentSchemas` or `dependencies` on the root that declare properties the schema does not | error | error |
 | a root that is not an object schema, or declares no properties | error | error |
 | a property name that is not a valid field name | error | error |
 
 Alternatives on the root that only constrain properties the schema declares, such as
 `oneOf: [{"required": ["a"]}, {"required": ["b"]}]` or an `if`/`then` that requires a
 field, change nothing and are ignored like any constraint. Alternatives that declare *other*
-properties are refused, because those fields would be lost: a schema that is a family of
-variants cannot be imported as one schema yet.
+properties are refused, because those fields would be lost (see the
+[limitations](#known-limitations)).
 
 References are never fetched: the importer reads one file and touches nothing else.
 
@@ -199,16 +205,18 @@ References are never fetched: the importer reads one file and touches nothing el
 
 `$id` and `title` on the root, where they name the schema, and `description`, `type`, `format`,
 `enum`, `const`, `nullable`, `properties`, `required`, `$ref`, `allOf`, `oneOf`, `anyOf`,
-`additionalProperties` and `unevaluatedProperties`. When one has a value of the wrong shape, such
-as a `required` that is not a list of strings or an unknown `type`, the import fails with
-`invalid_json_schema`.
+`additionalProperties` and `unevaluatedProperties`. `$dynamicRef` and `$recursiveRef` are
+recognised only to be refused, and on the root `then`, `else`, `dependentSchemas` and
+`dependencies` are looked at only to refuse alternatives that would lose fields. When a keyword
+has a value of the wrong shape, such as a `required` that is not a list of strings or an unknown
+`type`, the import fails with `invalid_json_schema`.
 
 **Everything else is ignored without a warning**: value constraints (`minimum`, `maxLength`,
 `pattern`, `minItems`, `uniqueItems`...), annotations (`default`, `examples`, `deprecated`,
-`$comment`...), `not`, `if`/`then`/`else`, `patternProperties`, and keywords of a vendor or of a
-later draft. A RippleRack schema is made of types and nullability, and has nowhere to put
-them. The exception is `additionalProperties: false` and `unevaluatedProperties: false`, which
-get a warning.
+`$comment`...), `not`, `if`, `patternProperties`, and keywords of a vendor or of a later draft.
+A RippleRack schema is made of types and nullability, and has nowhere to put them. The
+exception is `additionalProperties: false` and `unevaluatedProperties: false`, which get a
+warning.
 
 ## Strict and lenient
 
