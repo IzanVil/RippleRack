@@ -1,0 +1,174 @@
+<svg class="rich-terminal" viewBox="0 0 1238 733.1999999999999" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .ripplerack-simulate-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .ripplerack-simulate-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .ripplerack-simulate-r1 { fill: #3fb950;font-weight: bold }
+.ripplerack-simulate-r2 { fill: #c9d1d9;font-weight: bold }
+.ripplerack-simulate-r3 { fill: #c9d1d9 }
+.ripplerack-simulate-r4 { fill: #56d364 }
+.ripplerack-simulate-r5 { fill: #c9d1d9;font-style: italic; }
+.ripplerack-simulate-r6 { fill: #3fb950 }
+.ripplerack-simulate-r7 { fill: #d29922 }
+.ripplerack-simulate-r8 { fill: #ffffff;font-weight: bold }
+.ripplerack-simulate-r9 { fill: #7d848b }
+    </style>
+
+    <defs>
+    <clipPath id="ripplerack-simulate-clip-terminal">
+      <rect x="0" y="0" width="1219.0" height="682.1999999999999" />
+    </clipPath>
+    <clipPath id="ripplerack-simulate-line-0">
+    <rect x="0" y="1.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-1">
+    <rect x="0" y="25.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-2">
+    <rect x="0" y="50.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-3">
+    <rect x="0" y="74.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-4">
+    <rect x="0" y="99.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-5">
+    <rect x="0" y="123.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-6">
+    <rect x="0" y="147.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-7">
+    <rect x="0" y="172.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-8">
+    <rect x="0" y="196.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-9">
+    <rect x="0" y="221.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-10">
+    <rect x="0" y="245.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-11">
+    <rect x="0" y="269.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-12">
+    <rect x="0" y="294.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-13">
+    <rect x="0" y="318.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-14">
+    <rect x="0" y="343.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-15">
+    <rect x="0" y="367.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-16">
+    <rect x="0" y="391.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-17">
+    <rect x="0" y="416.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-18">
+    <rect x="0" y="440.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-19">
+    <rect x="0" y="465.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-20">
+    <rect x="0" y="489.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-21">
+    <rect x="0" y="513.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-22">
+    <rect x="0" y="538.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-23">
+    <rect x="0" y="562.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-24">
+    <rect x="0" y="587.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-25">
+    <rect x="0" y="611.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-simulate-line-26">
+    <rect x="0" y="635.9" width="1220" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#0d1117" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="731.2" rx="8"/><text class="ripplerack-simulate-title" fill="#c9d1d9" text-anchor="middle" x="618" y="27">ripplerack</text>
+            <g transform="translate(26,22)">
+            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
+            <circle cx="22" cy="0" r="7" fill="#febc2e"/>
+            <circle cx="44" cy="0" r="7" fill="#28c840"/>
+            </g>
+        
+    <g transform="translate(9, 41)" clip-path="url(#ripplerack-simulate-clip-terminal)">
+    <rect fill="#f85149" x="658.8" y="343.1" width="73.2" height="24.65" shape-rendering="crispEdges"/>
+    <g class="ripplerack-simulate-matrix">
+    <text class="ripplerack-simulate-r1" x="0" y="20" textLength="24.4" clip-path="url(#ripplerack-simulate-line-0)">$&#160;</text><text class="ripplerack-simulate-r2" x="24.4" y="20" textLength="902.8" clip-path="url(#ripplerack-simulate-line-0)">ripplerack&#160;simulate&#160;examples/mini_datacenter.yaml&#160;--load&#160;1.5&#160;--fail&#160;srv-a2</text><text class="ripplerack-simulate-r3" x="1220" y="20" textLength="12.2" clip-path="url(#ripplerack-simulate-line-0)">
+</text><text class="ripplerack-simulate-r4" x="0" y="44.4" textLength="475.8" clip-path="url(#ripplerack-simulate-line-1)">──────────────────────────────────────&#160;</text><text class="ripplerack-simulate-r2" x="475.8" y="44.4" textLength="122" clip-path="url(#ripplerack-simulate-line-1)">Simulation</text><text class="ripplerack-simulate-r3" x="597.8" y="44.4" textLength="146.4" clip-path="url(#ripplerack-simulate-line-1)">&#160;(load&#160;x1.5)</text><text class="ripplerack-simulate-r4" x="744.2" y="44.4" textLength="475.8" clip-path="url(#ripplerack-simulate-line-1)">&#160;──────────────────────────────────────</text><text class="ripplerack-simulate-r3" x="1220" y="44.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-1)">
+</text><text class="ripplerack-simulate-r5" x="0" y="68.8" textLength="488" clip-path="url(#ripplerack-simulate-line-2)">Racks&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="1220" y="68.8" textLength="12.2" clip-path="url(#ripplerack-simulate-line-2)">
+</text><text class="ripplerack-simulate-r3" x="0" y="93.2" textLength="488" clip-path="url(#ripplerack-simulate-line-3)">┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┓</text><text class="ripplerack-simulate-r3" x="1220" y="93.2" textLength="12.2" clip-path="url(#ripplerack-simulate-line-3)">
+</text><text class="ripplerack-simulate-r3" x="0" y="117.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-4)">┃</text><text class="ripplerack-simulate-r2" x="24.4" y="117.6" textLength="73.2" clip-path="url(#ripplerack-simulate-line-4)">rack&#160;&#160;</text><text class="ripplerack-simulate-r3" x="109.8" y="117.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-4)">┃</text><text class="ripplerack-simulate-r2" x="134.2" y="117.6" textLength="122" clip-path="url(#ripplerack-simulate-line-4)">power&#160;(kW)</text><text class="ripplerack-simulate-r3" x="268.4" y="117.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-4)">┃</text><text class="ripplerack-simulate-r2" x="292.8" y="117.6" textLength="61" clip-path="url(#ripplerack-simulate-line-4)">usage</text><text class="ripplerack-simulate-r3" x="366" y="117.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-4)">┃</text><text class="ripplerack-simulate-r2" x="390.4" y="117.6" textLength="73.2" clip-path="url(#ripplerack-simulate-line-4)">status</text><text class="ripplerack-simulate-r3" x="475.8" y="117.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-4)">┃</text><text class="ripplerack-simulate-r3" x="1220" y="117.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-4)">
+</text><text class="ripplerack-simulate-r3" x="0" y="142" textLength="488" clip-path="url(#ripplerack-simulate-line-5)">┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━┩</text><text class="ripplerack-simulate-r3" x="1220" y="142" textLength="12.2" clip-path="url(#ripplerack-simulate-line-5)">
+</text><text class="ripplerack-simulate-r3" x="0" y="166.4" textLength="390.4" clip-path="url(#ripplerack-simulate-line-6)">│&#160;rack-a&#160;│&#160;&#160;1.8&#160;/&#160;2.8&#160;│&#160;&#160;&#160;64%&#160;│&#160;</text><text class="ripplerack-simulate-r6" x="390.4" y="166.4" textLength="24.4" clip-path="url(#ripplerack-simulate-line-6)">ok</text><text class="ripplerack-simulate-r3" x="414.8" y="166.4" textLength="73.2" clip-path="url(#ripplerack-simulate-line-6)">&#160;&#160;&#160;&#160;&#160;│</text><text class="ripplerack-simulate-r3" x="1220" y="166.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-6)">
+</text><text class="ripplerack-simulate-r3" x="0" y="190.8" textLength="390.4" clip-path="url(#ripplerack-simulate-line-7)">│&#160;rack-b&#160;│&#160;&#160;&#160;&#160;1.5&#160;/&#160;4&#160;│&#160;&#160;&#160;38%&#160;│&#160;</text><text class="ripplerack-simulate-r6" x="390.4" y="190.8" textLength="24.4" clip-path="url(#ripplerack-simulate-line-7)">ok</text><text class="ripplerack-simulate-r3" x="414.8" y="190.8" textLength="73.2" clip-path="url(#ripplerack-simulate-line-7)">&#160;&#160;&#160;&#160;&#160;│</text><text class="ripplerack-simulate-r3" x="1220" y="190.8" textLength="12.2" clip-path="url(#ripplerack-simulate-line-7)">
+</text><text class="ripplerack-simulate-r3" x="0" y="215.2" textLength="488" clip-path="url(#ripplerack-simulate-line-8)">└────────┴────────────┴───────┴────────┘</text><text class="ripplerack-simulate-r3" x="1220" y="215.2" textLength="12.2" clip-path="url(#ripplerack-simulate-line-8)">
+</text><text class="ripplerack-simulate-r5" x="0" y="239.6" textLength="768.6" clip-path="url(#ripplerack-simulate-line-9)">Servers&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="1220" y="239.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-9)">
+</text><text class="ripplerack-simulate-r3" x="0" y="264" textLength="768.6" clip-path="url(#ripplerack-simulate-line-10)">┏━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓</text><text class="ripplerack-simulate-r3" x="1220" y="264" textLength="12.2" clip-path="url(#ripplerack-simulate-line-10)">
+</text><text class="ripplerack-simulate-r3" x="0" y="288.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-11)">┃</text><text class="ripplerack-simulate-r2" x="24.4" y="288.4" textLength="73.2" clip-path="url(#ripplerack-simulate-line-11)">server</text><text class="ripplerack-simulate-r3" x="109.8" y="288.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-11)">┃</text><text class="ripplerack-simulate-r2" x="134.2" y="288.4" textLength="73.2" clip-path="url(#ripplerack-simulate-line-11)">rack&#160;&#160;</text><text class="ripplerack-simulate-r3" x="219.6" y="288.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-11)">┃</text><text class="ripplerack-simulate-r2" x="244" y="288.4" textLength="158.6" clip-path="url(#ripplerack-simulate-line-11)">&#160;&#160;cpu&#160;(cores)</text><text class="ripplerack-simulate-r3" x="414.8" y="288.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-11)">┃</text><text class="ripplerack-simulate-r2" x="439.2" y="288.4" textLength="183" clip-path="url(#ripplerack-simulate-line-11)">&#160;&#160;&#160;&#160;memory&#160;(GB)</text><text class="ripplerack-simulate-r3" x="634.4" y="288.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-11)">┃</text><text class="ripplerack-simulate-r2" x="658.8" y="288.4" textLength="85.4" clip-path="url(#ripplerack-simulate-line-11)">status&#160;</text><text class="ripplerack-simulate-r3" x="756.4" y="288.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-11)">┃</text><text class="ripplerack-simulate-r3" x="1220" y="288.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-11)">
+</text><text class="ripplerack-simulate-r3" x="0" y="312.8" textLength="768.6" clip-path="url(#ripplerack-simulate-line-12)">┡━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩</text><text class="ripplerack-simulate-r3" x="1220" y="312.8" textLength="12.2" clip-path="url(#ripplerack-simulate-line-12)">
+</text><text class="ripplerack-simulate-r3" x="0" y="337.2" textLength="658.8" clip-path="url(#ripplerack-simulate-line-13)">│&#160;srv-a1&#160;│&#160;rack-a&#160;│&#160;30&#160;/&#160;32&#160;(94%)&#160;│&#160;120&#160;/&#160;128&#160;(94%)&#160;│&#160;</text><text class="ripplerack-simulate-r7" x="658.8" y="337.2" textLength="85.4" clip-path="url(#ripplerack-simulate-line-13)">warning</text><text class="ripplerack-simulate-r3" x="744.2" y="337.2" textLength="24.4" clip-path="url(#ripplerack-simulate-line-13)">&#160;│</text><text class="ripplerack-simulate-r3" x="1220" y="337.2" textLength="12.2" clip-path="url(#ripplerack-simulate-line-13)">
+</text><text class="ripplerack-simulate-r3" x="0" y="361.6" textLength="658.8" clip-path="url(#ripplerack-simulate-line-14)">│&#160;srv-a2&#160;│&#160;rack-a&#160;│&#160;&#160;&#160;0&#160;/&#160;16&#160;(0%)&#160;│&#160;&#160;&#160;&#160;&#160;0&#160;/&#160;64&#160;(0%)&#160;│&#160;</text><text class="ripplerack-simulate-r8" x="658.8" y="361.6" textLength="73.2" clip-path="url(#ripplerack-simulate-line-14)">failed</text><text class="ripplerack-simulate-r3" x="732" y="361.6" textLength="36.6" clip-path="url(#ripplerack-simulate-line-14)">&#160;&#160;│</text><text class="ripplerack-simulate-r3" x="1220" y="361.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-14)">
+</text><text class="ripplerack-simulate-r3" x="0" y="386" textLength="658.8" clip-path="url(#ripplerack-simulate-line-15)">│&#160;srv-b1&#160;│&#160;rack-b&#160;│&#160;&#160;9&#160;/&#160;24&#160;(38%)&#160;│&#160;&#160;&#160;24&#160;/&#160;96&#160;(25%)&#160;│&#160;</text><text class="ripplerack-simulate-r6" x="658.8" y="386" textLength="24.4" clip-path="url(#ripplerack-simulate-line-15)">ok</text><text class="ripplerack-simulate-r3" x="683.2" y="386" textLength="85.4" clip-path="url(#ripplerack-simulate-line-15)">&#160;&#160;&#160;&#160;&#160;&#160;│</text><text class="ripplerack-simulate-r3" x="1220" y="386" textLength="12.2" clip-path="url(#ripplerack-simulate-line-15)">
+</text><text class="ripplerack-simulate-r3" x="0" y="410.4" textLength="768.6" clip-path="url(#ripplerack-simulate-line-16)">└────────┴────────┴───────────────┴─────────────────┴─────────┘</text><text class="ripplerack-simulate-r3" x="1220" y="410.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-16)">
+</text><text class="ripplerack-simulate-r2" x="0" y="434.8" textLength="85.4" clip-path="url(#ripplerack-simulate-line-17)">Failed:</text><text class="ripplerack-simulate-r3" x="85.4" y="434.8" textLength="85.4" clip-path="url(#ripplerack-simulate-line-17)">&#160;srv-a2</text><text class="ripplerack-simulate-r3" x="1220" y="434.8" textLength="12.2" clip-path="url(#ripplerack-simulate-line-17)">
+</text><text class="ripplerack-simulate-r5" x="0" y="459.2" textLength="915" clip-path="url(#ripplerack-simulate-line-18)">Unavailable&#160;as&#160;a&#160;consequence&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="1220" y="459.2" textLength="12.2" clip-path="url(#ripplerack-simulate-line-18)">
+</text><text class="ripplerack-simulate-r3" x="0" y="483.6" textLength="915" clip-path="url(#ripplerack-simulate-line-19)">┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓</text><text class="ripplerack-simulate-r3" x="1220" y="483.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-19)">
+</text><text class="ripplerack-simulate-r3" x="0" y="508" textLength="12.2" clip-path="url(#ripplerack-simulate-line-20)">┃</text><text class="ripplerack-simulate-r2" x="24.4" y="508" textLength="183" clip-path="url(#ripplerack-simulate-line-20)">component&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="219.6" y="508" textLength="12.2" clip-path="url(#ripplerack-simulate-line-20)">┃</text><text class="ripplerack-simulate-r2" x="244" y="508" textLength="97.6" clip-path="url(#ripplerack-simulate-line-20)">kind&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="353.8" y="508" textLength="12.2" clip-path="url(#ripplerack-simulate-line-20)">┃</text><text class="ripplerack-simulate-r2" x="378.2" y="508" textLength="512.4" clip-path="url(#ripplerack-simulate-line-20)">via&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="902.8" y="508" textLength="12.2" clip-path="url(#ripplerack-simulate-line-20)">┃</text><text class="ripplerack-simulate-r3" x="1220" y="508" textLength="12.2" clip-path="url(#ripplerack-simulate-line-20)">
+</text><text class="ripplerack-simulate-r3" x="0" y="532.4" textLength="915" clip-path="url(#ripplerack-simulate-line-21)">┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩</text><text class="ripplerack-simulate-r3" x="1220" y="532.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-21)">
+</text><text class="ripplerack-simulate-r3" x="0" y="556.8" textLength="366" clip-path="url(#ripplerack-simulate-line-22)">│&#160;spark&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;│&#160;service&#160;&#160;│</text><text class="ripplerack-simulate-r9" x="378.2" y="556.8" textLength="512.4" clip-path="url(#ripplerack-simulate-line-22)">srv-a2&#160;→&#160;spark&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="902.8" y="556.8" textLength="12.2" clip-path="url(#ripplerack-simulate-line-22)">│</text><text class="ripplerack-simulate-r3" x="1220" y="556.8" textLength="12.2" clip-path="url(#ripplerack-simulate-line-22)">
+</text><text class="ripplerack-simulate-r3" x="0" y="581.2" textLength="366" clip-path="url(#ripplerack-simulate-line-23)">│&#160;orders-enriched&#160;│&#160;pipeline&#160;│</text><text class="ripplerack-simulate-r9" x="378.2" y="581.2" textLength="512.4" clip-path="url(#ripplerack-simulate-line-23)">srv-a2&#160;→&#160;spark&#160;→&#160;orders-enriched&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="902.8" y="581.2" textLength="12.2" clip-path="url(#ripplerack-simulate-line-23)">│</text><text class="ripplerack-simulate-r3" x="1220" y="581.2" textLength="12.2" clip-path="url(#ripplerack-simulate-line-23)">
+</text><text class="ripplerack-simulate-r3" x="0" y="605.6" textLength="366" clip-path="url(#ripplerack-simulate-line-24)">│&#160;revenue-daily&#160;&#160;&#160;│&#160;pipeline&#160;│</text><text class="ripplerack-simulate-r9" x="378.2" y="605.6" textLength="512.4" clip-path="url(#ripplerack-simulate-line-24)">srv-a2&#160;→&#160;spark&#160;→&#160;revenue-daily&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="ripplerack-simulate-r3" x="902.8" y="605.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-24)">│</text><text class="ripplerack-simulate-r3" x="1220" y="605.6" textLength="12.2" clip-path="url(#ripplerack-simulate-line-24)">
+</text><text class="ripplerack-simulate-r3" x="0" y="630" textLength="366" clip-path="url(#ripplerack-simulate-line-25)">│&#160;dashboard&#160;&#160;&#160;&#160;&#160;&#160;&#160;│&#160;service&#160;&#160;│</text><text class="ripplerack-simulate-r9" x="378.2" y="630" textLength="512.4" clip-path="url(#ripplerack-simulate-line-25)">srv-a2&#160;→&#160;spark&#160;→&#160;revenue-daily&#160;→&#160;dashboard</text><text class="ripplerack-simulate-r3" x="902.8" y="630" textLength="12.2" clip-path="url(#ripplerack-simulate-line-25)">│</text><text class="ripplerack-simulate-r3" x="1220" y="630" textLength="12.2" clip-path="url(#ripplerack-simulate-line-25)">
+</text><text class="ripplerack-simulate-r3" x="0" y="654.4" textLength="915" clip-path="url(#ripplerack-simulate-line-26)">└─────────────────┴──────────┴────────────────────────────────────────────┘</text><text class="ripplerack-simulate-r3" x="1220" y="654.4" textLength="12.2" clip-path="url(#ripplerack-simulate-line-26)">
+</text><text class="ripplerack-simulate-r3" x="1220" y="678.8" textLength="12.2" clip-path="url(#ripplerack-simulate-line-27)">
+</text>
+    </g>
+    </g>
+</svg>

@@ -1,0 +1,173 @@
+<svg class="rich-terminal" viewBox="0 0 1238 733.1999999999999" xmlns="http://www.w3.org/2000/svg">
+    <!-- Generated with Rich https://www.textualize.io -->
+    <style>
+
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Regular"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Regular.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Regular.woff") format("woff");
+        font-style: normal;
+        font-weight: 400;
+    }
+    @font-face {
+        font-family: "Fira Code";
+        src: local("FiraCode-Bold"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff2/FiraCode-Bold.woff2") format("woff2"),
+                url("https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/woff/FiraCode-Bold.woff") format("woff");
+        font-style: bold;
+        font-weight: 700;
+    }
+
+    .ripplerack-graph-matrix {
+        font-family: Fira Code, monospace;
+        font-size: 20px;
+        line-height: 24.4px;
+        font-variant-east-asian: full-width;
+    }
+
+    .ripplerack-graph-title {
+        font-size: 18px;
+        font-weight: bold;
+        font-family: arial;
+    }
+
+    .ripplerack-graph-r1 { fill: #3fb950;font-weight: bold }
+.ripplerack-graph-r2 { fill: #c9d1d9;font-weight: bold }
+.ripplerack-graph-r3 { fill: #c9d1d9 }
+.ripplerack-graph-r4 { fill: #bc8cff }
+.ripplerack-graph-r5 { fill: #7d848b }
+.ripplerack-graph-r6 { fill: #58a6ff }
+.ripplerack-graph-r7 { fill: #3fb950 }
+.ripplerack-graph-r8 { fill: #39c5cf }
+    </style>
+
+    <defs>
+    <clipPath id="ripplerack-graph-clip-terminal">
+      <rect x="0" y="0" width="1219.0" height="682.1999999999999" />
+    </clipPath>
+    <clipPath id="ripplerack-graph-line-0">
+    <rect x="0" y="1.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-1">
+    <rect x="0" y="25.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-2">
+    <rect x="0" y="50.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-3">
+    <rect x="0" y="74.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-4">
+    <rect x="0" y="99.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-5">
+    <rect x="0" y="123.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-6">
+    <rect x="0" y="147.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-7">
+    <rect x="0" y="172.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-8">
+    <rect x="0" y="196.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-9">
+    <rect x="0" y="221.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-10">
+    <rect x="0" y="245.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-11">
+    <rect x="0" y="269.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-12">
+    <rect x="0" y="294.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-13">
+    <rect x="0" y="318.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-14">
+    <rect x="0" y="343.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-15">
+    <rect x="0" y="367.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-16">
+    <rect x="0" y="391.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-17">
+    <rect x="0" y="416.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-18">
+    <rect x="0" y="440.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-19">
+    <rect x="0" y="465.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-20">
+    <rect x="0" y="489.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-21">
+    <rect x="0" y="513.9" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-22">
+    <rect x="0" y="538.3" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-23">
+    <rect x="0" y="562.7" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-24">
+    <rect x="0" y="587.1" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-25">
+    <rect x="0" y="611.5" width="1220" height="24.65"/>
+            </clipPath>
+<clipPath id="ripplerack-graph-line-26">
+    <rect x="0" y="635.9" width="1220" height="24.65"/>
+            </clipPath>
+    </defs>
+
+    <rect fill="#0d1117" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1236" height="731.2" rx="8"/><text class="ripplerack-graph-title" fill="#c9d1d9" text-anchor="middle" x="618" y="27">ripplerack</text>
+            <g transform="translate(26,22)">
+            <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
+            <circle cx="22" cy="0" r="7" fill="#febc2e"/>
+            <circle cx="44" cy="0" r="7" fill="#28c840"/>
+            </g>
+        
+    <g transform="translate(9, 41)" clip-path="url(#ripplerack-graph-clip-terminal)">
+    
+    <g class="ripplerack-graph-matrix">
+    <text class="ripplerack-graph-r1" x="0" y="20" textLength="24.4" clip-path="url(#ripplerack-graph-line-0)">$&#160;</text><text class="ripplerack-graph-r2" x="24.4" y="20" textLength="561.2" clip-path="url(#ripplerack-graph-line-0)">ripplerack&#160;graph&#160;examples/mini_datacenter.yaml</text><text class="ripplerack-graph-r3" x="1220" y="20" textLength="12.2" clip-path="url(#ripplerack-graph-line-0)">
+</text><text class="ripplerack-graph-r2" x="0" y="44.4" textLength="183" clip-path="url(#ripplerack-graph-line-1)">mini-datacenter</text><text class="ripplerack-graph-r3" x="1220" y="44.4" textLength="12.2" clip-path="url(#ripplerack-graph-line-1)">
+</text><text class="ripplerack-graph-r3" x="0" y="68.8" textLength="48.8" clip-path="url(#ripplerack-graph-line-2)">├──&#160;</text><text class="ripplerack-graph-r2" x="48.8" y="68.8" textLength="170.8" clip-path="url(#ripplerack-graph-line-2)">infrastructure</text><text class="ripplerack-graph-r3" x="1220" y="68.8" textLength="12.2" clip-path="url(#ripplerack-graph-line-2)">
+</text><text class="ripplerack-graph-r3" x="0" y="93.2" textLength="97.6" clip-path="url(#ripplerack-graph-line-3)">│&#160;&#160;&#160;├──&#160;</text><text class="ripplerack-graph-r4" x="97.6" y="93.2" textLength="48.8" clip-path="url(#ripplerack-graph-line-3)">rack</text><text class="ripplerack-graph-r3" x="146.4" y="93.2" textLength="97.6" clip-path="url(#ripplerack-graph-line-3)">&#160;rack-a&#160;</text><text class="ripplerack-graph-r5" x="244" y="93.2" textLength="97.6" clip-path="url(#ripplerack-graph-line-3)">(2.8&#160;kW)</text><text class="ripplerack-graph-r3" x="1220" y="93.2" textLength="12.2" clip-path="url(#ripplerack-graph-line-3)">
+</text><text class="ripplerack-graph-r3" x="0" y="117.6" textLength="146.4" clip-path="url(#ripplerack-graph-line-4)">│&#160;&#160;&#160;│&#160;&#160;&#160;├──&#160;</text><text class="ripplerack-graph-r6" x="146.4" y="117.6" textLength="73.2" clip-path="url(#ripplerack-graph-line-4)">server</text><text class="ripplerack-graph-r3" x="219.6" y="117.6" textLength="97.6" clip-path="url(#ripplerack-graph-line-4)">&#160;srv-a1&#160;</text><text class="ripplerack-graph-r5" x="317.2" y="117.6" textLength="219.6" clip-path="url(#ripplerack-graph-line-4)">(32&#160;cores,&#160;128&#160;GB)</text><text class="ripplerack-graph-r3" x="1220" y="117.6" textLength="12.2" clip-path="url(#ripplerack-graph-line-4)">
+</text><text class="ripplerack-graph-r3" x="0" y="142" textLength="195.2" clip-path="url(#ripplerack-graph-line-5)">│&#160;&#160;&#160;│&#160;&#160;&#160;│&#160;&#160;&#160;├──&#160;</text><text class="ripplerack-graph-r7" x="195.2" y="142" textLength="85.4" clip-path="url(#ripplerack-graph-line-5)">service</text><text class="ripplerack-graph-r3" x="280.6" y="142" textLength="109.8" clip-path="url(#ripplerack-graph-line-5)">&#160;postgres</text><text class="ripplerack-graph-r3" x="1220" y="142" textLength="12.2" clip-path="url(#ripplerack-graph-line-5)">
+</text><text class="ripplerack-graph-r3" x="0" y="166.4" textLength="195.2" clip-path="url(#ripplerack-graph-line-6)">│&#160;&#160;&#160;│&#160;&#160;&#160;│&#160;&#160;&#160;└──&#160;</text><text class="ripplerack-graph-r7" x="195.2" y="166.4" textLength="85.4" clip-path="url(#ripplerack-graph-line-6)">service</text><text class="ripplerack-graph-r3" x="280.6" y="166.4" textLength="73.2" clip-path="url(#ripplerack-graph-line-6)">&#160;kafka</text><text class="ripplerack-graph-r3" x="1220" y="166.4" textLength="12.2" clip-path="url(#ripplerack-graph-line-6)">
+</text><text class="ripplerack-graph-r3" x="0" y="190.8" textLength="146.4" clip-path="url(#ripplerack-graph-line-7)">│&#160;&#160;&#160;│&#160;&#160;&#160;└──&#160;</text><text class="ripplerack-graph-r6" x="146.4" y="190.8" textLength="73.2" clip-path="url(#ripplerack-graph-line-7)">server</text><text class="ripplerack-graph-r3" x="219.6" y="190.8" textLength="97.6" clip-path="url(#ripplerack-graph-line-7)">&#160;srv-a2&#160;</text><text class="ripplerack-graph-r5" x="317.2" y="190.8" textLength="207.4" clip-path="url(#ripplerack-graph-line-7)">(16&#160;cores,&#160;64&#160;GB)</text><text class="ripplerack-graph-r3" x="1220" y="190.8" textLength="12.2" clip-path="url(#ripplerack-graph-line-7)">
+</text><text class="ripplerack-graph-r3" x="0" y="215.2" textLength="195.2" clip-path="url(#ripplerack-graph-line-8)">│&#160;&#160;&#160;│&#160;&#160;&#160;&#160;&#160;&#160;&#160;└──&#160;</text><text class="ripplerack-graph-r7" x="195.2" y="215.2" textLength="85.4" clip-path="url(#ripplerack-graph-line-8)">service</text><text class="ripplerack-graph-r3" x="280.6" y="215.2" textLength="73.2" clip-path="url(#ripplerack-graph-line-8)">&#160;spark</text><text class="ripplerack-graph-r3" x="1220" y="215.2" textLength="12.2" clip-path="url(#ripplerack-graph-line-8)">
+</text><text class="ripplerack-graph-r3" x="0" y="239.6" textLength="97.6" clip-path="url(#ripplerack-graph-line-9)">│&#160;&#160;&#160;└──&#160;</text><text class="ripplerack-graph-r4" x="97.6" y="239.6" textLength="48.8" clip-path="url(#ripplerack-graph-line-9)">rack</text><text class="ripplerack-graph-r3" x="146.4" y="239.6" textLength="97.6" clip-path="url(#ripplerack-graph-line-9)">&#160;rack-b&#160;</text><text class="ripplerack-graph-r5" x="244" y="239.6" textLength="73.2" clip-path="url(#ripplerack-graph-line-9)">(4&#160;kW)</text><text class="ripplerack-graph-r3" x="1220" y="239.6" textLength="12.2" clip-path="url(#ripplerack-graph-line-9)">
+</text><text class="ripplerack-graph-r3" x="0" y="264" textLength="146.4" clip-path="url(#ripplerack-graph-line-10)">│&#160;&#160;&#160;&#160;&#160;&#160;&#160;└──&#160;</text><text class="ripplerack-graph-r6" x="146.4" y="264" textLength="73.2" clip-path="url(#ripplerack-graph-line-10)">server</text><text class="ripplerack-graph-r3" x="219.6" y="264" textLength="97.6" clip-path="url(#ripplerack-graph-line-10)">&#160;srv-b1&#160;</text><text class="ripplerack-graph-r5" x="317.2" y="264" textLength="207.4" clip-path="url(#ripplerack-graph-line-10)">(24&#160;cores,&#160;96&#160;GB)</text><text class="ripplerack-graph-r3" x="1220" y="264" textLength="12.2" clip-path="url(#ripplerack-graph-line-10)">
+</text><text class="ripplerack-graph-r3" x="0" y="288.4" textLength="195.2" clip-path="url(#ripplerack-graph-line-11)">│&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;├──&#160;</text><text class="ripplerack-graph-r7" x="195.2" y="288.4" textLength="85.4" clip-path="url(#ripplerack-graph-line-11)">service</text><text class="ripplerack-graph-r3" x="280.6" y="288.4" textLength="48.8" clip-path="url(#ripplerack-graph-line-11)">&#160;api</text><text class="ripplerack-graph-r3" x="1220" y="288.4" textLength="12.2" clip-path="url(#ripplerack-graph-line-11)">
+</text><text class="ripplerack-graph-r3" x="0" y="312.8" textLength="195.2" clip-path="url(#ripplerack-graph-line-12)">│&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;└──&#160;</text><text class="ripplerack-graph-r7" x="195.2" y="312.8" textLength="85.4" clip-path="url(#ripplerack-graph-line-12)">service</text><text class="ripplerack-graph-r3" x="280.6" y="312.8" textLength="122" clip-path="url(#ripplerack-graph-line-12)">&#160;dashboard</text><text class="ripplerack-graph-r3" x="1220" y="312.8" textLength="12.2" clip-path="url(#ripplerack-graph-line-12)">
+</text><text class="ripplerack-graph-r3" x="0" y="337.2" textLength="48.8" clip-path="url(#ripplerack-graph-line-13)">├──&#160;</text><text class="ripplerack-graph-r2" x="48.8" y="337.2" textLength="109.8" clip-path="url(#ripplerack-graph-line-13)">pipelines</text><text class="ripplerack-graph-r3" x="1220" y="337.2" textLength="12.2" clip-path="url(#ripplerack-graph-line-13)">
+</text><text class="ripplerack-graph-r3" x="0" y="361.6" textLength="97.6" clip-path="url(#ripplerack-graph-line-14)">│&#160;&#160;&#160;├──&#160;</text><text class="ripplerack-graph-r8" x="97.6" y="361.6" textLength="97.6" clip-path="url(#ripplerack-graph-line-14)">pipeline</text><text class="ripplerack-graph-r3" x="195.2" y="361.6" textLength="183" clip-path="url(#ripplerack-graph-line-14)">&#160;orders-ingest&#160;</text><text class="ripplerack-graph-r5" x="378.2" y="361.6" textLength="292.8" clip-path="url(#ripplerack-graph-line-14)">(orders@1.2.0,&#160;on&#160;kafka)</text><text class="ripplerack-graph-r3" x="1220" y="361.6" textLength="12.2" clip-path="url(#ripplerack-graph-line-14)">
+</text><text class="ripplerack-graph-r3" x="0" y="386" textLength="97.6" clip-path="url(#ripplerack-graph-line-15)">│&#160;&#160;&#160;├──&#160;</text><text class="ripplerack-graph-r8" x="97.6" y="386" textLength="97.6" clip-path="url(#ripplerack-graph-line-15)">pipeline</text><text class="ripplerack-graph-r3" x="195.2" y="386" textLength="207.4" clip-path="url(#ripplerack-graph-line-15)">&#160;orders-enriched&#160;</text><text class="ripplerack-graph-r5" x="402.6" y="386" textLength="402.6" clip-path="url(#ripplerack-graph-line-15)">(orders_enriched@1.0.0,&#160;on&#160;spark)</text><text class="ripplerack-graph-r3" x="1220" y="386" textLength="12.2" clip-path="url(#ripplerack-graph-line-15)">
+</text><text class="ripplerack-graph-r3" x="0" y="410.4" textLength="341.6" clip-path="url(#ripplerack-graph-line-16)">│&#160;&#160;&#160;│&#160;&#160;&#160;└──&#160;←&#160;orders-ingest&#160;</text><text class="ripplerack-graph-r5" x="341.6" y="410.4" textLength="622.2" clip-path="url(#ripplerack-graph-line-16)">order_id,&#160;customer_id,&#160;amount,&#160;currency,&#160;created_at</text><text class="ripplerack-graph-r3" x="1220" y="410.4" textLength="12.2" clip-path="url(#ripplerack-graph-line-16)">
+</text><text class="ripplerack-graph-r3" x="0" y="434.8" textLength="97.6" clip-path="url(#ripplerack-graph-line-17)">│&#160;&#160;&#160;├──&#160;</text><text class="ripplerack-graph-r8" x="97.6" y="434.8" textLength="97.6" clip-path="url(#ripplerack-graph-line-17)">pipeline</text><text class="ripplerack-graph-r3" x="195.2" y="434.8" textLength="183" clip-path="url(#ripplerack-graph-line-17)">&#160;revenue-daily&#160;</text><text class="ripplerack-graph-r5" x="378.2" y="434.8" textLength="378.2" clip-path="url(#ripplerack-graph-line-17)">(revenue_daily@2.1.0,&#160;on&#160;spark)</text><text class="ripplerack-graph-r3" x="1220" y="434.8" textLength="12.2" clip-path="url(#ripplerack-graph-line-17)">
+</text><text class="ripplerack-graph-r3" x="0" y="459.2" textLength="366" clip-path="url(#ripplerack-graph-line-18)">│&#160;&#160;&#160;│&#160;&#160;&#160;└──&#160;←&#160;orders-enriched&#160;</text><text class="ripplerack-graph-r5" x="366" y="459.2" textLength="512.4" clip-path="url(#ripplerack-graph-line-18)">customer_segment,&#160;amount_eur,&#160;created_date</text><text class="ripplerack-graph-r3" x="1220" y="459.2" textLength="12.2" clip-path="url(#ripplerack-graph-line-18)">
+</text><text class="ripplerack-graph-r3" x="0" y="483.6" textLength="97.6" clip-path="url(#ripplerack-graph-line-19)">│&#160;&#160;&#160;└──&#160;</text><text class="ripplerack-graph-r8" x="97.6" y="483.6" textLength="97.6" clip-path="url(#ripplerack-graph-line-19)">pipeline</text><text class="ripplerack-graph-r3" x="195.2" y="483.6" textLength="170.8" clip-path="url(#ripplerack-graph-line-19)">&#160;customer-360&#160;</text><text class="ripplerack-graph-r5" x="366" y="483.6" textLength="451.4" clip-path="url(#ripplerack-graph-line-19)">(customer_profile@0.4.0,&#160;on&#160;postgres)</text><text class="ripplerack-graph-r3" x="1220" y="483.6" textLength="12.2" clip-path="url(#ripplerack-graph-line-19)">
+</text><text class="ripplerack-graph-r3" x="0" y="508" textLength="329.4" clip-path="url(#ripplerack-graph-line-20)">│&#160;&#160;&#160;&#160;&#160;&#160;&#160;└──&#160;←&#160;orders-ingest</text><text class="ripplerack-graph-r3" x="1220" y="508" textLength="12.2" clip-path="url(#ripplerack-graph-line-20)">
+</text><text class="ripplerack-graph-r3" x="0" y="532.4" textLength="48.8" clip-path="url(#ripplerack-graph-line-21)">├──&#160;</text><text class="ripplerack-graph-r2" x="48.8" y="532.4" textLength="146.4" clip-path="url(#ripplerack-graph-line-21)">dependencies</text><text class="ripplerack-graph-r3" x="1220" y="532.4" textLength="12.2" clip-path="url(#ripplerack-graph-line-21)">
+</text><text class="ripplerack-graph-r3" x="0" y="556.8" textLength="280.6" clip-path="url(#ripplerack-graph-line-22)">│&#160;&#160;&#160;├──&#160;api&#160;→&#160;postgres&#160;</text><text class="ripplerack-graph-r5" x="280.6" y="556.8" textLength="109.8" clip-path="url(#ripplerack-graph-line-22)">(runtime)</text><text class="ripplerack-graph-r3" x="1220" y="556.8" textLength="12.2" clip-path="url(#ripplerack-graph-line-22)">
+</text><text class="ripplerack-graph-r3" x="0" y="581.2" textLength="329.4" clip-path="url(#ripplerack-graph-line-23)">│&#160;&#160;&#160;├──&#160;api&#160;→&#160;customer-360&#160;</text><text class="ripplerack-graph-r5" x="329.4" y="581.2" textLength="73.2" clip-path="url(#ripplerack-graph-line-23)">(data)</text><text class="ripplerack-graph-r3" x="1220" y="581.2" textLength="12.2" clip-path="url(#ripplerack-graph-line-23)">
+</text><text class="ripplerack-graph-r3" x="0" y="605.6" textLength="414.8" clip-path="url(#ripplerack-graph-line-24)">│&#160;&#160;&#160;├──&#160;dashboard&#160;→&#160;revenue-daily&#160;</text><text class="ripplerack-graph-r5" x="414.8" y="605.6" textLength="73.2" clip-path="url(#ripplerack-graph-line-24)">(data)</text><text class="ripplerack-graph-r3" x="1220" y="605.6" textLength="12.2" clip-path="url(#ripplerack-graph-line-24)">
+</text><text class="ripplerack-graph-r3" x="0" y="630" textLength="268.4" clip-path="url(#ripplerack-graph-line-25)">│&#160;&#160;&#160;└──&#160;spark&#160;→&#160;kafka&#160;</text><text class="ripplerack-graph-r5" x="268.4" y="630" textLength="109.8" clip-path="url(#ripplerack-graph-line-25)">(network)</text><text class="ripplerack-graph-r3" x="1220" y="630" textLength="12.2" clip-path="url(#ripplerack-graph-line-25)">
+</text><text class="ripplerack-graph-r3" x="0" y="654.4" textLength="48.8" clip-path="url(#ripplerack-graph-line-26)">└──&#160;</text><text class="ripplerack-graph-r5" x="48.8" y="654.4" textLength="646.6" clip-path="url(#ripplerack-graph-line-26)">2&#160;racks,&#160;3&#160;servers,&#160;5&#160;services,&#160;4&#160;pipelines,&#160;19&#160;edges</text><text class="ripplerack-graph-r3" x="1220" y="654.4" textLength="12.2" clip-path="url(#ripplerack-graph-line-26)">
+</text><text class="ripplerack-graph-r3" x="1220" y="678.8" textLength="12.2" clip-path="url(#ripplerack-graph-line-27)">
+</text>
+    </g>
+    </g>
+</svg>

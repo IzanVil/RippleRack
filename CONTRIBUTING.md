@@ -33,6 +33,10 @@ pinned by the files in `tests/golden/`. If you change it on purpose, regenerate 
 with `RIPPLERACK_UPDATE_GOLDEN=1 uv run pytest`, review the diff carefully and update
 the documentation.
 
+The screenshots in the README are drawn from the real output of the commands by
+`docs/images/generate.py`, and a test fails when one is out of date. If you change what a
+command prints, run `uv run python docs/images/generate.py` and commit the images.
+
 ## Commit convention
 
 We use [Conventional Commits](https://www.conventionalcommits.org/):
