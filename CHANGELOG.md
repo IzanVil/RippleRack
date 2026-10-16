@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/import.md`, with the translation rules and the known limitations of an imported
   schema, and `examples/schemas/orders_v2.schema.json`, a JSON Schema equivalent to
   `examples/changes/orders_v2.yaml`.
+- Screenshots of `validate`, `graph`, `impact` and `simulate` in the README, drawn from the real
+  output of the commands by `docs/images/generate.py`. A test fails when one is out of date.
 
 ### Changed
 

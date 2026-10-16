@@ -43,6 +43,10 @@ uv run ripplerack impact examples/mini_datacenter.yaml -p orders-ingest \
 uv run ripplerack diff examples/mini_datacenter.yaml examples/mini_datacenter_v2.yaml --fail-on-breaking
 ```
 
+Without `--format json`, `impact` prints tables for people:
+
+![Terminal: ripplerack impact on the example datacenter. Renaming amount to amount_cents in orders-ingest is a major change that breaks customer-360 and orders-enriched, puts api, revenue-daily and dashboard at risk, and the severity is CRITICAL.](docs/images/impact.svg)
+
 ## Why?
 
 Infrastructure tools model machines. Data catalogs model tables. Schema
@@ -93,6 +97,8 @@ stack.
 uv run ripplerack validate examples/mini_datacenter.yaml
 ```
 
+![Terminal: ripplerack validate on the example file says that mini-datacenter is valid, with 2 racks, 3 servers, 5 services, 4 pipelines, 4 explicit dependencies and a graph of 14 nodes and 19 edges.](docs/images/validate.svg)
+
 This checks types, unique ids, references between components, the fields that
 consumers read and dependency cycles. Typos in keys are reported instead of
 being silently ignored.
@@ -105,6 +111,10 @@ uv run ripplerack graph examples/mini_datacenter.yaml -F dot -o dc.dot   # Graph
 uv run ripplerack graph examples/mini_datacenter.yaml -F json    # machine readable
 uv run ripplerack graph examples/mini_datacenter.yaml -F mermaid # Mermaid flowchart
 ```
+
+The default is a tree in the terminal:
+
+![Terminal: ripplerack graph prints the example datacenter as a tree of racks, servers and services, then its pipelines with the fields each one reads, then its explicit dependencies.](docs/images/graph.svg)
 
 `-F mermaid` prints a [Mermaid](https://mermaid.js.org) flowchart: racks and servers are
 nested boxes, services and pipelines have their own shapes, and arrows are labelled with
@@ -346,6 +356,10 @@ be represented is an error, or with `--lenient` a `json` field and a warning, an
 uv run ripplerack simulate examples/mini_datacenter.yaml --load 1.5
 uv run ripplerack simulate examples/mini_datacenter.yaml --load 1.5 --fail srv-a2
 ```
+
+The second command, with `srv-a2` taken down:
+
+![Terminal: ripplerack simulate with the load at 1.5 and srv-a2 failed. srv-a1 is at warning with 94% of its CPU and memory, srv-a2 is failed, and spark, orders-enriched, revenue-daily and dashboard are unavailable as a consequence.](docs/images/simulate.svg)
 
 `--load` scales every service's CPU/memory demand and every server's power draw.
 `--fail` (repeatable) takes a component down along with everything that depends
