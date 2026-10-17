@@ -19,9 +19,9 @@ from enum import StrEnum
 
 from ripplerack.graph import NodeKind
 from ripplerack.impact import ImpactReport, Severity, analyze_diff
-from ripplerack.models import Datacenter, DependencyKind, Pipeline
+from ripplerack.models import Datacenter, DependencyKind, Pipeline, Rack, Server, Service
 from ripplerack.parser import LoadedDatacenter
-from ripplerack.semver import ChangeLevel, diff_schemas
+from ripplerack.semver import ChangeLevel, SchemaDiff, diff_schemas
 
 _KIND_ORDER = {NodeKind.RACK: 0, NodeKind.SERVER: 1, NodeKind.SERVICE: 2, NodeKind.PIPELINE: 3}
 
@@ -156,76 +156,14 @@ def diff_datacenters(base: LoadedDatacenter, head: LoadedDatacenter) -> Datacent
     """Compare ``base`` with ``head`` and assess the impact of the differences."""
     base_dc, head_dc = base.datacenter, head.datacenter
     base_index, head_index = _index(base_dc), _index(head_dc)
-    warnings: list[DiffWarning] = []
 
-    metadata: list[AttributeChange] = []
-    if base_dc.name != head_dc.name:
-        metadata.append(AttributeChange("name", base_dc.name, head_dc.name))
-        warnings.append(
-            DiffWarning(
-                WarningCode.DATACENTER_NAME_CHANGED,
-                f"datacenter name changed from '{base_dc.name}' to '{head_dc.name}': "
-                "are you comparing different datacenters?",
-            )
-        )
-    if base_dc.description != head_dc.description:
-        metadata.append(AttributeChange("description", base_dc.description, head_dc.description))
-
-    kind_changed = sorted(
-        i for i in base_index.keys() & head_index.keys() if base_index[i].kind != head_index[i].kind
+    metadata, name_warnings = _metadata_changes(base_dc, head_dc)
+    kind_changed = _kind_changed(base_index, head_index)
+    added, removed, modified = _component_changes(base_index, head_index, kind_changed)
+    dependencies_added, dependencies_removed, dependencies_modified = _dependency_changes(
+        base_dc, head_dc
     )
-    for component_id in kind_changed:
-        warnings.append(
-            DiffWarning(
-                WarningCode.COMPONENT_KIND_CHANGED,
-                f"'{component_id}' changed from {base_index[component_id].kind} to "
-                f"{head_index[component_id].kind}; it is reported as removed and added",
-            )
-        )
-
-    removed_ids = (base_index.keys() - head_index.keys()) | set(kind_changed)
-    added_ids = (head_index.keys() - base_index.keys()) | set(kind_changed)
-    added = sorted(
-        (ComponentRef(i, head_index[i].kind, head_index[i].parent) for i in added_ids),
-        key=_by_kind_then_id,
-    )
-    removed = sorted(
-        (ComponentRef(i, base_index[i].kind, base_index[i].parent) for i in removed_ids),
-        key=_by_kind_then_id,
-    )
-    modified: list[ComponentChange] = []
-    for component_id in sorted((base_index.keys() & head_index.keys()) - set(kind_changed)):
-        change = _compare(component_id, base_index[component_id], head_index[component_id])
-        if change is not None:
-            modified.append(change)
-    modified.sort(key=_by_kind_then_id)
-
-    base_deps = {(d.source, d.target): d.kind for d in base_dc.dependencies}
-    head_deps = {(d.source, d.target): d.kind for d in head_dc.dependencies}
-    dependencies_added = [
-        DependencyRef(source, target, kind)
-        for (source, target), kind in sorted(head_deps.items())
-        if (source, target) not in base_deps
-    ]
-    dependencies_removed = [
-        DependencyRef(source, target, kind)
-        for (source, target), kind in sorted(base_deps.items())
-        if (source, target) not in head_deps
-    ]
-    dependencies_modified = [
-        DependencyChange(source, target, base_deps[(source, target)], kind)
-        for (source, target), kind in sorted(head_deps.items())
-        if (source, target) in base_deps and base_deps[(source, target)] != kind
-    ]
-
-    schema_impacts = _schema_impacts(base, head, warnings)
-
-    # Only direct dependents are listed: the closest removed provider is the one to blame.
-    removed_with_dependents: list[RemovedWithDependents] = []
-    for ref in removed:
-        dependents = sorted(n for n in base.graph.successors(ref.id) if n in head_index)
-        if dependents:
-            removed_with_dependents.append(RemovedWithDependents(ref.id, ref.kind, dependents))
+    schema_changes = _schema_changes(base_dc, head_dc)
 
     diff = DatacenterDiff(
         base_name=base_dc.name,
@@ -237,10 +175,14 @@ def diff_datacenters(base: LoadedDatacenter, head: LoadedDatacenter) -> Datacent
         dependencies_added=dependencies_added,
         dependencies_removed=dependencies_removed,
         dependencies_modified=dependencies_modified,
-        schema_impacts=schema_impacts,
-        removed_with_dependents=removed_with_dependents,
+        schema_impacts=_schema_impacts(head, schema_changes, _new_pipelines(base_dc, head_dc)),
+        removed_with_dependents=_removed_with_dependents(base, head_index, removed),
         possible_renames=_possible_renames(removed, added, base_index, head_index),
-        warnings=warnings,
+        warnings=[
+            *name_warnings,
+            *_kind_change_warnings(kind_changed, base_index, head_index),
+            *_version_warnings(schema_changes),
+        ],
     )
     return _with_severity(diff)
 
@@ -260,96 +202,236 @@ def _with_severity(diff: DatacenterDiff) -> DatacenterDiff:
     return replace(diff, severity=severity)
 
 
-def _schema_impacts(
-    base: LoadedDatacenter, head: LoadedDatacenter, warnings: list[DiffWarning]
-) -> list[ImpactReport]:
-    base_pipelines = {p.id: p for p in base.datacenter.pipelines}
-    head_pipelines = {p.id: p for p in head.datacenter.pipelines}
-    new_pipelines = head_pipelines.keys() - base_pipelines.keys()
+# ------------------------------------------------------------------ the datacenter itself
 
-    reports: list[ImpactReport] = []
-    for pipeline_id in sorted(base_pipelines.keys() & head_pipelines.keys()):
-        schema_diff = diff_schemas(
-            base_pipelines[pipeline_id].schema_, head_pipelines[pipeline_id].schema_
+
+def _metadata_changes(
+    base_dc: Datacenter, head_dc: Datacenter
+) -> tuple[list[AttributeChange], list[DiffWarning]]:
+    """The name and the description when they differ, and a warning if the name does."""
+    changes: list[AttributeChange] = []
+    warnings: list[DiffWarning] = []
+    if base_dc.name != head_dc.name:
+        changes.append(AttributeChange("name", base_dc.name, head_dc.name))
+        warnings.append(
+            DiffWarning(
+                WarningCode.DATACENTER_NAME_CHANGED,
+                f"datacenter name changed from '{base_dc.name}' to '{head_dc.name}': "
+                "are you comparing different datacenters?",
+            )
         )
-        if not schema_diff.version_is_consistent:
-            if schema_diff.level is ChangeLevel.NONE:
-                detail = f"version went backwards from {schema_diff.old.version}"
-            else:
-                detail = (
-                    f"is too low for a {schema_diff.level} change "
-                    f"(expected >= {schema_diff.suggested_version})"
-                )
-            warnings.append(
-                DiffWarning(
-                    WarningCode.SCHEMA_VERSION_TOO_LOW,
-                    f"pipeline '{pipeline_id}': declared version {schema_diff.new.version} "
-                    f"{detail}",
-                )
-            )
-        if schema_diff.changes:
-            reports.append(
-                analyze_diff(
-                    head.datacenter,
-                    head.graph,
-                    pipeline_id,
-                    schema_diff,
-                    ignore_consumers=new_pipelines,
-                )
-            )
-    return reports
+    if base_dc.description != head_dc.description:
+        changes.append(AttributeChange("description", base_dc.description, head_dc.description))
+    return changes, warnings
+
+
+# ----------------------------------------------------------------------- the components
+
+
+def _kind_changed(
+    base_index: dict[str, _Component], head_index: dict[str, _Component]
+) -> list[str]:
+    """Ids that are in both files but belong to a component of another kind, sorted."""
+    return sorted(
+        i for i in base_index.keys() & head_index.keys() if base_index[i].kind != head_index[i].kind
+    )
+
+
+def _kind_change_warnings(
+    kind_changed: list[str], base_index: dict[str, _Component], head_index: dict[str, _Component]
+) -> list[DiffWarning]:
+    return [
+        DiffWarning(
+            WarningCode.COMPONENT_KIND_CHANGED,
+            f"'{component_id}' changed from {base_index[component_id].kind} to "
+            f"{head_index[component_id].kind}; it is reported as removed and added",
+        )
+        for component_id in kind_changed
+    ]
+
+
+def _component_changes(
+    base_index: dict[str, _Component],
+    head_index: dict[str, _Component],
+    kind_changed: list[str],
+) -> tuple[list[ComponentRef], list[ComponentRef], list[ComponentChange]]:
+    """The components added, removed and modified; one that changed kind is removed and added."""
+    removed_ids = (base_index.keys() - head_index.keys()) | set(kind_changed)
+    added_ids = (head_index.keys() - base_index.keys()) | set(kind_changed)
+    added = sorted(
+        (ComponentRef(i, head_index[i].kind, head_index[i].parent) for i in added_ids),
+        key=_by_kind_then_id,
+    )
+    removed = sorted(
+        (ComponentRef(i, base_index[i].kind, base_index[i].parent) for i in removed_ids),
+        key=_by_kind_then_id,
+    )
+    kept = sorted((base_index.keys() & head_index.keys()) - set(kind_changed))
+    changes = (_compare(i, base_index[i], head_index[i]) for i in kept)
+    modified = sorted((change for change in changes if change is not None), key=_by_kind_then_id)
+    return added, removed, modified
+
+
+def _removed_with_dependents(
+    base: LoadedDatacenter, head_index: dict[str, _Component], removed: list[ComponentRef]
+) -> list[RemovedWithDependents]:
+    """Only direct dependents are listed: the closest removed provider is the one to blame."""
+    result: list[RemovedWithDependents] = []
+    for ref in removed:
+        dependents = sorted(n for n in base.graph.successors(ref.id) if n in head_index)
+        if dependents:
+            result.append(RemovedWithDependents(ref.id, ref.kind, dependents))
+    return result
+
+
+# --------------------------------------------------------------------- the dependencies
+
+
+def _dependency_changes(
+    base_dc: Datacenter, head_dc: Datacenter
+) -> tuple[list[DependencyRef], list[DependencyRef], list[DependencyChange]]:
+    """The explicit dependencies added, removed and whose kind changed, sorted."""
+    before = {(d.source, d.target): d.kind for d in base_dc.dependencies}
+    after = {(d.source, d.target): d.kind for d in head_dc.dependencies}
+    added = [
+        DependencyRef(source, target, kind)
+        for (source, target), kind in sorted(after.items())
+        if (source, target) not in before
+    ]
+    removed = [
+        DependencyRef(source, target, kind)
+        for (source, target), kind in sorted(before.items())
+        if (source, target) not in after
+    ]
+    modified = [
+        DependencyChange(source, target, before[(source, target)], kind)
+        for (source, target), kind in sorted(after.items())
+        if (source, target) in before and before[(source, target)] != kind
+    ]
+    return added, removed, modified
+
+
+# ------------------------------------------------------------------------- the schemas
+
+
+def _schema_changes(base_dc: Datacenter, head_dc: Datacenter) -> list[tuple[str, SchemaDiff]]:
+    """The comparison of the schema of every pipeline that both files have, by pipeline id."""
+    before = {p.id: p.schema_ for p in base_dc.pipelines}
+    after = {p.id: p.schema_ for p in head_dc.pipelines}
+    return [
+        (pipeline_id, diff_schemas(before[pipeline_id], after[pipeline_id]))
+        for pipeline_id in sorted(before.keys() & after.keys())
+    ]
+
+
+def _new_pipelines(base_dc: Datacenter, head_dc: Datacenter) -> set[str]:
+    """Pipelines that exist only in head: they were written against the new schemas."""
+    return {p.id for p in head_dc.pipelines} - {p.id for p in base_dc.pipelines}
+
+
+def _version_warnings(schema_changes: list[tuple[str, SchemaDiff]]) -> list[DiffWarning]:
+    """A warning for each schema whose declared version is lower than its changes require."""
+    return [
+        _version_warning(pipeline_id, schema_diff)
+        for pipeline_id, schema_diff in schema_changes
+        if not schema_diff.version_is_consistent
+    ]
+
+
+def _version_warning(pipeline_id: str, schema_diff: SchemaDiff) -> DiffWarning:
+    if schema_diff.level is ChangeLevel.NONE:
+        detail = f"version went backwards from {schema_diff.old.version}"
+    else:
+        detail = (
+            f"is too low for a {schema_diff.level} change "
+            f"(expected >= {schema_diff.suggested_version})"
+        )
+    return DiffWarning(
+        WarningCode.SCHEMA_VERSION_TOO_LOW,
+        f"pipeline '{pipeline_id}': declared version {schema_diff.new.version} {detail}",
+    )
+
+
+def _schema_impacts(
+    head: LoadedDatacenter, schema_changes: list[tuple[str, SchemaDiff]], new_pipelines: set[str]
+) -> list[ImpactReport]:
+    """The impact, in head, of every schema that changed."""
+    return [
+        analyze_diff(
+            head.datacenter, head.graph, pipeline_id, schema_diff, ignore_consumers=new_pipelines
+        )
+        for pipeline_id, schema_diff in schema_changes
+        if schema_diff.changes
+    ]
+
+
+# ----------------------------------------------------- how a component is described
 
 
 def _index(datacenter: Datacenter) -> dict[str, _Component]:
     """Describe every component by kind, parent and the attributes that are compared."""
     index: dict[str, _Component] = {}
     for rack in datacenter.racks:
-        index[rack.id] = _Component(
-            NodeKind.RACK, None, {"power_capacity_kw": rack.power_capacity_kw}
-        )
+        index[rack.id] = _rack_component(rack)
         for server in rack.servers:
-            index[server.id] = _Component(
-                NodeKind.SERVER,
-                rack.id,
-                {
-                    "rack": rack.id,
-                    "cpu_cores": server.cpu_cores,
-                    "memory_gb": server.memory_gb,
-                    "power_kw": server.power_kw,
-                },
-            )
+            index[server.id] = _server_component(rack, server)
             for service in server.services:
-                index[service.id] = _Component(
-                    NodeKind.SERVICE,
-                    server.id,
-                    {
-                        "server": server.id,
-                        "cpu_cores": service.cpu_cores,
-                        "memory_gb": service.memory_gb,
-                        "description": service.description,
-                    },
-                )
+                index[service.id] = _service_component(server, service)
     for pipeline in datacenter.pipelines:
-        index[pipeline.id] = _Component(
-            NodeKind.PIPELINE,
-            pipeline.runs_on,
-            {
-                "runs_on": pipeline.runs_on,
-                "inputs": _canonical_inputs(pipeline),
-                "schema.name": pipeline.schema_.name,
-                "schema.version": pipeline.schema_.version,
-                "schema.fields": [
-                    {
-                        "name": f.name,
-                        "type": str(f.type),
-                        "nullable": f.nullable,
-                        "description": f.description,
-                    }
-                    for f in pipeline.schema_.fields
-                ],
-            },
-        )
+        index[pipeline.id] = _pipeline_component(pipeline)
     return index
+
+
+def _rack_component(rack: Rack) -> _Component:
+    return _Component(NodeKind.RACK, None, {"power_capacity_kw": rack.power_capacity_kw})
+
+
+def _server_component(rack: Rack, server: Server) -> _Component:
+    return _Component(
+        NodeKind.SERVER,
+        rack.id,
+        {
+            "rack": rack.id,
+            "cpu_cores": server.cpu_cores,
+            "memory_gb": server.memory_gb,
+            "power_kw": server.power_kw,
+        },
+    )
+
+
+def _service_component(server: Server, service: Service) -> _Component:
+    return _Component(
+        NodeKind.SERVICE,
+        server.id,
+        {
+            "server": server.id,
+            "cpu_cores": service.cpu_cores,
+            "memory_gb": service.memory_gb,
+            "description": service.description,
+        },
+    )
+
+
+def _pipeline_component(pipeline: Pipeline) -> _Component:
+    return _Component(
+        NodeKind.PIPELINE,
+        pipeline.runs_on,
+        {
+            "runs_on": pipeline.runs_on,
+            "inputs": _canonical_inputs(pipeline),
+            "schema.name": pipeline.schema_.name,
+            "schema.version": pipeline.schema_.version,
+            "schema.fields": [
+                {
+                    "name": f.name,
+                    "type": str(f.type),
+                    "nullable": f.nullable,
+                    "description": f.description,
+                }
+                for f in pipeline.schema_.fields
+            ],
+        },
+    )
 
 
 def _canonical_inputs(pipeline: Pipeline) -> list[dict[str, object]]:
