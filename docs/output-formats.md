@@ -115,7 +115,7 @@ ripplerack graph dc.yaml -F json | jq -r '.nodes[] | select(.kind == "pipeline")
 ```json
 {
   "schemaVersion": 1,
-  "tool": { "name": "ripplerack", "version": "0.2.0" },
+  "tool": { "name": "ripplerack", "version": "0.2.1" },
   "command": "impact",
   "datacenter": "mini-datacenter",
   "pipeline": "orders-ingest",
@@ -221,7 +221,7 @@ Each entry of `changes`:
 ```json
 {
   "schemaVersion": 1,
-  "tool": { "name": "ripplerack", "version": "0.2.0" },
+  "tool": { "name": "ripplerack", "version": "0.2.1" },
   "command": "diff",
   "base": { "name": "mini-datacenter" },
   "head": { "name": "mini-datacenter" },
@@ -345,7 +345,7 @@ object:
 ```json
 {
   "schemaVersion": 1,
-  "tool": { "name": "ripplerack", "version": "0.2.0" },
+  "tool": { "name": "ripplerack", "version": "0.2.1" },
   "command": "impact",
   "error": {
     "code": "unknown_pipeline",
