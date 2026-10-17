@@ -17,11 +17,12 @@ reads a field, or reads a brand new one, is unaffected.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import IntEnum, StrEnum
 from functools import total_ordering
 
-from ripplerack.models import SEMVER_PATTERN, Schema
+from ripplerack.models import SEMVER_PATTERN, Schema, SchemaField
 
 _SEMVER_RE = re.compile(SEMVER_PATTERN)
 
@@ -148,68 +149,75 @@ def diff_schemas(old: Schema, new: Schema) -> SchemaDiff:
     for name, old_field in old_fields.items():
         new_field = new_fields.get(name)
         if new_field is None:
-            changes.append(
-                SchemaChange(
-                    ChangeKind.FIELD_REMOVED,
-                    ChangeLevel.MAJOR,
-                    name,
-                    f"field '{name}' removed",
-                    breaks_readers=True,
-                )
-            )
-            continue
-
-        if old_field.type != new_field.type:
-            changes.append(
-                SchemaChange(
-                    ChangeKind.TYPE_CHANGED,
-                    ChangeLevel.MAJOR,
-                    name,
-                    f"field '{name}' type changed {old_field.type} -> {new_field.type}",
-                    breaks_readers=True,
-                )
-            )
-
-        if old_field.nullable != new_field.nullable:
-            loosened = new_field.nullable
-            changes.append(
-                SchemaChange(
-                    ChangeKind.NULLABILITY_CHANGED,
-                    ChangeLevel.MAJOR if loosened else ChangeLevel.MINOR,
-                    name,
-                    f"field '{name}' is now {'nullable' if loosened else 'required'}",
-                    breaks_readers=loosened,
-                )
-            )
-
-        if old_field.description != new_field.description:
-            changes.append(
-                SchemaChange(
-                    ChangeKind.DESCRIPTION_CHANGED,
-                    ChangeLevel.PATCH,
-                    name,
-                    f"field '{name}' description changed",
-                )
-            )
-
-    for name, new_field in new_fields.items():
-        if name in old_fields:
-            continue
-        required = not new_field.nullable
-        changes.append(
-            SchemaChange(
-                ChangeKind.FIELD_ADDED,
-                ChangeLevel.MAJOR if required else ChangeLevel.MINOR,
-                name,
-                f"{'required' if required else 'optional'} field '{name}' added",
-            )
-        )
-
-    common_old = [n for n in old_fields if n in new_fields]
-    common_new = [n for n in new_fields if n in old_fields]
-    if common_old != common_new:
+            changes.append(_field_removed(name))
+        else:
+            changes.extend(_field_changes(name, old_field, new_field))
+    changes.extend(
+        _field_added(name, new_field)
+        for name, new_field in new_fields.items()
+        if name not in old_fields
+    )
+    if _fields_reordered(old_fields, new_fields):
         changes.append(
             SchemaChange(ChangeKind.FIELDS_REORDERED, ChangeLevel.PATCH, None, "fields reordered")
         )
-
     return SchemaDiff(old=old, new=new, changes=changes)
+
+
+def _field_removed(name: str) -> SchemaChange:
+    return SchemaChange(
+        ChangeKind.FIELD_REMOVED,
+        ChangeLevel.MAJOR,
+        name,
+        f"field '{name}' removed",
+        breaks_readers=True,
+    )
+
+
+def _field_added(name: str, new_field: SchemaField) -> SchemaChange:
+    required = not new_field.nullable
+    return SchemaChange(
+        ChangeKind.FIELD_ADDED,
+        ChangeLevel.MAJOR if required else ChangeLevel.MINOR,
+        name,
+        f"{'required' if required else 'optional'} field '{name}' added",
+    )
+
+
+def _field_changes(
+    name: str, old_field: SchemaField, new_field: SchemaField
+) -> Iterator[SchemaChange]:
+    """The differences between the two versions of a field that both schemas have."""
+    if old_field.type != new_field.type:
+        yield SchemaChange(
+            ChangeKind.TYPE_CHANGED,
+            ChangeLevel.MAJOR,
+            name,
+            f"field '{name}' type changed {old_field.type} -> {new_field.type}",
+            breaks_readers=True,
+        )
+    if old_field.nullable != new_field.nullable:
+        loosened = new_field.nullable
+        yield SchemaChange(
+            ChangeKind.NULLABILITY_CHANGED,
+            ChangeLevel.MAJOR if loosened else ChangeLevel.MINOR,
+            name,
+            f"field '{name}' is now {'nullable' if loosened else 'required'}",
+            breaks_readers=loosened,
+        )
+    if old_field.description != new_field.description:
+        yield SchemaChange(
+            ChangeKind.DESCRIPTION_CHANGED,
+            ChangeLevel.PATCH,
+            name,
+            f"field '{name}' description changed",
+        )
+
+
+def _fields_reordered(
+    old_fields: dict[str, SchemaField], new_fields: dict[str, SchemaField]
+) -> bool:
+    """Whether the fields that both schemas have come in a different order."""
+    in_old_order = [name for name in old_fields if name in new_fields]
+    in_new_order = [name for name in new_fields if name in old_fields]
+    return in_old_order != in_new_order
