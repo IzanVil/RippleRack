@@ -154,9 +154,15 @@ def summarize(error: ValidationError) -> str:
 
 
 def slug(text: str) -> str:
-    """Lowercase letters and digits joined by ``_``: a valid, readable schema name."""
+    """Lowercase letters and digits joined by ``_``: a valid, readable schema name.
+
+    The words of a CamelCase name are told apart: ``OrderEvent`` is ``order_event`` and
+    ``HTTPRequest`` is ``http_request``.
+    """
     folded = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"[^a-z0-9]+", "_", folded.lower()).strip("_")
+    words = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", folded)
+    words = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", words)
+    return re.sub(r"[^a-z0-9]+", "_", words.lower()).strip("_")
 
 
 def strip_suffixes(name: str) -> str:

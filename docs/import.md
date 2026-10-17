@@ -99,14 +99,15 @@ The name is the first of these that gives something usable:
 | source | example | name |
 |--------|---------|------|
 | `--name` | `--name orders_v2` | `orders_v2` |
-| the root `title` | `"title": "Order Event"` | `order_event` |
+| the root `title` | `"title": "Order Event"` or `"title": "OrderEvent"` | `order_event` |
 | the last part of the root `$id` | `"$id": "https://example.com/schemas/orders.schema.json"` | `orders` |
 | the file name | `customer-events.json` | `customer_events` |
 | nothing else | standard input without a title or `$id` | `schema` |
 
-`--name` is used as given. The others are made into a valid name: lowercase, accents removed,
-every run of characters other than letters and digits turned into `_`, and the `.json` and
-`.schema` endings of a file name or `$id` dropped.
+`--name` is used as given. The others are made into a valid name: accents removed, the words of
+a CamelCase name told apart (`OrderEvent` becomes `order_event`), lowercase, every run of
+characters other than letters and digits turned into `_`, and the `.json` and `.schema` endings
+of a file name or `$id` dropped.
 
 A JSON Schema has no version, so none is guessed: it is `--version`, or `1.0.0`.
 
