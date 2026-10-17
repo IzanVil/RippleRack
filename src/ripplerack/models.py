@@ -197,44 +197,45 @@ class Datacenter(StrictModel):
         duplicates = _duplicates(ids)
         if duplicates:
             raise ValueError(f"duplicate component ids: {', '.join(duplicates)}")
-
-        known = set(ids)
-        service_ids = {service.id for _, service in self.iter_services()}
-        pipelines = {p.id: p for p in self.pipelines}
-        errors: list[str] = []
-
-        for pipeline in self.pipelines:
-            if pipeline.runs_on not in service_ids:
-                errors.append(
-                    f"pipeline '{pipeline.id}' runs on unknown service '{pipeline.runs_on}'"
-                )
-            for item in pipeline.inputs:
-                upstream = pipelines.get(item.pipeline)
-                if upstream is None:
-                    errors.append(
-                        f"pipeline '{pipeline.id}' consumes unknown pipeline '{item.pipeline}'"
-                    )
-                    continue
-                available = upstream.schema_.field_map()
-                missing = [f for f in item.fields or [] if f not in available]
-                if missing:
-                    errors.append(
-                        f"pipeline '{pipeline.id}' reads fields missing from "
-                        f"'{upstream.id}': {', '.join(missing)}"
-                    )
-
-        for dep in self.dependencies:
-            for endpoint in (dep.source, dep.target):
-                if endpoint not in known:
-                    errors.append(
-                        f"dependency {dep.source} -> {dep.target} references unknown '{endpoint}'"
-                    )
-            if dep.source == dep.target:
-                errors.append(f"component '{dep.source}' cannot depend on itself")
-
+        errors = [*self._pipeline_errors(), *self._dependency_errors(set(ids))]
         if errors:
             raise ValueError("; ".join(errors))
         return self
+
+    def _pipeline_errors(self) -> Iterator[str]:
+        """What is wrong with where the pipelines run and with what they read."""
+        service_ids = {service.id for _, service in self.iter_services()}
+        pipelines = {pipeline.id: pipeline for pipeline in self.pipelines}
+        for pipeline in self.pipelines:
+            if pipeline.runs_on not in service_ids:
+                yield f"pipeline '{pipeline.id}' runs on unknown service '{pipeline.runs_on}'"
+            for item in pipeline.inputs:
+                yield from _input_errors(pipeline, item, pipelines.get(item.pipeline))
+
+    def _dependency_errors(self, known: set[str]) -> Iterator[str]:
+        """What is wrong with the explicit dependencies: unknown components, and itself."""
+        for dep in self.dependencies:
+            for endpoint in (dep.source, dep.target):
+                if endpoint not in known:
+                    yield f"dependency {dep.source} -> {dep.target} references unknown '{endpoint}'"
+            if dep.source == dep.target:
+                yield f"component '{dep.source}' cannot depend on itself"
+
+
+def _input_errors(
+    pipeline: Pipeline, item: PipelineInput, upstream: Pipeline | None
+) -> Iterator[str]:
+    """What is wrong with one input of ``pipeline``, given the pipeline it names (or none)."""
+    if upstream is None:
+        yield f"pipeline '{pipeline.id}' consumes unknown pipeline '{item.pipeline}'"
+        return
+    available = upstream.schema_.field_map()
+    missing = [name for name in item.fields or [] if name not in available]
+    if missing:
+        yield (
+            f"pipeline '{pipeline.id}' reads fields missing from "
+            f"'{upstream.id}': {', '.join(missing)}"
+        )
 
 
 def _duplicates(values: Iterator[str] | list[str]) -> list[str]:
