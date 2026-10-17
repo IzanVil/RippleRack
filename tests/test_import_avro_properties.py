@@ -106,110 +106,164 @@ def note_of(listed: list[str]) -> str:
     return f"One of: {shown}" + (f", … ({len(listed)} values)" if len(listed) > 10 else "")
 
 
-@st.composite
-def a_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
-    """A type with no union around it, and what it has to give.
+# Each kind of type is a strategy that takes the position of the field in the record, the types
+# the record has defined so far (it adds the ones it defines) and the namespace of the record,
+# and gives the type, what it has to give and the note it has to add to the description.
 
-    ``namespace`` is that of the record: what the record defines takes it, so it can be named
-    in full as well as by its name alone.
-    """
-    kinds = ["simple", "object", "fitting", "ignored", "enum", "fixed", "record", "array", "map"]
-    kind = draw(st.sampled_from([*kinds, *(["reference"] * 3 if defined else [])]))
-    if kind == "simple":
-        name = draw(st.sampled_from(sorted(SIMPLE)))
-        return name, SIMPLE[name], ""
-    if kind == "object":
-        name = draw(st.sampled_from(sorted(SIMPLE)))
-        extra = {draw(st.sampled_from(HARMLESS)): draw(st.integers(0, 3))}
-        return {"type": name, **extra}, SIMPLE[name], ""
-    if kind == "fitting":
-        base, extra, result = draw(st.sampled_from(FITTING))
-        return {"type": base, **extra}, result, ""
-    if kind == "ignored":
-        base, extra = draw(st.sampled_from(IGNORED))
-        return {"type": base, **extra}, SIMPLE[base], ""
-    if kind == "enum":
-        listed = draw(st.lists(symbols, unique=True, max_size=12))
-        name = f"E{index}"
-        defined.append((name, "string", note_of(listed)))
-        return {"type": "enum", "name": name, "symbols": listed}, "string", note_of(listed)
-    if kind == "fixed":
-        logical, result = draw(
-            st.sampled_from(
-                [(None, "string"), ("duration", "string"), ("uuid", "string"), ("decimal", "float")]
-            )
+
+@st.composite
+def plain_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    name = draw(st.sampled_from(sorted(SIMPLE)))
+    return name, SIMPLE[name], ""
+
+
+@st.composite
+def attributed_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    """A plain type written as an object, with an attribute that nothing reads."""
+    name = draw(st.sampled_from(sorted(SIMPLE)))
+    extra = {draw(st.sampled_from(HARMLESS)): draw(st.integers(0, 3))}
+    return {"type": name, **extra}, SIMPLE[name], ""
+
+
+@st.composite
+def fitting_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    base, extra, result = draw(st.sampled_from(FITTING))
+    return {"type": base, **extra}, result, ""
+
+
+@st.composite
+def ignored_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    base, extra = draw(st.sampled_from(IGNORED))
+    return {"type": base, **extra}, SIMPLE[base], ""
+
+
+@st.composite
+def enum_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    listed = draw(st.lists(symbols, unique=True, max_size=12))
+    name = f"E{index}"
+    defined.append((name, "string", note_of(listed)))
+    return {"type": "enum", "name": name, "symbols": listed}, "string", note_of(listed)
+
+
+@st.composite
+def fixed_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    logical, result = draw(
+        st.sampled_from(
+            [(None, "string"), ("duration", "string"), ("uuid", "string"), ("decimal", "float")]
         )
-        name = f"F{index}"
-        definition: dict[str, Any] = {
-            "type": "fixed",
-            "name": name,
-            "size": draw(st.integers(1, 16)),
-        }
-        if logical:
-            definition["logicalType"] = logical
-        if logical == "decimal":
-            definition["precision"] = 5
-        defined.append((name, result, ""))
-        return definition, result, ""
-    if kind == "record":
-        name = f"R{index}"
-        inner = [{"name": "x", "type": draw(st.sampled_from(sorted(SIMPLE)))}]
-        defined.append((name, "json", ""))
-        record_kind = draw(st.sampled_from(["record", "error"]))
-        return {"type": record_kind, "name": name, "fields": inner}, "json", ""
-    if kind in ("array", "map"):
-        contents: Any = draw(st.sampled_from(sorted(SIMPLE)))
-        if draw(st.booleans()):  # a type defined inside, that the fields after it can use
-            listed = draw(st.lists(symbols, unique=True, max_size=12))
-            contents = {"type": "enum", "name": f"E{index}", "symbols": listed}
-            defined.append((f"E{index}", "string", note_of(listed)))
-        return {"type": kind, "items" if kind == "array" else "values": contents}, "json", ""
+    )
+    name = f"F{index}"
+    definition: dict[str, Any] = {"type": "fixed", "name": name, "size": draw(st.integers(1, 16))}
+    if logical:
+        definition["logicalType"] = logical
+    if logical == "decimal":
+        definition["precision"] = 5
+    defined.append((name, result, ""))
+    return definition, result, ""
+
+
+@st.composite
+def record_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    name = f"R{index}"
+    inner = [{"name": "x", "type": draw(st.sampled_from(sorted(SIMPLE)))}]
+    defined.append((name, "json", ""))
+    kind = draw(st.sampled_from(["record", "error"]))
+    return {"type": kind, "name": name, "fields": inner}, "json", ""
+
+
+@st.composite
+def container_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    """An array or a map, which may define a type inside that the fields after it can use."""
+    kind = draw(st.sampled_from(["array", "map"]))
+    contents: Any = draw(st.sampled_from(sorted(SIMPLE)))
+    if draw(st.booleans()):
+        listed = draw(st.lists(symbols, unique=True, max_size=12))
+        contents = {"type": "enum", "name": f"E{index}", "symbols": listed}
+        defined.append((f"E{index}", "string", note_of(listed)))
+    return {"type": kind, "items" if kind == "array" else "values": contents}, "json", ""
+
+
+@st.composite
+def reference_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    """A type defined earlier, named as a name, as a full name or as an object."""
     name, result, note = draw(st.sampled_from(defined))
     spelling = draw(st.sampled_from(["name", "object", "full name"]))
     if spelling == "object":
-        return {"type": name}, result, note  # a reference written as an object
+        return {"type": name}, result, note
     if spelling == "full name" and namespace:
         return f"{namespace}.{name}", result, note
     return name, result, note
 
 
+TYPES = [
+    plain_type,
+    attributed_type,
+    fitting_type,
+    ignored_type,
+    enum_type,
+    fixed_type,
+    record_type,
+    container_type,
+]
+
+
 @st.composite
-def model_records(
-    draw: st.DrawFn,
-) -> tuple[dict[str, Any], list[tuple[str, str, bool, str]]]:
+def a_type(draw: st.DrawFn, index: int, defined: Defined, namespace: str | None) -> Typed:
+    """A type with no union around it, and what it has to give.
+
+    ``namespace`` is that of the record: what the record defines takes it, so it can be named
+    in full as well as by its name alone. References are more likely than any other kind, and
+    the logical types, which are tables of cases, are twice as likely as the rest.
+    """
+    kinds = [*TYPES, fitting_type, ignored_type, *([reference_type] * 3 if defined else [])]
+    return draw(draw(st.sampled_from(kinds))(index, defined, namespace))
+
+
+Expected = tuple[str, str, bool, str]  # name, type, nullable, description of a field
+
+
+@st.composite
+def a_field(
+    draw: st.DrawFn, index: int, name: str, defined: Defined, namespace: str | None
+) -> tuple[dict[str, Any], Expected]:
+    """A field, with its type alone or in a union with ``null``, and what it has to give."""
+    type_, result, note = draw(a_type(index, defined, namespace))
+    wrap = draw(st.sampled_from(["plain", "null first", "null last", "alone"]))
+    field_type: Any = {
+        "plain": type_,
+        "null first": ["null", type_],
+        "null last": [type_, "null"],
+        "alone": [type_],
+    }[wrap]
+    field: dict[str, Any] = {"name": name, "type": field_type}
+    description = note
+    doc = draw(docs) if not note else None  # an enum with a doc is tested by example
+    if doc is not None:
+        field["doc"] = doc
+        description = " ".join(doc.split())
+    return field, (name, result, wrap in ("null first", "null last"), description)
+
+
+@st.composite
+def model_records(draw: st.DrawFn) -> tuple[dict[str, Any], list[Expected]]:
     """A record, and ``(name, type, nullable, description)`` of each field it has to give."""
     names = draw(st.lists(field_names, unique=True, min_size=1, max_size=8))
     namespace = draw(namespaces)
     defined: Defined = []
-    declared: list[dict[str, Any]] = []
-    expected: list[tuple[str, str, bool, str]] = []
-    for index, name in enumerate(names):
-        type_, result, note = draw(a_type(index, defined, namespace))
-        wrap = draw(st.sampled_from(["plain", "null first", "null last", "alone"]))
-        nullable = wrap in ("null first", "null last")
-        field_type: Any = {
-            "plain": type_,
-            "null first": ["null", type_],
-            "null last": [type_, "null"],
-            "alone": [type_],
-        }[wrap]
-        field: dict[str, Any] = {"name": name, "type": field_type}
-        description = note
-        doc = draw(docs) if not note else None  # an enum with a doc is tested by example
-        if doc is not None:
-            field["doc"] = doc
-            description = " ".join(doc.split())
-        declared.append(field)
-        expected.append((name, result, nullable, description))
+    made = [draw(a_field(index, name, defined, namespace)) for index, name in enumerate(names)]
     name = draw(record_names)
-    document: dict[str, Any] = {"type": "record", "name": name, "fields": declared}
+    document: dict[str, Any] = {
+        "type": "record",
+        "name": name,
+        "fields": [field for field, _ in made],
+    }
     if namespace and draw(st.booleans()):  # a full name: the namespace beside it is ignored
         document["name"] = f"{namespace}.{name}"
         if draw(st.booleans()):
             document["namespace"] = "ignored.because.the.name.is.a.full.name"
     elif namespace is not None:
         document["namespace"] = namespace
-    return document, expected
+    return document, [expected for _, expected in made]
 
 
 def read(document: Any, **options: Any) -> list[tuple[str, str, bool, str]]:
