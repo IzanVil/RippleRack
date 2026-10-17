@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ripplerack import FILE --from avro`: reads an Avro schema (an `.avsc` file) and writes one of
+  its records as a RippleRack schema. A union with `null` is `nullable`, `int` and `long` are
+  `integer`, the timestamp logical types are `timestamp`, `date` is `date`, and records, arrays and
+  maps are `json` fields. An enum is a `string` that lists its symbols in the description, and a
+  name that refers to a type defined elsewhere in the file is resolved with the namespace rules of
+  Avro. A logical type that is unknown, or does not fit its type, is ignored, as the specification
+  asks.
+- `--select NAME` chooses the record to import when a file defines several, by its name or its full
+  name. A list of types with a single record needs no `--select`. With `--from json-schema` it is a
+  usage error.
+- The error codes `invalid_avro_schema` and `unsupported_avro_schema`, with the same strictness as
+  for JSON Schema: a union of several types, or `null` on its own, is an error, and with
+  `--lenient` the field becomes a `json` one with a `degraded_to_json` warning. There is a guide,
+  [docs/import-avro.md](docs/import-avro.md), and an example, `examples/schemas/orders_v2.avsc`,
+  that gives the same schema as the JSON Schema one.
+
 ### Changed
 
 - The name of a schema taken from a title, an `$id` or a file name tells the words of a
