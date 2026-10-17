@@ -287,7 +287,7 @@ def test_warnings_do_not_stop_an_output_file(tmp_path: Path) -> None:
     [
         ([], "Missing argument"),
         (["FILE"], "Missing option '--from'"),
-        (["FILE", "--from", "avro"], "Invalid value for '--from'"),
+        (["FILE", "--from", "no-such-format"], "Invalid value for '--from'"),
         (["FILE", "--from", "json-schema", "--name", "two words"], "Invalid value for '--name'"),
         (["FILE", "--from", "json-schema", "--name", ""], "Invalid value for '--name'"),
         (["FILE", "--from", "json-schema", "--version", "1.0"], "MAJOR.MINOR.PATCH"),
@@ -317,6 +317,8 @@ def test_the_command_is_listed_and_documented() -> None:
     for fragment in (
         "--from",
         "json-schema",
+        "avro",
+        "--select",
         "--output",
         "--name",
         "--version",
@@ -324,3 +326,136 @@ def test_the_command_is_listed_and_documented() -> None:
         "--force",
     ):
         assert fragment in helptext
+
+
+# ----------------------------------------------------------------------------- Avro
+
+AVRO_DOCUMENT: dict[str, Any] = {
+    "type": "record",
+    "name": "Orders",
+    "namespace": "com.example",
+    "fields": [
+        {"name": "order_id", "type": "long"},
+        {"name": "amount_cents", "type": "long", "doc": "Order total in cents"},
+        {"name": "coupon_code", "type": ["null", "string"], "default": None},
+    ],
+}
+AVRO_EXPECTED = EXPECTED
+SHOP: list[dict[str, Any]] = [
+    {
+        "type": "record",
+        "name": "Address",
+        "namespace": "shop",
+        "fields": [{"name": "street", "type": "string"}],
+    },
+    {
+        "type": "record",
+        "name": "OrderEvent",
+        "namespace": "shop",
+        "fields": [{"name": "id", "type": "long"}],
+    },
+]
+MIXED = {
+    "type": "record",
+    "name": "Mixed",
+    "fields": [{"name": "choice", "type": ["string", "long"]}],
+}
+
+
+def write_avro(tmp_path: Path, document: Any = AVRO_DOCUMENT, name: str = "orders.avsc") -> Path:
+    return write(tmp_path, document, name)
+
+
+def test_avro_prints_the_schema_on_standard_output(tmp_path: Path) -> None:
+    result = run(write_avro(tmp_path), "--from", "avro")
+    assert result.exit_code == 0, result.output
+    assert result.stdout == AVRO_EXPECTED
+    assert result.stderr == ""
+
+
+def test_avro_from_standard_input_is_named_after_the_record() -> None:
+    result = run("-", "--from", "avro", input=json.dumps(AVRO_DOCUMENT))
+    assert result.exit_code == 0, result.output
+    assert result.stdout == AVRO_EXPECTED
+
+
+def test_avro_name_version_and_output_file(tmp_path: Path) -> None:
+    out = tmp_path / "mine.yaml"
+    args = ("--from", "avro", "--name", "mine", "--version", "2.3.4", "-o", out)
+    result = run(write_avro(tmp_path), *args)
+    assert result.exit_code == 0, result.output
+    schema = load_schema(out)
+    assert (schema.name, schema.version, len(schema.fields)) == ("mine", "2.3.4", 3)
+    assert "schema mine 2.3.4 (3 fields) written to" in plain(result.stdout)
+
+
+def test_a_file_with_several_records_asks_which_one(tmp_path: Path) -> None:
+    result = run(write_avro(tmp_path, SHOP, "shop.avsc"), "--from", "avro")
+    assert result.exit_code == 1
+    message = plain(result.stderr)
+    assert "the file holds several records ('shop.Address', 'shop.OrderEvent')" in message
+    assert "choose one with --select" in message
+    assert result.stdout == ""
+
+
+@pytest.mark.parametrize("select", ["OrderEvent", "shop.OrderEvent"])
+def test_select_chooses_the_record(tmp_path: Path, select: str) -> None:
+    result = run(write_avro(tmp_path, SHOP, "shop.avsc"), "--from", "avro", "--select", select)
+    assert result.exit_code == 0, result.output
+    assert (
+        result.stdout
+        == "name: order_event\nversion: 1.0.0\nfields:\n  - {name: id, type: integer}\n"
+    )
+
+
+def test_select_with_a_record_the_file_does_not_define(tmp_path: Path) -> None:
+    result = run(write_avro(tmp_path, SHOP, "shop.avsc"), "--from", "avro", "--select", "Nope")
+    assert result.exit_code == 1
+    message = plain(result.stderr)
+    assert "no record called 'Nope'" in message
+    assert "'shop.Address', 'shop.OrderEvent'" in message
+
+
+def test_select_is_a_usage_error_for_a_format_with_one_schema(tmp_path: Path) -> None:
+    out = tmp_path / "out.yaml"
+    result = run(write(tmp_path), "--from", "json-schema", "--select", "Orders", "-o", out)
+    assert result.exit_code == 2
+    assert "Invalid value for '--select'" in plain(result.output)
+    assert "a json-schema file describes one schema, so there is nothing to select" in plain(
+        result.output
+    )
+    assert result.stdout == ""
+    assert not out.exists()
+
+
+def test_avro_strict_and_lenient(tmp_path: Path) -> None:
+    source = write_avro(tmp_path, MIXED, "mixed.avsc")
+    strict = run(source, "--from", "avro")
+    assert strict.exit_code == 1
+    message = plain(strict.stderr)
+    assert (
+        "#/fields/0/type: the union ['string', 'long'] mixes several types in one field" in message
+    )
+    assert "hint: --lenient imports fields like these as json fields" in message
+    assert strict.stdout == ""
+
+    lenient = run(source, "--from", "avro", "--lenient")
+    assert lenient.exit_code == 0, lenient.output
+    assert (
+        lenient.stdout == "name: mixed\nversion: 1.0.0\nfields:\n  - {name: choice, type: json}\n"
+    )
+    assert plain(lenient.stderr).startswith("warning[degraded_to_json] #/fields/0/type: the union")
+
+
+def test_a_schema_that_is_not_avro_names_the_place(tmp_path: Path) -> None:
+    document = {**AVRO_DOCUMENT, "fields": [{"name": "a", "type": "Nope"}]}
+    result = run(write_avro(tmp_path, document), "--from", "avro")
+    assert result.exit_code == 1
+    assert "#/fields/0/type: unknown type 'Nope'" in plain(result.stderr)
+    assert result.stdout == ""
+
+
+def test_a_json_schema_is_not_taken_for_an_avro_schema(tmp_path: Path) -> None:
+    result = run(write(tmp_path), "--from", "avro")
+    assert result.exit_code == 1
+    assert "the root is the type 'object'" in plain(result.stderr)

@@ -937,6 +937,13 @@ def test_the_name_option_wins() -> None:
         ({}, "<stdin>", "schema"),
         ({"title": "???"}, "<stdin>", "schema"),
         ({"title": ""}, "orders.json", "orders"),
+        ({"title": "OrderEvent"}, "file.json", "order_event"),
+        ({"title": "HTTPRequestLog"}, "file.json", "http_request_log"),
+        ({"title": "orderV2"}, "file.json", "order_v2"),
+        ({"title": "Order2Event"}, "file.json", "order2_event"),
+        ({"title": "ID"}, "file.json", "id"),
+        ({"$id": "https://x.test/schemas/OrderEvent.schema.json"}, "f.json", "order_event"),
+        ({}, "dir/customerEvents.json", "customer_events"),
     ],
 )
 def test_the_name_comes_from_title_then_id_then_the_file(
@@ -1061,6 +1068,7 @@ def test_the_importers_are_registered_by_format() -> None:
         name="s",
         version="1.0.0",
         lenient=False,
+        select=None,
     )
     assert result.schema.name == "s"
     assert result.issues == ()

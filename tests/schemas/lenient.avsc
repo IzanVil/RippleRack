@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "Lenient",
+  "doc": "Fields that strict mode refuses and --lenient imports as json.",
+  "fields": [
+    {"name": "id", "type": "long"},
+    {"name": "choice", "type": ["string", "long"], "doc": "Either a code or a number"},
+    {"name": "maybe", "type": ["null", "string", "long"]},
+    {"name": "nothing", "type": "null"},
+    {"name": "never", "type": []},
+    {"name": "note", "type": ["null", "string"], "doc": "Optional text"}
+  ]
+}

@@ -366,6 +366,8 @@ object:
 | `invalid_json`      | `import`: the input file is not valid JSON. |
 | `invalid_json_schema` | `import`: the input is JSON, but not a well-formed JSON Schema. |
 | `unsupported_json_schema` | `import`: the input is a JSON Schema that cannot be imported as it is. |
+| `invalid_avro_schema` | `import`: the input is JSON, but not a well-formed Avro schema. |
+| `unsupported_avro_schema` | `import`: the input is an Avro schema that cannot be imported as it is, or has no record to import. |
 | `output_exists`     | `import`: the output file exists, or it is the input file. |
 
 For file-related codes `error.message` names the offending file, and for
@@ -373,7 +375,7 @@ For file-related codes `error.message` names the offending file, and for
 message tells you whether `BASE` or `HEAD` was the problem. `unknown_pipeline` only
 applies to `impact`.
 
-The last four codes come from `ripplerack import`. It writes YAML and has no
+The last six codes come from `ripplerack import`. It writes YAML and has no
 `--format json`, so for now they are not printed in a JSON document; they identify the error
 in the Python API (`RippleRackError.code`) and are explained in [import.md](import.md#errors).
 

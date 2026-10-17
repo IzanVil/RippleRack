@@ -1,0 +1,45 @@
+{
+  "type": "record",
+  "name": "OrderEvent",
+  "namespace": "com.example.shop",
+  "doc": "One field of every kind the importer reads.",
+  "fields": [
+    {"name": "event_id", "type": {"type": "string", "logicalType": "uuid"}, "doc": "Unique id of the event"},
+    {"name": "sequence", "type": "int"},
+    {"name": "occurred_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "local_at", "type": {"type": "long", "logicalType": "local-timestamp-micros"}},
+    {"name": "shipped_on", "type": ["null", {"type": "int", "logicalType": "date"}], "default": null},
+    {
+      "name": "status",
+      "type": {"type": "enum", "name": "Status", "symbols": ["PENDING", "PAID", "REFUNDED", "CANCELLED"]}
+    },
+    {"name": "previous_status", "type": ["null", "Status"], "default": null},
+    {"name": "priority", "type": "long"},
+    {
+      "name": "amount",
+      "type": {"type": "bytes", "logicalType": "decimal", "precision": 12, "scale": 2},
+      "doc": "Total, in the\n    order currency"
+    },
+    {"name": "ratio", "type": "float"},
+    {"name": "score", "type": "double"},
+    {"name": "paid", "type": "boolean"},
+    {"name": "coupon", "type": ["string", "null"]},
+    {"name": "note", "type": ["null", "string"], "default": null, "doc": "Free text note"},
+    {"name": "elapsed", "type": {"type": "fixed", "name": "Span", "size": 12, "logicalType": "duration"}},
+    {"name": "payload", "type": "bytes"},
+    {
+      "name": "shipping",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "fields": [{"name": "street", "type": "string"}, {"name": "city", "type": "string"}]
+      }
+    },
+    {"name": "billing", "type": ["null", "Address"], "default": null},
+    {"name": "tags", "type": {"type": "array", "items": "string"}},
+    {"name": "attributes", "type": {"type": "map", "values": "string"}},
+    {"name": "legacy_id", "type": "long", "doc": "Id in the old system", "aliases": ["old_id"]},
+    {"name": "parent", "type": ["null", "OrderEvent"], "default": null},
+    {"name": "region", "type": {"type": "long", "logicalType": "vendor-specific"}}
+  ]
+}

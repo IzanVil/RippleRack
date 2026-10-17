@@ -22,6 +22,7 @@ class SourceFormat(StrEnum):
     """Formats ``ripplerack import`` can read (``--from``)."""
 
     JSON_SCHEMA = "json-schema"
+    AVRO = "avro"
 
 
 class IssueCode(StrEnum):
@@ -57,10 +58,21 @@ class ImportResult:
 
 
 class Importer(Protocol):
-    """Reads the text of a file in some format and returns the schema it describes."""
+    """Reads the text of a file in some format and returns the schema it describes.
+
+    ``select`` names which of the schemas a file defines to read, for the formats that can hold
+    several; the others refuse it.
+    """
 
     def __call__(
-        self, text: str, *, source: str, name: str | None, version: str, lenient: bool
+        self,
+        text: str,
+        *,
+        source: str,
+        name: str | None,
+        version: str,
+        lenient: bool,
+        select: str | None,
     ) -> ImportResult: ...
 
 

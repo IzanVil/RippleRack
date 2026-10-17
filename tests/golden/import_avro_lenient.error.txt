@@ -1,0 +1,6 @@
+error: lenient.avsc: cannot import this Avro schema:
+  #/fields/1/type: the union ['string', 'long'] mixes several types in one field
+  #/fields/2/type: the union ['string', 'long'] mixes several types in one field
+  #/fields/3/type: type 'null' on its own has no data type
+  #/fields/4/type: an empty union has no data type
+  hint: --lenient imports fields like these as json fields
