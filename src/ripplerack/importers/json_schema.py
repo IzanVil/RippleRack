@@ -86,8 +86,14 @@ def import_json_schema(
     name: str | None = None,
     version: str = "1.0.0",
     lenient: bool = False,
+    select: str | None = None,
 ) -> ImportResult:
-    """Parse the JSON Schema in ``text`` and translate it; ``source`` names it in messages."""
+    """Parse the JSON Schema in ``text`` and translate it; ``source`` names it in messages.
+
+    A JSON Schema file describes one schema, so there is nothing to ``select``.
+    """
+    if select is not None:
+        raise ValueError("select does not apply to JSON Schema: a file describes one schema")
     return from_json_schema(
         parse_json(text, source), source=source, name=name, version=version, lenient=lenient
     )

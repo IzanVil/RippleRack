@@ -1,8 +1,8 @@
 # Importing schemas
 
 `ripplerack import` reads a schema written in another format and writes it as the YAML that
-RippleRack reads, so nobody has to type it by hand. Today it reads **JSON Schema**; Avro and
-SQL DDL are planned.
+RippleRack reads, so nobody has to type it by hand. Today it reads **JSON Schema** and
+**Avro**; SQL DDL is planned.
 
 ```bash
 ripplerack import orders.schema.json --from json-schema > orders.yaml
@@ -46,12 +46,14 @@ whether they are optional, is an error or a [warning](#warnings). Value constrai
 
 ```text
 ripplerack import FILE --from json-schema [-o OUT] [--name NAME] [--version X.Y.Z] [--lenient] [--force]
+ripplerack import FILE --from avro [--select NAME] [-o OUT] [--name NAME] [--version X.Y.Z] [--lenient] [--force]
 ```
 
 | option | meaning |
 |--------|---------|
 | `FILE` | The file to import. `-` reads standard input. It is read as UTF-8; a byte order mark is accepted. |
-| `--from` | The format of `FILE`. Required: the format is never guessed. Today: `json-schema`. |
+| `--from` | The format of `FILE`. Required: the format is never guessed. Today: `json-schema` and `avro`. |
+| `--select` | Avro only: the record to import when the file defines several, by its name or its full name. Using it with `json-schema` is a usage error. |
 | `-o`, `--output` | Write the schema to this file instead of standard output. `-o -` is standard output. |
 | `--name` | The name of the schema. Letters, digits, `_`, `.` and `-` only. See [the name](#the-name-and-the-version). |
 | `--version` | The version to give the schema, `MAJOR.MINOR.PATCH`. Default: `1.0.0`. |

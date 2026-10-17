@@ -18,7 +18,7 @@ from ripplerack.importers.base import ImportIssue, IssueCode
 from ripplerack.parser import ErrorCode, RippleRackError
 
 MAX_ENUM_VALUES = 10
-_NAME_SUFFIXES = (".json", ".schema")
+_NAME_SUFFIXES = (".json", ".schema", ".avsc")
 
 
 class ReadError(Exception):

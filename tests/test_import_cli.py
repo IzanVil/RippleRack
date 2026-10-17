@@ -287,7 +287,7 @@ def test_warnings_do_not_stop_an_output_file(tmp_path: Path) -> None:
     [
         ([], "Missing argument"),
         (["FILE"], "Missing option '--from'"),
-        (["FILE", "--from", "avro"], "Invalid value for '--from'"),
+        (["FILE", "--from", "no-such-format"], "Invalid value for '--from'"),
         (["FILE", "--from", "json-schema", "--name", "two words"], "Invalid value for '--name'"),
         (["FILE", "--from", "json-schema", "--name", ""], "Invalid value for '--name'"),
         (["FILE", "--from", "json-schema", "--version", "1.0"], "MAJOR.MINOR.PATCH"),

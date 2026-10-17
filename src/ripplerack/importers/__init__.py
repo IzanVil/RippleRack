@@ -2,11 +2,13 @@
 
 Each importer reads the text of a file and returns an :class:`ImportResult`: the schema, plus
 the warnings about whatever could not be carried over exactly. Anything that cannot be
-imported at all is a :class:`~ripplerack.parser.RippleRackError`.
+imported at all is a :class:`~ripplerack.parser.RippleRackError`. What the formats share (reading
+JSON, naming a schema, reporting problems) lives in :mod:`ripplerack.importers.common`.
 """
 
 from __future__ import annotations
 
+from ripplerack.importers.avro import import_avro
 from ripplerack.importers.base import (
     STDIN,
     Importer,
@@ -22,10 +24,16 @@ from ripplerack.importers.base import (
 from ripplerack.importers.json_schema import import_json_schema
 from ripplerack.importers.render import render_schema_yaml
 
-IMPORTERS: dict[SourceFormat, Importer] = {SourceFormat.JSON_SCHEMA: import_json_schema}
+IMPORTERS: dict[SourceFormat, Importer] = {
+    SourceFormat.JSON_SCHEMA: import_json_schema,
+    SourceFormat.AVRO: import_avro,
+}
+# The formats whose files can define several schemas, one of which ``--select`` picks.
+SELECTABLE: frozenset[SourceFormat] = frozenset({SourceFormat.AVRO})
 
 __all__ = [
     "IMPORTERS",
+    "SELECTABLE",
     "STDIN",
     "ImportIssue",
     "ImportResult",

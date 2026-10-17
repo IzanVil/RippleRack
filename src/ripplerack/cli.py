@@ -23,6 +23,7 @@ from ripplerack.graph import NodeKind, to_dot, to_json
 from ripplerack.impact import ImpactReport, Severity, analyze_schema_change
 from ripplerack.importers import (
     IMPORTERS,
+    SELECTABLE,
     STDIN,
     SourceFormat,
     is_identifier,
@@ -288,8 +289,8 @@ def import_command(
         typer.Option(
             "--name",
             callback=_check_schema_name,
-            help="Name of the schema. Default: the title, then the last part of $id, "
-            "then the file name.",
+            help="Name of the schema. Default: the title or $id of a JSON Schema, the name "
+            "of an Avro record, then the file name.",
             show_default=False,
         ),
     ] = None,
@@ -301,6 +302,14 @@ def import_command(
             help="Version to give the schema; the source has none.",
         ),
     ] = "1.0.0",
+    select: Annotated[
+        str | None,
+        typer.Option(
+            "--select",
+            help="Avro: the record to import when the file defines several, by name or full name.",
+            show_default=False,
+        ),
+    ] = None,
     lenient: Annotated[
         bool,
         typer.Option(
@@ -318,12 +327,22 @@ def import_command(
     The result is a schema file: `impact --schema` reads it as is, and under a pipeline's
     `schema:` key it describes what the pipeline produces. Warnings go to standard error.
     """
+    if select is not None and source_format not in SELECTABLE:
+        raise typer.BadParameter(
+            f"a {source_format.value} file describes one schema, so there is nothing to select",
+            param_hint="'--select'",
+        )
     target = None if output is None or output == STDIN else output
     try:
         if target is not None:
             _check_output(target, file, force=force)
         result = IMPORTERS[source_format](
-            read_text(file), source=source_label(file), name=name, version=version, lenient=lenient
+            read_text(file),
+            source=source_label(file),
+            name=name,
+            version=version,
+            lenient=lenient,
+            select=select,
         )
         text = render_schema_yaml(result.schema)
         if target is not None:

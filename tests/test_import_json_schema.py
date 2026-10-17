@@ -1068,6 +1068,7 @@ def test_the_importers_are_registered_by_format() -> None:
         name="s",
         version="1.0.0",
         lenient=False,
+        select=None,
     )
     assert result.schema.name == "s"
     assert result.issues == ()
