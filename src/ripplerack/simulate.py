@@ -13,7 +13,7 @@ from enum import StrEnum
 import networkx as nx
 
 from ripplerack.impact import AffectedNode, blast_radius
-from ripplerack.models import Datacenter
+from ripplerack.models import Datacenter, Rack, Server
 
 WARNING_THRESHOLD = 0.8
 
@@ -103,38 +103,53 @@ def simulate(
     if unknown:
         raise KeyError(", ".join(unknown))
 
-    down: set[str] = set(failures)
+    down, unavailable = _cascade(graph, failures)
+    return SimulationReport(
+        load_factor=load_factor,
+        servers=[
+            _server_report(rack, server, down, load_factor)
+            for rack, server in datacenter.iter_servers()
+        ],
+        racks=[_rack_report(rack, down, load_factor) for rack in datacenter.racks],
+        failed=list(failures),
+        unavailable=sorted(unavailable.values(), key=lambda item: (item.distance, item.id)),
+    )
+
+
+def _cascade(
+    graph: nx.DiGraph[str], failures: list[str]
+) -> tuple[set[str], dict[str, AffectedNode]]:
+    """Everything that is down because of ``failures``, and what was lost as a consequence.
+
+    The second part keeps, for each component that did not fail itself, the path from the
+    closest failure.
+    """
+    failed = set(failures)
+    down = set(failed)
     unavailable: dict[str, AffectedNode] = {}
     for node in failures:
         for affected in blast_radius(graph, node):
             down.add(affected.id)
-            current = unavailable.get(affected.id)
-            if affected.id not in failures and (
-                current is None or affected.distance < current.distance
-            ):
+            if affected.id in failed:
+                continue
+            closest = unavailable.get(affected.id)
+            if closest is None or affected.distance < closest.distance:
                 unavailable[affected.id] = affected
+    return down, unavailable
 
-    server_reports: list[ServerReport] = []
-    rack_power: dict[str, float] = {rack.id: 0.0 for rack in datacenter.racks}
-    for rack, server in datacenter.iter_servers():
-        running = [service for service in server.services if service.id not in down]
-        cpu = ResourceUsage(sum(s.cpu_cores for s in running) * load_factor, server.cpu_cores)
-        memory = ResourceUsage(sum(s.memory_gb for s in running) * load_factor, server.memory_gb)
-        status = Status.FAILED if server.id in down else classify(cpu, memory)
-        server_reports.append(ServerReport(server.id, rack.id, cpu, memory, status))
-        if server.id not in down:
-            rack_power[rack.id] += server.power_kw * load_factor
 
-    rack_reports = []
-    for rack in datacenter.racks:
-        power = ResourceUsage(rack_power[rack.id], rack.power_capacity_kw)
-        status = Status.FAILED if rack.id in down else classify(power)
-        rack_reports.append(RackReport(rack.id, power, status))
+def _server_report(rack: Rack, server: Server, down: set[str], load_factor: float) -> ServerReport:
+    """Usage of a server by the services that are still running on it."""
+    running = [service for service in server.services if service.id not in down]
+    cpu = ResourceUsage(sum(s.cpu_cores for s in running) * load_factor, server.cpu_cores)
+    memory = ResourceUsage(sum(s.memory_gb for s in running) * load_factor, server.memory_gb)
+    status = Status.FAILED if server.id in down else classify(cpu, memory)
+    return ServerReport(server.id, rack.id, cpu, memory, status)
 
-    return SimulationReport(
-        load_factor=load_factor,
-        servers=server_reports,
-        racks=rack_reports,
-        failed=list(failures),
-        unavailable=sorted(unavailable.values(), key=lambda item: (item.distance, item.id)),
-    )
+
+def _rack_report(rack: Rack, down: set[str], load_factor: float) -> RackReport:
+    """Power drawn from a rack by the servers that are still up."""
+    drawn = sum((s.power_kw * load_factor for s in rack.servers if s.id not in down), 0.0)
+    power = ResourceUsage(drawn, rack.power_capacity_kw)
+    status = Status.FAILED if rack.id in down else classify(power)
+    return RackReport(rack.id, power, status)
