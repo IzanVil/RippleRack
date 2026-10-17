@@ -11,10 +11,14 @@ record that uses it.
 As with JSON Schema, what decides the type but has no equivalent is an error, so nothing is lost
 without anyone noticing: a union of several types, for one. With ``lenient`` the field becomes a
 ``json`` one and a warning says so. ``docs/import-avro.md`` lists every rule.
+
+The module has two halves. ``_Types`` knows what the file defines and which record to import;
+``_Reader`` translates the fields of that record.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, TypeGuard
 
@@ -26,11 +30,9 @@ from ripplerack.importers.common import (
     ReadError,
     child,
     describe,
-    file_name,
+    name_schema,
     one_line,
     parse_json,
-    slug,
-    strip_suffixes,
     summarize,
     values_note,
     with_note,
@@ -53,11 +55,14 @@ _PLAIN_TYPES = {
 }
 _RECORDS = ("record", "error")
 _NAMED_KINDS = (*_RECORDS, "enum", "fixed")
-_NEEDS_A_NAME = {
+_HOLDS = {"array": "items", "map": "values"}  # what an array and a map are made of
+_CALLED = {  # how a kind of type is named in a message
     "record": "a record",
     "error": "an error",
     "enum": "an enum",
     "fixed": "a fixed type",
+    "array": "an array",
+    "map": "a map",
 }
 # The logical types of the specification: the types each can sit on and what it makes of them.
 # One that is unknown, or sits on a type it does not fit, is ignored, as the specification asks.
@@ -152,101 +157,22 @@ def from_avro(
     return reader.read(source=source, name=name, version=version, select=select)
 
 
-class _Reader(Reader):
-    """Reads one document; collects every problem and warning before reporting."""
+# ------------------------------------------------------------- what the file defines
 
-    def __init__(self, root: Any, *, lenient: bool) -> None:
-        super().__init__(
-            lenient=lenient,
-            invalid=ErrorCode.INVALID_AVRO_SCHEMA,
-            unsupported=ErrorCode.UNSUPPORTED_AVRO_SCHEMA,
-            subject="Avro schema",
-            unit="fields",
-        )
+
+class _Types:
+    """The records, enums and fixed types that a file defines, found by their full names."""
+
+    def __init__(self, root: Any) -> None:
         self._root = root
-        self._named: dict[str, _Named] = {}  # by full name
+        self._named: dict[str, _Named] = {}
         self._defined: dict[int, _Named] = {}  # by the identity of the object that defines it
 
-    def read(
-        self, *, source: str, name: str | None, version: str, select: str | None
-    ) -> ImportResult:
-        fields: list[SchemaField] = []
-        record_name = ""
-        try:
-            self._register(self._root, None, "#", 0)
-            record = self._select(select)
-            record_name = record.name
-            fields = self._fields(record)
-        except ReadError as error:
-            self._problems.append(error)
-        if self._problems:
-            self._fail(source)
-        schema_name = name if name is not None else self._schema_name(record_name, source)
-        try:
-            schema = Schema(name=schema_name, version=version, fields=fields)
-        except ValidationError as exc:
-            raise RippleRackError(
-                f"{source}: {summarize(exc)}", ErrorCode.VALIDATION_FAILED
-            ) from exc
-        return ImportResult(schema=schema, issues=tuple(self._issues))
+    def register(self) -> None:
+        """Note every type the file defines, wherever it is: in a field, an array, a union..."""
+        self._register(self._root, None, "#", 0)
 
-    # -------------------------------------------------------------- the types of the file
-
-    def _register(self, schema: Any, namespace: str | None, pointer: str, depth: int) -> None:
-        """Note every record, enum and fixed type that a schema defines, wherever it is."""
-        if depth > _MAX_DEPTH:
-            raise _unsupported(pointer, "the schema is nested too deeply", degradable=False)
-        if isinstance(schema, list):
-            for index, branch in enumerate(schema):
-                self._register(branch, namespace, child(pointer, index), depth + 1)
-        elif isinstance(schema, dict):
-            kind = schema.get("type")
-            if kind in _NAMED_KINDS:
-                namespace = self._define(kind, schema, namespace, pointer)
-                if kind in _RECORDS:
-                    for index, field in enumerate(schema["fields"]):
-                        if isinstance(field, dict) and "type" in field:
-                            where = child(pointer, "fields", index, "type")
-                            self._register(field["type"], namespace, where, depth + 1)
-            elif kind == "array":
-                self._register(schema.get("items"), namespace, child(pointer, "items"), depth + 1)
-            elif kind == "map":
-                self._register(schema.get("values"), namespace, child(pointer, "values"), depth + 1)
-
-    def _define(
-        self, kind: str, schema: dict[str, Any], namespace: str | None, pointer: str
-    ) -> str | None:
-        """Register a named type; returns the namespace its own members are read in."""
-        name = schema.get("name")
-        if not isinstance(name, str) or not name:
-            raise _invalid(child(pointer, "name"), f"{_NEEDS_A_NAME[kind]} needs a name")
-        if "." in name:  # a full name: a namespace given next to it is ignored
-            fullname = name
-            own: str | None = name.rpartition(".")[0] or None
-        else:
-            declared = schema.get("namespace")
-            if declared is None:  # absent, or null: that of the type that contains this one
-                declared = namespace
-            elif not isinstance(declared, str):
-                raise _invalid(child(pointer, "namespace"), "namespace must be a string")
-            own = declared or None  # the empty namespace is no namespace
-            fullname = f"{own}.{name}" if own else name
-        if fullname in self._named:
-            raise _invalid(child(pointer, "name"), f"{fullname!r} is defined more than once")
-        if kind in _RECORDS and not isinstance(schema.get("fields"), list):
-            raise _invalid(child(pointer, "fields"), "the fields of a record must be a list")
-        if kind == "enum":
-            symbols = schema.get("symbols")
-            if not isinstance(symbols, list) or not all(isinstance(s, str) for s in symbols):
-                raise _invalid(
-                    child(pointer, "symbols"), "the symbols of an enum must be a list of strings"
-                )
-        named = _Named(kind, fullname, schema, own, pointer)
-        self._named[fullname] = named
-        self._defined[id(schema)] = named
-        return own
-
-    def _find(self, name: str, namespace: str | None) -> _Named | None:
+    def find(self, name: str, namespace: str | None) -> _Named | None:
         """The type a name refers to: one without a dot is looked up in the namespace first."""
         if "." not in name and namespace:
             found = self._named.get(f"{namespace}.{name}")
@@ -254,12 +180,44 @@ class _Reader(Reader):
                 return found
         return self._named.get(name)
 
-    # ----------------------------------------------------------------- the record to import
-
-    def _select(self, select: str | None) -> _Named:
+    def choose(self, select: str | None) -> _Named:
+        """The record to import: the one ``select`` names, or else the only one the file holds."""
         records = {full: named for full, named in self._named.items() if named.kind in _RECORDS}
         if select is not None:
-            return self._chosen(select, records)
+            return _record_named(select, records)
+        return self._only_record(records)
+
+    def _register(self, schema: Any, namespace: str | None, pointer: str, depth: int) -> None:
+        if depth > _MAX_DEPTH:
+            raise _unsupported(pointer, "the schema is nested too deeply", degradable=False)
+        held: list[tuple[tuple[str | int, ...], Any]]
+        if isinstance(schema, list):
+            held = [((index,), branch) for index, branch in enumerate(schema)]
+        elif isinstance(schema, dict):
+            kind = schema.get("type")
+            if kind in _NAMED_KINDS:
+                namespace = self._define(kind, schema, namespace, pointer)
+            held = list(_held_by(kind, schema))
+        else:
+            return  # a name or a primitive: nothing is defined here
+        for tokens, inner in held:
+            self._register(inner, namespace, child(pointer, *tokens), depth + 1)
+
+    def _define(
+        self, kind: str, schema: dict[str, Any], namespace: str | None, pointer: str
+    ) -> str | None:
+        """Register a named type; returns the namespace its own members are read in."""
+        fullname, own = _full_name(kind, schema, namespace, pointer)
+        if fullname in self._named:
+            raise _invalid(child(pointer, "name"), f"{fullname!r} is defined more than once")
+        _check_shape(kind, schema, pointer)
+        named = _Named(kind, fullname, schema, own, pointer)
+        self._named[fullname] = named
+        self._defined[id(schema)] = named
+        return own
+
+    def _only_record(self, records: dict[str, _Named]) -> _Named:
+        """The record at the top of the file: the root, or the one in a list of types."""
         branches = self._root if isinstance(self._root, list) else [self._root]
         top = [
             named
@@ -275,36 +233,119 @@ class _Reader(Reader):
                 "choose one with --select",
                 degradable=False,
             )
-        hint = (
-            f"; the file defines the records {_listing(sorted(records))}: choose one with --select"
-            if records
-            else ""
-        )
+        raise _unsupported("#", _no_record_to_import(self._root, records), degradable=False)
+
+
+def _full_name(
+    kind: str, schema: dict[str, Any], namespace: str | None, pointer: str
+) -> tuple[str, str | None]:
+    """The full name of a type that is defined, and the namespace its own members are read in."""
+    name = schema.get("name")
+    if not isinstance(name, str) or not name:
+        raise _invalid(child(pointer, "name"), f"{_CALLED[kind]} needs a name")
+    if "." in name:  # a full name: a namespace given next to it is ignored
+        return name, name.rpartition(".")[0] or None
+    declared = schema.get("namespace")
+    if declared is None:  # absent, or null: that of the type that contains this one
+        declared = namespace
+    elif not isinstance(declared, str):
+        raise _invalid(child(pointer, "namespace"), "namespace must be a string")
+    own = declared or None  # the empty namespace is no namespace
+    return (f"{own}.{name}" if own else name), own
+
+
+def _check_shape(kind: str, schema: dict[str, Any], pointer: str) -> None:
+    """Refuse a record whose fields, or an enum whose symbols, are not what Avro says."""
+    if kind in _RECORDS and not isinstance(schema.get("fields"), list):
+        raise _invalid(child(pointer, "fields"), "the fields of a record must be a list")
+    if kind == "enum":
+        symbols = schema.get("symbols")
+        if not isinstance(symbols, list) or not all(isinstance(s, str) for s in symbols):
+            raise _invalid(
+                child(pointer, "symbols"), "the symbols of an enum must be a list of strings"
+            )
+
+
+def _held_by(kind: Any, schema: dict[str, Any]) -> Iterator[tuple[tuple[str | int, ...], Any]]:
+    """The schemas that a schema holds, each with its place in it: field types, items, values."""
+    if kind in _RECORDS:
+        for index, field in enumerate(schema["fields"]):
+            if isinstance(field, dict) and "type" in field:
+                yield ("fields", index, "type"), field["type"]
+    elif isinstance(kind, str) and kind in _HOLDS:
+        yield (_HOLDS[kind],), schema.get(_HOLDS[kind])
+
+
+def _record_named(select: str, records: dict[str, _Named]) -> _Named:
+    """The record ``select`` names: its full name, or its name alone if no other has it."""
+    if select in records:
+        return records[select]
+    matches = sorted(full for full, named in records.items() if named.name == select)
+    if len(matches) == 1:
+        return records[matches[0]]
+    if matches:
         raise _unsupported(
             "#",
-            f"the root is {_kind_of(self._root)}, but only a record can be imported: its fields "
-            f"become the fields of the schema{hint}",
+            f"several records are called {select!r} ({_listing(matches)}); give the full name",
             degradable=False,
         )
+    known = f"; its records are {_listing(sorted(records))}" if records else ""
+    raise _unsupported(
+        "#", f"the file defines no record called {select!r}{known}", degradable=False
+    )
 
-    def _chosen(self, select: str, records: dict[str, _Named]) -> _Named:
-        if select in records:
-            return records[select]
-        matches = sorted(full for full, named in records.items() if named.name == select)
-        if len(matches) == 1:
-            return records[matches[0]]
-        if matches:
-            raise _unsupported(
-                "#",
-                f"several records are called {select!r} ({_listing(matches)}); give the full name",
-                degradable=False,
-            )
-        known = f"; its records are {_listing(sorted(records))}" if records else ""
-        raise _unsupported(
-            "#", f"the file defines no record called {select!r}{known}", degradable=False
+
+def _no_record_to_import(root: Any, records: dict[str, _Named]) -> str:
+    """Why the root is not a record to import, and where to find one if the file defines any."""
+    hint = (
+        f"; the file defines the records {_listing(sorted(records))}: choose one with --select"
+        if records
+        else ""
+    )
+    return (
+        f"the root is {_kind_of(root)}, but only a record can be imported: its fields "
+        f"become the fields of the schema{hint}"
+    )
+
+
+# ------------------------------------------------------ the translation of a record
+
+
+class _Reader(Reader):
+    """Translates the fields of one record; collects every problem and warning before reporting."""
+
+    def __init__(self, root: Any, *, lenient: bool) -> None:
+        super().__init__(
+            lenient=lenient,
+            invalid=ErrorCode.INVALID_AVRO_SCHEMA,
+            unsupported=ErrorCode.UNSUPPORTED_AVRO_SCHEMA,
+            subject="Avro schema",
+            unit="fields",
         )
+        self._types = _Types(root)
 
-    # --------------------------------------------------------------------- the fields
+    def read(
+        self, *, source: str, name: str | None, version: str, select: str | None
+    ) -> ImportResult:
+        fields: list[SchemaField] = []
+        record_name = ""
+        try:
+            self._types.register()
+            record = self._types.choose(select)
+            record_name = record.name
+            fields = self._fields(record)
+        except ReadError as error:
+            self._problems.append(error)
+        if self._problems:
+            self._fail(source)
+        schema_name = name if name is not None else name_schema([record_name], source)
+        try:
+            schema = Schema(name=schema_name, version=version, fields=fields)
+        except ValidationError as exc:
+            raise RippleRackError(
+                f"{source}: {summarize(exc)}", ErrorCode.VALIDATION_FAILED
+            ) from exc
+        return ImportResult(schema=schema, issues=tuple(self._issues))
 
     def _fields(self, record: _Named) -> list[SchemaField]:
         fields: list[SchemaField] = []
@@ -324,26 +365,27 @@ class _Reader(Reader):
         return fields
 
     def _field(self, declared: Any, record: _Named, pointer: str, seen: set[str]) -> SchemaField:
-        if not isinstance(declared, dict):
-            raise _invalid(pointer, f"a field must be an object, found {describe(declared)}")
-        name = declared.get("name")
-        if not isinstance(name, str):
-            raise _invalid(child(pointer, "name"), "a field needs a name")
-        if not is_identifier(name):
-            raise _unsupported(
-                child(pointer, "name"),
-                f"field name {name!r} is not a valid field name "
-                "(letters, digits, '_', '.' and '-' only)",
-                degradable=False,
-            )
-        if name in seen:
-            raise _invalid(child(pointer, "name"), f"field {name!r} is declared more than once")
-        seen.add(name)
+        name = _field_name(declared, pointer, seen)
         if "type" not in declared:
             raise _invalid(pointer, f"field {name!r} has no type")
         description = _doc(declared, pointer)
+        translated = self._translated(name, declared["type"], record.namespace, pointer)
+        return SchemaField(
+            name=name,
+            type=translated.type,
+            nullable=translated.nullable,
+            description=with_note(description, translated.note),
+        )
+
+    def _translated(
+        self, name: str, schema: Any, namespace: str | None, pointer: str
+    ) -> _Translated:
+        """The type of the field ``name``.
+
+        With ``lenient``, a type that has no equivalent gives a ``json`` field and a warning.
+        """
         try:
-            translated = self._type(declared["type"], record.namespace, child(pointer, "type"))
+            return self._type(schema, namespace, child(pointer, "type"))
         except ReadError as error:
             if not (self._lenient and error.degradable):
                 raise
@@ -352,15 +394,7 @@ class _Reader(Reader):
                 error.pointer,
                 f"{error.message}; field {name!r} imported as json",
             )
-            translated = _Translated(FieldType.JSON, _admits_null(declared["type"]))
-        return SchemaField(
-            name=name,
-            type=translated.type,
-            nullable=translated.nullable,
-            description=with_note(description, translated.note),
-        )
-
-    # ------------------------------------------------------------------------ the types
+            return _Translated(FieldType.JSON, _admits_null(schema))
 
     def _type(self, schema: Any, namespace: str | None, pointer: str) -> _Translated:
         """The type of a field, whether it admits null, and the values it lists."""
@@ -395,7 +429,7 @@ class _Reader(Reader):
     def _by_name(self, name: str, namespace: str | None, pointer: str) -> _Translated:
         if name in _PLAIN_TYPES:
             return _Translated(_PLAIN_TYPES[name])
-        named = self._find(name, namespace)
+        named = self._types.find(name, namespace)
         if named is None:
             raise _invalid(
                 pointer,
@@ -409,31 +443,40 @@ class _Reader(Reader):
             raise _invalid(child(pointer, "type"), "the type of a schema must be a name")
         if kind in _PLAIN_TYPES:
             return _Translated(_logical(kind, schema) or _PLAIN_TYPES[kind])
-        if kind in _RECORDS:
-            return _Translated(FieldType.JSON)
-        if kind == "enum":
-            return _Translated(FieldType.STRING, note=values_note(schema["symbols"], "One of"))
         if kind == "fixed":
             return _Translated(_logical(kind, schema) or FieldType.STRING)
-        if kind == "array" and "items" not in schema:
-            raise _invalid(pointer, "an array needs items")
-        if kind == "map" and "values" not in schema:
-            raise _invalid(pointer, "a map needs values")
-        if kind in ("array", "map"):
+        if kind == "enum":
+            return _Translated(FieldType.STRING, note=values_note(schema["symbols"], "One of"))
+        if kind in _RECORDS:
+            return _Translated(FieldType.JSON)
+        if kind in _HOLDS:
+            if _HOLDS[kind] not in schema:
+                raise _invalid(pointer, f"{_CALLED[kind]} needs {_HOLDS[kind]}")
             return _Translated(FieldType.JSON)
         return self._by_name(kind, namespace, pointer)  # {"type": "Name"} refers to a type too
 
-    # ------------------------------------------------------------------------ the name
-
-    def _schema_name(self, record_name: str, source: str) -> str:
-        """The name of the record, else the file name, else ``schema``."""
-        candidates = [record_name]
-        if not source.startswith("<"):
-            candidates.append(strip_suffixes(file_name(source)))
-        return next((name for name in map(slug, candidates) if name), "schema")
-
 
 # ---------------------------------------------------------------------- pure helpers
+
+
+def _field_name(declared: Any, pointer: str, seen: set[str]) -> str:
+    """The name of a field, which must be there, usable, and not used by another field."""
+    if not isinstance(declared, dict):
+        raise _invalid(pointer, f"a field must be an object, found {describe(declared)}")
+    name = declared.get("name")
+    if not isinstance(name, str):
+        raise _invalid(child(pointer, "name"), "a field needs a name")
+    if not is_identifier(name):
+        raise _unsupported(
+            child(pointer, "name"),
+            f"field name {name!r} is not a valid field name "
+            "(letters, digits, '_', '.' and '-' only)",
+            degradable=False,
+        )
+    if name in seen:
+        raise _invalid(child(pointer, "name"), f"field {name!r} is declared more than once")
+    seen.add(name)
+    return name
 
 
 def _is_null(schema: Any) -> bool:

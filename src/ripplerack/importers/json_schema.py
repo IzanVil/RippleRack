@@ -26,10 +26,9 @@ from ripplerack.importers.common import (
     ReadError,
     child,
     describe,
-    file_name,
+    name_schema,
     one_line,
     parse_json,
-    slug,
     strip_suffixes,
     summarize,
     values_note,
@@ -485,9 +484,7 @@ class _Reader(Reader):
             identifier = self._text(self._root, "$id")
             if identifier:
                 candidates.append(strip_suffixes(_last_segment(identifier)))
-        if not source.startswith("<"):
-            candidates.append(strip_suffixes(file_name(source)))
-        return next((name for name in map(slug, candidates) if name), "schema")
+        return name_schema(candidates, source)
 
     def _text(self, schema: dict[str, Any], key: str) -> str | None:
         value = schema.get(key)

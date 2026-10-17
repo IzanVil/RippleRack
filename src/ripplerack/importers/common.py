@@ -165,6 +165,17 @@ def slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", words.lower()).strip("_")
 
 
+def name_schema(candidates: list[str], source: str) -> str:
+    """The name of a schema: the first candidate that makes a usable name, else the file's.
+
+    ``source`` is the path of the file, or ``<stdin>``, which has no name to give. When nothing
+    makes a usable name the schema is called ``schema``.
+    """
+    if not source.startswith("<"):
+        candidates = [*candidates, strip_suffixes(file_name(source))]
+    return next((name for name in map(slug, candidates) if name), "schema")
+
+
 def strip_suffixes(name: str) -> str:
     """``name`` without the endings of a file name that are not part of the schema's name."""
     for suffix in _NAME_SUFFIXES:
