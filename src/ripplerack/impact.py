@@ -14,7 +14,7 @@ from enum import IntEnum
 import networkx as nx
 
 from ripplerack.graph import NodeKind
-from ripplerack.models import Datacenter, Schema
+from ripplerack.models import Datacenter, PipelineInput, Schema
 from ripplerack.semver import ChangeLevel, SchemaChange, SchemaDiff, diff_schemas
 
 
@@ -140,20 +140,26 @@ def _broken_consumers(
     if not breaking:
         return []
 
+    inputs = (
+        (consumer, item)
+        for consumer in datacenter.pipelines
+        if consumer.id not in ignored
+        for item in consumer.inputs
+        if item.pipeline == pipeline_id
+    )
     result: list[BrokenConsumer] = []
-    for consumer in datacenter.pipelines:
-        if consumer.id in ignored:
-            continue
-        for item in consumer.inputs:
-            if item.pipeline != pipeline_id:
-                continue
-            # Without an explicit field list the consumer reads every existing field.
-            read = set(item.fields) if item.fields is not None else set(diff.old.field_map())
-            hits = [c for c in breaking if c.field in read]
-            if hits:
-                fields = sorted({c.field for c in hits if c.field is not None})
-                result.append(BrokenConsumer(consumer.id, fields, hits))
+    for consumer, item in inputs:
+        read = _fields_read(item, diff.old)
+        hits = [change for change in breaking if change.field in read]
+        if hits:
+            fields = sorted({change.field for change in hits if change.field is not None})
+            result.append(BrokenConsumer(consumer.id, fields, hits))
     return result
+
+
+def _fields_read(item: PipelineInput, upstream: Schema) -> set[str]:
+    """The fields of ``upstream`` that an input reads: all of them unless it lists some."""
+    return set(item.fields) if item.fields is not None else set(upstream.field_map())
 
 
 def _severity(
