@@ -15,33 +15,50 @@ from tests.helpers import EXAMPLES, SCHEMAS, assert_json_golden, assert_text_gol
 
 runner = CliRunner()
 ORDERS_V2 = EXAMPLES / "schemas" / "orders_v2.schema.json"
+ORDERS_V2_AVRO = EXAMPLES / "schemas" / "orders_v2.avsc"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
+# The same schema, written in each format: the examples are one and the same thing.
+EXAMPLE_IN_EVERY_FORMAT = pytest.mark.parametrize(
+    ("source_format", "example"),
+    [("json-schema", ORDERS_V2), ("avro", ORDERS_V2_AVRO)],
+    ids=["json-schema", "avro"],
+)
 
-def run_import(source: Path | str, *args: str) -> Result:
+
+def run_import(source: Path | str, *args: str, source_format: str = "json-schema") -> Result:
     # A wide terminal, so that a long error is not folded at 80 columns.
     return runner.invoke(
-        app, ["import", str(source), "--from", "json-schema", *args], env={"COLUMNS": "300"}
+        app, ["import", str(source), "--from", source_format, *args], env={"COLUMNS": "300"}
     )
 
 
-def test_the_example_is_imported_as_the_documented_yaml() -> None:
-    result = run_import(ORDERS_V2, "--version", "2.0.0")
+@EXAMPLE_IN_EVERY_FORMAT
+def test_the_example_is_imported_as_the_documented_yaml(source_format: str, example: Path) -> None:
+    result = run_import(example, "--version", "2.0.0", source_format=source_format)
     assert result.exit_code == 0, result.output
     assert result.stderr == ""
     assert_text_golden("import_orders_v2.yaml", result.stdout)
 
 
-def test_the_example_describes_the_same_schema_as_the_orders_v2_change(tmp_path: Path) -> None:
+@EXAMPLE_IN_EVERY_FORMAT
+def test_the_example_describes_the_same_schema_as_the_orders_v2_change(
+    source_format: str, example: Path, tmp_path: Path
+) -> None:
     out = tmp_path / "orders.yaml"
-    assert run_import(ORDERS_V2, "--version", "2.0.0", "-o", str(out)).exit_code == 0
+    result = run_import(example, "--version", "2.0.0", "-o", str(out), source_format=source_format)
+    assert result.exit_code == 0, result.output
     assert load_schema(out) == load_schema(EXAMPLES / "changes" / "orders_v2.yaml")
 
 
-def test_from_json_schema_to_impact_gives_the_orders_v2_golden(tmp_path: Path) -> None:
-    """JSON Schema, import, impact: the same report as with ``changes/orders_v2.yaml``."""
+@EXAMPLE_IN_EVERY_FORMAT
+def test_from_the_example_to_impact_gives_the_orders_v2_golden(
+    source_format: str, example: Path, tmp_path: Path
+) -> None:
+    """Import, impact: the same report as with ``changes/orders_v2.yaml``, from either format."""
     out = tmp_path / "orders.yaml"
-    assert run_import(ORDERS_V2, "--version", "2.0.0", "-o", str(out)).exit_code == 0
+    result = run_import(example, "--version", "2.0.0", "-o", str(out), source_format=source_format)
+    assert result.exit_code == 0, result.output
 
     arguments = [
         "impact",
@@ -53,31 +70,51 @@ def test_from_json_schema_to_impact_gives_the_orders_v2_golden(tmp_path: Path) -
         "--format",
         "json",
     ]
-    result = runner.invoke(app, arguments)
-    assert result.exit_code == 0, result.output
-    assert_json_golden("impact_orders_v2.json", json.loads(result.stdout))
+    report = runner.invoke(app, arguments)
+    assert report.exit_code == 0, report.output
+    assert_json_golden("impact_orders_v2.json", json.loads(report.stdout))
 
     gate = runner.invoke(app, [*arguments, "--fail-on-breaking"])
     assert gate.exit_code == 2  # the breaking change is found, as with the YAML file
 
 
 @pytest.mark.parametrize(
-    ("source", "options", "golden"),
+    ("source", "source_format", "options", "golden"),
     [
-        ("kitchen_sink.schema.json", [], "import_kitchen_sink"),
-        ("lenient.schema.json", ["--lenient"], "import_lenient"),
+        ("kitchen_sink.schema.json", "json-schema", [], "import_kitchen_sink"),
+        ("lenient.schema.json", "json-schema", ["--lenient"], "import_lenient"),
+        ("kitchen_sink.avsc", "avro", [], "import_avro_kitchen_sink"),
+        ("lenient.avsc", "avro", ["--lenient"], "import_avro_lenient"),
+        ("shop.avsc", "avro", ["--select", "OrderEvent"], "import_avro_shop"),
     ],
 )
-def test_golden_output_and_warnings(source: str, options: list[str], golden: str) -> None:
-    result = run_import(SCHEMAS / source, *options)
+def test_golden_output_and_warnings(
+    source: str, source_format: str, options: list[str], golden: str
+) -> None:
+    result = run_import(SCHEMAS / source, *options, source_format=source_format)
     assert result.exit_code == 0, result.output
     assert_text_golden(f"{golden}.yaml", result.stdout)
     assert_text_golden(f"{golden}.warnings.txt", result.stderr)
 
 
-def test_golden_error_for_a_schema_strict_mode_refuses(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize(
+    ("source", "source_format", "options", "golden"),
+    [
+        ("lenient.schema.json", "json-schema", [], "import_lenient"),
+        ("lenient.avsc", "avro", [], "import_avro_lenient"),
+        ("shop.avsc", "avro", [], "import_avro_shop"),
+        ("shop.avsc", "avro", ["--select", "Nope"], "import_avro_shop_nope"),
+    ],
+)
+def test_golden_error_for_a_schema_strict_mode_refuses(
+    monkeypatch: pytest.MonkeyPatch,
+    source: str,
+    source_format: str,
+    options: list[str],
+    golden: str,
+) -> None:
     monkeypatch.chdir(SCHEMAS)  # so that the file name in the message is the same everywhere
-    result = run_import("lenient.schema.json")
+    result = run_import(source, *options, source_format=source_format)
     assert result.exit_code == 1
     assert result.stdout == ""
-    assert_text_golden("import_lenient.error.txt", ANSI.sub("", result.stderr))  # colours vary
+    assert_text_golden(f"{golden}.error.txt", ANSI.sub("", result.stderr))  # colours vary

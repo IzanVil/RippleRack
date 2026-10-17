@@ -1,0 +1,9 @@
+name: lenient
+version: 1.0.0
+fields:
+  - {name: id, type: integer}
+  - {name: choice, type: json, description: Either a code or a number}
+  - {name: maybe, type: json, nullable: true}
+  - {name: nothing, type: json, nullable: true}
+  - {name: never, type: json}
+  - {name: note, type: string, nullable: true, description: Optional text}

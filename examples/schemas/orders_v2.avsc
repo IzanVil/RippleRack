@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "Orders",
+  "namespace": "com.example.orders",
+  "doc": "One order, as the orders-ingest pipeline publishes it from version 2.0.0.",
+  "fields": [
+    {"name": "order_id", "type": "long"},
+    {"name": "customer_id", "type": "long"},
+    {"name": "amount_cents", "type": "long", "doc": "Order total in cents"},
+    {"name": "currency", "type": "string"},
+    {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "coupon_code", "type": ["null", "string"], "default": null}
+  ]
+}

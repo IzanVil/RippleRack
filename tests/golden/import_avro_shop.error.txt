@@ -1,0 +1,2 @@
+error: shop.avsc: cannot import this Avro schema:
+  #: the file holds several records ('com.example.shop.Address', 'com.example.shop.Customer', 'com.example.shop.OrderEvent'); choose one with --select

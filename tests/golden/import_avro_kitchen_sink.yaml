@@ -1,0 +1,26 @@
+name: order_event
+version: 1.0.0
+fields:
+  - {name: event_id, type: string, description: Unique id of the event}
+  - {name: sequence, type: integer}
+  - {name: occurred_at, type: timestamp}
+  - {name: local_at, type: timestamp}
+  - {name: shipped_on, type: date, nullable: true}
+  - {name: status, type: string, description: 'One of: PENDING, PAID, REFUNDED, CANCELLED'}
+  - {name: previous_status, type: string, nullable: true, description: 'One of: PENDING, PAID, REFUNDED, CANCELLED'}
+  - {name: priority, type: integer}
+  - {name: amount, type: float, description: 'Total, in the order currency'}
+  - {name: ratio, type: float}
+  - {name: score, type: float}
+  - {name: paid, type: boolean}
+  - {name: coupon, type: string, nullable: true}
+  - {name: note, type: string, nullable: true, description: Free text note}
+  - {name: elapsed, type: string}
+  - {name: payload, type: string}
+  - {name: shipping, type: json}
+  - {name: billing, type: json, nullable: true}
+  - {name: tags, type: json}
+  - {name: attributes, type: json}
+  - {name: legacy_id, type: integer, description: Id in the old system}
+  - {name: parent, type: json, nullable: true}
+  - {name: region, type: integer}

@@ -1,0 +1,7 @@
+name: order_event
+version: 1.0.0
+fields:
+  - {name: event_id, type: string}
+  - {name: status, type: string, description: 'One of: PENDING, PAID, REFUNDED'}
+  - {name: shipping, type: json}
+  - {name: coupon, type: string, nullable: true}

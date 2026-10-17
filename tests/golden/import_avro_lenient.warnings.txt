@@ -1,0 +1,4 @@
+warning[degraded_to_json] #/fields/1/type: the union ['string', 'long'] mixes several types in one field; field 'choice' imported as json
+warning[degraded_to_json] #/fields/2/type: the union ['string', 'long'] mixes several types in one field; field 'maybe' imported as json
+warning[degraded_to_json] #/fields/3/type: type 'null' on its own has no data type; field 'nothing' imported as json
+warning[degraded_to_json] #/fields/4/type: an empty union has no data type; field 'never' imported as json

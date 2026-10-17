@@ -1,0 +1,2 @@
+error: shop.avsc: cannot import this Avro schema:
+  #: the file defines no record called 'Nope'; its records are 'com.example.shop.Address', 'com.example.shop.Customer', 'com.example.shop.OrderEvent'
