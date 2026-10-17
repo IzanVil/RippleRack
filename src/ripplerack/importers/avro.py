@@ -224,8 +224,10 @@ class _Reader(Reader):
             fullname = name
             own: str | None = name.rpartition(".")[0] or None
         else:
-            declared = schema.get("namespace", namespace)
-            if declared is not None and not isinstance(declared, str):
+            declared = schema.get("namespace")
+            if declared is None:  # absent, or null: that of the type that contains this one
+                declared = namespace
+            elif not isinstance(declared, str):
                 raise _invalid(child(pointer, "namespace"), "namespace must be a string")
             own = declared or None  # the empty namespace is no namespace
             fullname = f"{own}.{name}" if own else name

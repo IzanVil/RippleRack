@@ -556,6 +556,20 @@ def test_a_type_defined_inside_a_record_has_the_namespace_of_that_record() -> No
     ]
 
 
+@pytest.mark.parametrize("written", ["absent", "null"])
+def test_a_namespace_that_is_absent_or_null_is_that_of_the_type_that_contains_it(
+    written: str,
+) -> None:
+    status = enum("Status", "NEW")
+    if written == "null":
+        status["namespace"] = None
+    document = [
+        named("Outer", ("status", status), namespace="shop"),
+        named("Other", ("status", "shop.Status")),
+    ]
+    assert fields(document, select="Other") == [("status", "string", False, "One of: NEW")]
+
+
 def test_a_namespace_given_to_a_type_is_inherited_by_what_it_defines() -> None:
     document = [
         named(
