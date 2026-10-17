@@ -14,7 +14,8 @@ from typing import Any, NoReturn
 
 from pydantic import ValidationError
 
-from ripplerack.importers.base import ImportIssue, IssueCode
+from ripplerack.importers.base import ImportIssue, ImportResult, IssueCode
+from ripplerack.models import Schema, SchemaField
 from ripplerack.parser import ErrorCode, RippleRackError
 
 MAX_ENUM_VALUES = 10
@@ -65,6 +66,20 @@ class Reader:
         if (code, pointer) not in self._noted:
             self._noted.add((code, pointer))
             self._issues.append(ImportIssue(code=code, pointer=pointer, message=message))
+
+    def _finish(
+        self, *, source: str, name: str, version: str, fields: list[SchemaField]
+    ) -> ImportResult:
+        """The result of reading: the schema if nothing went wrong, else the error with it all."""
+        if self._problems:
+            self._fail(source)
+        try:
+            schema = Schema(name=name, version=version, fields=fields)
+        except ValidationError as exc:
+            raise RippleRackError(
+                f"{source}: {summarize(exc)}", ErrorCode.VALIDATION_FAILED
+            ) from exc
+        return ImportResult(schema=schema, issues=tuple(self._issues))
 
     def _fail(self, source: str) -> NoReturn:
         invalid = any(p.code is self._invalid_code for p in self._problems)

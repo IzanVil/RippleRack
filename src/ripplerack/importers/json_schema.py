@@ -18,8 +18,6 @@ from pathlib import PurePosixPath
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from pydantic import ValidationError
-
 from ripplerack.importers.base import ImportResult, IssueCode, is_identifier
 from ripplerack.importers.common import (
     Reader,
@@ -30,12 +28,11 @@ from ripplerack.importers.common import (
     one_line,
     parse_json,
     strip_suffixes,
-    summarize,
     values_note,
     visible,
     with_note,
 )
-from ripplerack.models import FieldType, Schema, SchemaField
+from ripplerack.models import FieldType, SchemaField
 from ripplerack.parser import ErrorCode, RippleRackError
 
 __all__ = ["from_json_schema", "import_json_schema", "parse_json"]
@@ -136,15 +133,7 @@ class _Reader(Reader):
     def read(self, *, source: str, name: str | None, version: str) -> ImportResult:
         fields = self._fields()
         schema_name = name if name is not None else self._schema_name(source)
-        if self._problems:
-            self._fail(source)
-        try:
-            schema = Schema(name=schema_name, version=version, fields=fields)
-        except ValidationError as exc:
-            raise RippleRackError(
-                f"{source}: {summarize(exc)}", ErrorCode.VALIDATION_FAILED
-            ) from exc
-        return ImportResult(schema=schema, issues=tuple(self._issues))
+        return self._finish(source=source, name=schema_name, version=version, fields=fields)
 
     # ------------------------------------------------------------------ the fields
 

@@ -22,8 +22,6 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any, TypeGuard
 
-from pydantic import ValidationError
-
 from ripplerack.importers.base import ImportResult, IssueCode, is_identifier
 from ripplerack.importers.common import (
     Reader,
@@ -33,12 +31,11 @@ from ripplerack.importers.common import (
     name_schema,
     one_line,
     parse_json,
-    summarize,
     values_note,
     with_note,
 )
-from ripplerack.models import FieldType, Schema, SchemaField
-from ripplerack.parser import ErrorCode, RippleRackError
+from ripplerack.models import FieldType, SchemaField
+from ripplerack.parser import ErrorCode
 
 __all__ = ["from_avro", "import_avro"]
 
@@ -336,16 +333,8 @@ class _Reader(Reader):
             fields = self._fields(record)
         except ReadError as error:
             self._problems.append(error)
-        if self._problems:
-            self._fail(source)
         schema_name = name if name is not None else name_schema([record_name], source)
-        try:
-            schema = Schema(name=schema_name, version=version, fields=fields)
-        except ValidationError as exc:
-            raise RippleRackError(
-                f"{source}: {summarize(exc)}", ErrorCode.VALIDATION_FAILED
-            ) from exc
-        return ImportResult(schema=schema, issues=tuple(self._issues))
+        return self._finish(source=source, name=schema_name, version=version, fields=fields)
 
     def _fields(self, record: _Named) -> list[SchemaField]:
         fields: list[SchemaField] = []
