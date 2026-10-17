@@ -17,8 +17,18 @@ import json
 from typing import Any
 
 from ripplerack import __version__
-from ripplerack.diff import AttributeChange, ComponentRef, DatacenterDiff
-from ripplerack.impact import ImpactReport
+from ripplerack.diff import (
+    AttributeChange,
+    ComponentChange,
+    ComponentRef,
+    DatacenterDiff,
+    DependencyChange,
+    DependencyRef,
+    DiffWarning,
+    PossibleRename,
+    RemovedWithDependents,
+)
+from ripplerack.impact import AffectedNode, BrokenConsumer, ImpactReport
 from ripplerack.semver import SchemaChange, SchemaDiff
 
 SCHEMA_VERSION = 1
@@ -60,61 +70,38 @@ def diff_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
         "base": {"name": diff.base_name},
         "head": {"name": diff.head_name},
         "severity": str(diff.severity),
-        "summary": {
-            "added": len(diff.added),
-            "removed": len(diff.removed),
-            "modified": len(diff.modified),
-            "dependenciesAdded": len(diff.dependencies_added),
-            "dependenciesRemoved": len(diff.dependencies_removed),
-            "dependenciesModified": len(diff.dependencies_modified),
-            "schemaChanges": len(diff.schema_impacts),
-            "brokenConsumers": len(diff.broken_consumers),
-            "warnings": len(diff.warnings),
-        },
+        "summary": _diff_summary(diff),
         "metadata": [_attribute_to_dict(change) for change in diff.metadata],
         "components": {
             "added": [_component_ref_to_dict(ref) for ref in diff.added],
             "removed": [_component_ref_to_dict(ref) for ref in diff.removed],
-            "modified": [
-                {
-                    "id": component.id,
-                    "kind": str(component.kind),
-                    "changes": [_attribute_to_dict(change) for change in component.changes],
-                }
-                for component in diff.modified
-            ],
+            "modified": [_component_change_to_dict(change) for change in diff.modified],
         },
         "dependencies": {
-            "added": [
-                {"source": dep.source, "target": dep.target, "kind": str(dep.kind)}
-                for dep in diff.dependencies_added
-            ],
-            "removed": [
-                {"source": dep.source, "target": dep.target, "kind": str(dep.kind)}
-                for dep in diff.dependencies_removed
-            ],
-            "modified": [
-                {
-                    "source": dep.source,
-                    "target": dep.target,
-                    "before": str(dep.before),
-                    "after": str(dep.after),
-                }
-                for dep in diff.dependencies_modified
-            ],
+            "added": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_added],
+            "removed": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_removed],
+            "modified": [_dependency_change_to_dict(dep) for dep in diff.dependencies_modified],
         },
         "schemaChanges": [impact_body(report) for report in diff.schema_impacts],
         "removedWithDependents": [
-            {"id": item.id, "kind": str(item.kind), "dependents": item.dependents}
-            for item in diff.removed_with_dependents
+            _removed_with_dependents_to_dict(item) for item in diff.removed_with_dependents
         ],
-        "possibleRenames": [
-            {"kind": str(rename.kind), "from": rename.old, "to": rename.new}
-            for rename in diff.possible_renames
-        ],
-        "warnings": [
-            {"code": str(warning.code), "message": warning.message} for warning in diff.warnings
-        ],
+        "possibleRenames": [_rename_to_dict(rename) for rename in diff.possible_renames],
+        "warnings": [_warning_to_dict(warning) for warning in diff.warnings],
+    }
+
+
+def _diff_summary(diff: DatacenterDiff) -> dict[str, int]:
+    return {
+        "added": len(diff.added),
+        "removed": len(diff.removed),
+        "modified": len(diff.modified),
+        "dependenciesAdded": len(diff.dependencies_added),
+        "dependenciesRemoved": len(diff.dependencies_removed),
+        "dependenciesModified": len(diff.dependencies_modified),
+        "schemaChanges": len(diff.schema_impacts),
+        "brokenConsumers": len(diff.broken_consumers),
+        "warnings": len(diff.warnings),
     }
 
 
@@ -126,44 +113,53 @@ def _component_ref_to_dict(ref: ComponentRef) -> dict[str, Any]:
     return {"id": ref.id, "kind": str(ref.kind), "parent": ref.parent}
 
 
+def _component_change_to_dict(component: ComponentChange) -> dict[str, Any]:
+    return {
+        "id": component.id,
+        "kind": str(component.kind),
+        "changes": [_attribute_to_dict(change) for change in component.changes],
+    }
+
+
+def _dependency_ref_to_dict(dep: DependencyRef) -> dict[str, Any]:
+    return {"source": dep.source, "target": dep.target, "kind": str(dep.kind)}
+
+
+def _dependency_change_to_dict(dep: DependencyChange) -> dict[str, Any]:
+    return {
+        "source": dep.source,
+        "target": dep.target,
+        "before": str(dep.before),
+        "after": str(dep.after),
+    }
+
+
+def _removed_with_dependents_to_dict(item: RemovedWithDependents) -> dict[str, Any]:
+    return {"id": item.id, "kind": str(item.kind), "dependents": item.dependents}
+
+
+def _rename_to_dict(rename: PossibleRename) -> dict[str, Any]:
+    return {"kind": str(rename.kind), "from": rename.old, "to": rename.new}
+
+
+def _warning_to_dict(warning: DiffWarning) -> dict[str, Any]:
+    return {"code": str(warning.code), "message": warning.message}
+
+
 def impact_body(report: ImpactReport) -> dict[str, Any]:
     """Build the part of an impact document that does not depend on the envelope."""
     broken_ids = report.broken_ids
     at_risk_ids = set(report.at_risk)
-
-    def status(node_id: str) -> str:
-        if node_id in broken_ids:
-            return "broken"
-        if node_id in at_risk_ids:
-            return "at_risk"
-        return "affected"
-
     return {
         "pipeline": report.pipeline,
         "severity": str(report.severity),
         "schema": schema_diff_to_dict(report.diff),
         "brokenConsumers": [
-            {
-                "pipeline": consumer.pipeline,
-                "fields": sorted(consumer.fields),
-                "changes": [
-                    {"kind": str(change.kind), "field": change.field}
-                    for change in sorted(consumer.changes, key=_change_order)
-                ],
-            }
+            _broken_consumer_to_dict(consumer)
             for consumer in sorted(report.broken_consumers, key=lambda c: c.pipeline)
         ],
         "atRisk": sorted(report.at_risk),
-        "affected": [
-            {
-                "id": node.id,
-                "kind": node.kind,
-                "distance": node.distance,
-                "path": list(node.path),
-                "status": status(node.id),
-            }
-            for node in report.affected
-        ],
+        "affected": [_affected_to_dict(node, broken_ids, at_risk_ids) for node in report.affected],
         "summary": {
             "affected": len(report.affected),
             "broken": len(report.broken_consumers),
@@ -171,6 +167,35 @@ def impact_body(report: ImpactReport) -> dict[str, Any]:
             "breakingChanges": len(report.diff.breaking_changes),
         },
     }
+
+
+def _broken_consumer_to_dict(consumer: BrokenConsumer) -> dict[str, Any]:
+    return {
+        "pipeline": consumer.pipeline,
+        "fields": sorted(consumer.fields),
+        "changes": [
+            {"kind": str(change.kind), "field": change.field}
+            for change in sorted(consumer.changes, key=_change_order)
+        ],
+    }
+
+
+def _affected_to_dict(node: AffectedNode, broken: set[str], at_risk: set[str]) -> dict[str, Any]:
+    return {
+        "id": node.id,
+        "kind": node.kind,
+        "distance": node.distance,
+        "path": list(node.path),
+        "status": _status(node.id, broken, at_risk),
+    }
+
+
+def _status(node_id: str, broken: set[str], at_risk: set[str]) -> str:
+    if node_id in broken:
+        return "broken"
+    if node_id in at_risk:
+        return "at_risk"
+    return "affected"
 
 
 def schema_diff_to_dict(diff: SchemaDiff) -> dict[str, Any]:
