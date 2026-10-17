@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -57,51 +58,88 @@ class Diagram:
         return set(self.nodes) | set(self.subgraphs)
 
 
+class _Reader:
+    """Reads a diagram line by line; every kind of line has a method of its own."""
+
+    def __init__(self) -> None:
+        self.diagram = Diagram()
+        self.stack: list[str] = []  # the subgraphs that are open
+
+    def read(self, line: str) -> None:
+        for pattern, handler in self._grammar():
+            if match := pattern.match(line):
+                handler(match)
+                return
+        raise AssertionError(f"unexpected line: {line!r}")
+
+    def _grammar(self) -> list[tuple[re.Pattern[str], Callable[[re.Match[str]], None]]]:
+        return [
+            (SUBGRAPH, self._subgraph),
+            (END, self._end),
+            (NODE, self._node),
+            (EDGE, self._edge),
+            (CLASS_DEF, self._class_def),
+            (CLASS_USE, self._class_use),
+            (STYLE, self._style),
+            (LINK_STYLE, self._link_style),
+            (COMMENT, self._comment),
+        ]
+
+    def _declare(self, name: str) -> None:
+        """Note a node or a subgraph: it must be new, and it is a child of the open subgraph."""
+        diagram = self.diagram
+        assert name not in diagram.declared, f"duplicate id {name}"
+        parent = self.stack[-1] if self.stack else None
+        if parent is not None:
+            diagram.children[parent] = diagram.children.get(parent, 0) + 1
+        diagram.parent[name] = parent
+
+    def _subgraph(self, match: re.Match[str]) -> None:
+        container = match["id"]
+        self._declare(container)
+        self.diagram.subgraphs.append(container)
+        self.diagram.children.setdefault(container, 0)
+        self.stack.append(container)
+
+    def _end(self, match: re.Match[str]) -> None:
+        self.stack.pop()
+
+    def _node(self, match: re.Match[str]) -> None:
+        self._declare(match["id"])
+        self.diagram.nodes[match["id"]] = match["shape"]
+
+    def _edge(self, match: re.Match[str]) -> None:
+        self.diagram.edges.append((match["src"], match["dst"], match["label"]))
+
+    def _class_def(self, match: re.Match[str]) -> None:
+        self.diagram.class_defs[match["name"]] = match["style"]
+
+    def _class_use(self, match: re.Match[str]) -> None:
+        for node in match["ids"].split(","):
+            assert node not in self.diagram.node_class, f"{node} has two classes"
+            self.diagram.node_class[node] = match["name"]
+
+    def _style(self, match: re.Match[str]) -> None:
+        self.diagram.styles[match["id"]] = match["style"]
+
+    def _link_style(self, match: re.Match[str]) -> None:
+        for index in match["indexes"].split(","):
+            assert int(index) not in self.diagram.link_styles
+            self.diagram.link_styles[int(index)] = match["style"]
+
+    def _comment(self, match: re.Match[str]) -> None:
+        self.diagram.comments.append(match.string.strip())
+
+
 def parse(text: str) -> Diagram:
     assert text.endswith("\n")
     lines = text.splitlines()
     assert lines[0] == "flowchart LR"
-    diagram = Diagram()
-    stack: list[str] = []
+    reader = _Reader()
     for line in lines[1:]:
-        if match := SUBGRAPH.match(line):
-            container = match["id"]
-            assert container not in diagram.declared, f"duplicate id {container}"
-            if stack:
-                diagram.children[stack[-1]] = diagram.children.get(stack[-1], 0) + 1
-            diagram.parent[container] = stack[-1] if stack else None
-            diagram.subgraphs.append(container)
-            diagram.children.setdefault(container, 0)
-            stack.append(container)
-        elif END.match(line):
-            stack.pop()
-        elif match := NODE.match(line):
-            node = match["id"]
-            assert node not in diagram.declared, f"duplicate id {node}"
-            if stack:
-                diagram.children[stack[-1]] = diagram.children.get(stack[-1], 0) + 1
-            diagram.parent[node] = stack[-1] if stack else None
-            diagram.nodes[node] = match["shape"]
-        elif match := EDGE.match(line):
-            diagram.edges.append((match["src"], match["dst"], match["label"]))
-        elif match := CLASS_DEF.match(line):
-            diagram.class_defs[match["name"]] = match["style"]
-        elif match := CLASS_USE.match(line):
-            for node in match["ids"].split(","):
-                assert node not in diagram.node_class, f"{node} has two classes"
-                diagram.node_class[node] = match["name"]
-        elif match := STYLE.match(line):
-            diagram.styles[match["id"]] = match["style"]
-        elif match := LINK_STYLE.match(line):
-            for index in match["indexes"].split(","):
-                assert int(index) not in diagram.link_styles
-                diagram.link_styles[int(index)] = match["style"]
-        elif COMMENT.match(line):
-            diagram.comments.append(line.strip())
-        else:
-            raise AssertionError(f"unexpected line: {line!r}")
-    assert stack == [], "unbalanced subgraph/end"
-    return diagram
+        reader.read(line)
+    assert reader.stack == [], "unbalanced subgraph/end"
+    return reader.diagram
 
 
 class TestStructure:
