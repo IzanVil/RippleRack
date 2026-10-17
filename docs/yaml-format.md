@@ -80,5 +80,5 @@ other change to a schema, is classified by the
 `ripplerack impact --schema` takes a file containing just a schema
 (`name`, `version`, `fields`), or a document with a top-level `schema:` key.
 
-You do not have to write one by hand: `ripplerack import` generates it from a JSON Schema
-(see [import.md](import.md)).
+You do not have to write one by hand: `ripplerack import` generates it from a JSON Schema or an
+Avro schema (see [import.md](import.md) and [import-avro.md](import-avro.md)).

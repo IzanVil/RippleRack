@@ -1,31 +1,14 @@
 [
-  {
-    "type": "record",
-    "name": "Address",
-    "namespace": "com.example.shop",
-    "fields": [{"name": "street", "type": "string"}, {"name": "city", "type": "string"}]
-  },
-  {
-    "type": "enum",
-    "name": "Status",
-    "namespace": "com.example.shop",
-    "symbols": ["PENDING", "PAID", "REFUNDED"]
-  },
-  {
-    "type": "record",
-    "name": "OrderEvent",
-    "namespace": "com.example.shop",
-    "fields": [
-      {"name": "event_id", "type": "string"},
-      {"name": "status", "type": "Status"},
-      {"name": "shipping", "type": "Address"},
-      {"name": "coupon", "type": ["null", "string"], "default": null}
-    ]
-  },
-  {
-    "type": "record",
-    "name": "Customer",
-    "namespace": "com.example.shop",
-    "fields": [{"name": "id", "type": "long"}, {"name": "email", "type": ["null", "string"]}]
-  }
+  {"type": "record", "name": "Address", "namespace": "com.example.shop",
+   "fields": [{"name": "street", "type": "string"}, {"name": "city", "type": "string"}]},
+  {"type": "enum", "name": "Status", "namespace": "com.example.shop",
+   "symbols": ["PENDING", "PAID", "REFUNDED"]},
+  {"type": "record", "name": "OrderEvent", "namespace": "com.example.shop",
+   "fields": [
+     {"name": "event_id", "type": "string"},
+     {"name": "status", "type": "Status"},
+     {"name": "shipping", "type": "Address"},
+     {"name": "coupon", "type": ["null", "string"], "default": null}]},
+  {"type": "record", "name": "Customer", "namespace": "com.example.shop",
+   "fields": [{"name": "id", "type": "long"}, {"name": "email", "type": ["null", "string"]}]}
 ]

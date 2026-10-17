@@ -126,7 +126,16 @@ def test_every_option_of_the_command_is_documented() -> None:
         for option in parameter.opts
         if option.startswith("-")
     }
-    assert {"--from", "--output", "-o", "--name", "--version", "--lenient", "--force"} <= options
+    assert {
+        "--from",
+        "--output",
+        "-o",
+        "--name",
+        "--version",
+        "--lenient",
+        "--force",
+        "--select",
+    } <= options
     documented = IMPORT.read_text(encoding="utf-8")
     for option in options:
         assert f"`{option}`" in documented, f"{option} is not documented"
