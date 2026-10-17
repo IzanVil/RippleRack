@@ -412,7 +412,8 @@ Each module has one job; the [concepts guide](docs/concepts.md) explains the ide
 | `importers/` | Schema importers (JSON Schema and Avro) and the YAML writer for what they read |
 | `report.py` | Versioned JSON documents for CI (impact and diff results, errors) |
 | `simulate.py` | Capacity and failure simulation |
-| `cli.py` | Typer + Rich command line |
+| `display.py` | Rich tables and trees for the text output of the commands |
+| `cli.py` | Typer command line: loads the input, calls the engine, prints the result |
 
 ## Development
 
