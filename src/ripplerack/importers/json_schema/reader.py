@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
@@ -54,54 +55,56 @@ class JsonSchemaReader(Walker):
             self._problems.append(error)
             return []
         required_names = {name for name, _ in required}
-
-        fields: list[SchemaField] = []
-        for name, (schema, pointer) in properties.items():
-            if not is_identifier(name):
-                self._problems.append(
-                    unsupported(
-                        pointer,
-                        f"property name {name!r} is not a valid field name "
-                        "(letters, digits, '_', '.' and '-' only)",
-                        degradable=False,
-                    )
-                )
-                continue
-            if schema is False:  # a property that must not exist is simply not a field
-                continue
-            try:
-                translated = self._translate(schema, pointer, 0)
-            except ReadError as error:
-                if not (self._lenient and error.degradable):
-                    self._problems.append(error)
-                    continue
-                self._warn(
-                    IssueCode.DEGRADED_TO_JSON,
-                    error.pointer,
-                    f"{error.message}; field {name!r} imported as json",
-                )
-                translated = _Translated(FieldType.JSON, False, own_description(schema))
-            fields.append(
-                SchemaField(
-                    name=name,
-                    type=translated.type,
-                    nullable=translated.nullable or name not in required_names,
-                    description=translated.description,
-                )
+        fields = [
+            field
+            for name, (schema, pointer) in properties.items()
+            if (field := self._property_field(name, schema, pointer, required_names)) is not None
+        ]
+        fields += self._undeclared_required_fields(properties, required)
+        if not fields and not self._problems:
+            self._problems.append(
+                unsupported("#", "the schema declares no fields to import", degradable=False)
             )
+        return fields
 
+    def _property_field(
+        self, name: str, schema: Any, pointer: str, required_names: set[str]
+    ) -> SchemaField | None:
+        """The field a property gives; none if it is refused (and noted) or must not exist."""
+        if not is_identifier(name):
+            self._problems.append(_bad_name(pointer, "property", name))
+            return None
+        if schema is False:  # a property that must not exist is simply not a field
+            return None
+        try:
+            translated = self._translate(schema, pointer, 0)
+        except ReadError as error:
+            if not (self._lenient and error.degradable):
+                self._problems.append(error)
+                return None
+            self._warn(
+                IssueCode.DEGRADED_TO_JSON,
+                error.pointer,
+                f"{error.message}; field {name!r} imported as json",
+            )
+            translated = _Translated(FieldType.JSON, False, own_description(schema))
+        return SchemaField(
+            name=name,
+            type=translated.type,
+            nullable=translated.nullable or name not in required_names,
+            description=translated.description,
+        )
+
+    def _undeclared_required_fields(
+        self, properties: dict[str, tuple[Any, str]], required: list[tuple[str, str]]
+    ) -> list[SchemaField]:
+        """What ``required`` names without declaring it: an error, or with lenient a json field."""
+        fields: list[SchemaField] = []
         for name, pointer in required:
             if name in properties:
                 continue
             if not is_identifier(name):
-                self._problems.append(
-                    unsupported(
-                        pointer,
-                        f"required property name {name!r} is not a valid field name "
-                        "(letters, digits, '_', '.' and '-' only)",
-                        degradable=False,
-                    )
-                )
+                self._problems.append(_bad_name(pointer, "required property", name))
             elif self._lenient:
                 self._warn(
                     IssueCode.UNDECLARED_REQUIRED,
@@ -116,11 +119,6 @@ class JsonSchemaReader(Walker):
                         pointer, f"required property {name!r} is not declared in properties"
                     )
                 )
-
-        if not fields and not self._problems:
-            self._problems.append(
-                unsupported("#", "the schema declares no fields to import", degradable=False)
-            )
         return fields
 
     def _root_object(self) -> tuple[dict[str, tuple[Any, str]], list[tuple[str, str]]]:
@@ -132,38 +130,8 @@ class JsonSchemaReader(Walker):
             raise invalid(
                 "#", f"the document must be a JSON object (a schema), found {describe(root)}"
             )
-
-        properties: dict[str, tuple[Any, str]] = {}
-        required: dict[str, str] = {}
         parts = self._parts(root, "#", 0, frozenset())
-        for part, pointer in parts:
-            if "type" in part:
-                names = type_names(part["type"], pointer)
-                if "object" not in names:
-                    raise unsupported(
-                        child(pointer, "type"),
-                        f"the schema has type {names[0]!r}, but only object schemas "
-                        "(one record) can be imported",
-                    )
-            declared = part.get("properties", {})
-            if not isinstance(declared, dict):
-                raise invalid(child(pointer, "properties"), "properties must be an object")
-            for name, schema in declared.items():
-                where = child(pointer, "properties", name)
-                if name in properties and properties[name][0] != schema:
-                    raise unsupported(
-                        where,
-                        f"property {name!r} is declared differently by more than one allOf member",
-                    )
-                properties.setdefault(name, (schema, where))
-            names_required = part.get("required", [])
-            if not isinstance(names_required, list) or not all(
-                isinstance(item, str) for item in names_required
-            ):
-                raise invalid(child(pointer, "required"), "required must be a list of strings")
-            for item in names_required:
-                required.setdefault(item, child(pointer, "required"))
-
+        properties, required = _merged(parts)
         for part, pointer in parts:
             self._refuse_lost_fields(part, pointer, set(properties))
         if not properties and not required:
@@ -178,21 +146,7 @@ class JsonSchemaReader(Walker):
         ``oneOf``, ``anyOf``, ``then``, ``else`` and ``dependentSchemas`` that only constrain the
         properties the schema declares change nothing, and are ignored like any constraint.
         """
-        alternatives: list[tuple[str, str, Any]] = []
-        for keyword in ("oneOf", "anyOf"):
-            members = part.get(keyword)
-            if isinstance(members, list):
-                for index, member in enumerate(members):
-                    alternatives.append((keyword, child(pointer, keyword, index), member))
-        for keyword in ("then", "else"):
-            if keyword in part:
-                alternatives.append((keyword, child(pointer, keyword), part[keyword]))
-        for keyword in ("dependentSchemas", "dependencies"):
-            conditions = part.get(keyword)
-            if isinstance(conditions, dict):
-                for name, member in conditions.items():
-                    alternatives.append((keyword, child(pointer, keyword, name), member))
-        for keyword, where, alternative in alternatives:
+        for keyword, where, alternative in _alternatives(part, pointer):
             extra = self._declared_names(alternative, where, 0, frozenset()) - declared
             if extra:
                 shown = ", ".join(repr(name) for name in sorted(extra))
@@ -251,6 +205,82 @@ class JsonSchemaReader(Walker):
             self._problems.append(invalid(child("#", key), f"{key} must be a string"))
             return None
         return value
+
+
+def _bad_name(pointer: str, role: str, name: str) -> ReadError:
+    """A name that cannot be a field name. It is never renamed or skipped: either would change
+    the contract without anyone noticing."""
+    return unsupported(
+        pointer,
+        f"{role} name {name!r} is not a valid field name (letters, digits, '_', '.' and '-' only)",
+        degradable=False,
+    )
+
+
+def _merged(
+    parts: list[tuple[dict[str, Any], str]],
+) -> tuple[dict[str, tuple[Any, str]], dict[str, str]]:
+    """The properties and the required names of all the parts; the first declaration wins."""
+    properties: dict[str, tuple[Any, str]] = {}
+    required: dict[str, str] = {}
+    for part, pointer in parts:
+        _check_is_object(part, pointer)
+        for name, schema, where in _declared_properties(part, pointer):
+            if name in properties and properties[name][0] != schema:
+                raise unsupported(
+                    where,
+                    f"property {name!r} is declared differently by more than one allOf member",
+                )
+            properties.setdefault(name, (schema, where))
+        for item in _required_names(part, pointer):
+            required.setdefault(item, child(pointer, "required"))
+    return properties, required
+
+
+def _check_is_object(part: dict[str, Any], pointer: str) -> None:
+    """Refuse a schema that says it is not an object: only one record can be imported."""
+    if "type" in part:
+        names = type_names(part["type"], pointer)
+        if "object" not in names:
+            raise unsupported(
+                child(pointer, "type"),
+                f"the schema has type {names[0]!r}, but only object schemas "
+                "(one record) can be imported",
+            )
+
+
+def _declared_properties(part: dict[str, Any], pointer: str) -> Iterator[tuple[str, Any, str]]:
+    """The properties a part declares: name, schema and where it is written."""
+    declared = part.get("properties", {})
+    if not isinstance(declared, dict):
+        raise invalid(child(pointer, "properties"), "properties must be an object")
+    for name, schema in declared.items():
+        yield name, schema, child(pointer, "properties", name)
+
+
+def _required_names(part: dict[str, Any], pointer: str) -> list[str]:
+    """The names a part lists as required."""
+    names = part.get("required", [])
+    if not isinstance(names, list) or not all(isinstance(item, str) for item in names):
+        raise invalid(child(pointer, "required"), "required must be a list of strings")
+    return names
+
+
+def _alternatives(part: dict[str, Any], pointer: str) -> Iterator[tuple[str, str, Any]]:
+    """The schemas of a part that are alternatives to its own properties, with their place."""
+    for keyword in ("oneOf", "anyOf"):
+        members = part.get(keyword)
+        if isinstance(members, list):
+            for index, member in enumerate(members):
+                yield keyword, child(pointer, keyword, index), member
+    for keyword in ("then", "else"):
+        if keyword in part:
+            yield keyword, child(pointer, keyword), part[keyword]
+    for keyword in ("dependentSchemas", "dependencies"):
+        conditions = part.get(keyword)
+        if isinstance(conditions, dict):
+            for name, member in conditions.items():
+                yield keyword, child(pointer, keyword, name), member
 
 
 def _last_segment(identifier: str) -> str:

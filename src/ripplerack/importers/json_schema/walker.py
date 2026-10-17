@@ -45,6 +45,39 @@ def _is_index(key: str, node: Any) -> bool:
     )
 
 
+def _own_keywords(schema: dict[str, Any]) -> dict[str, Any]:
+    """What a schema says itself, without the ``$ref`` and ``allOf`` that are expanded."""
+    return {key: value for key, value in schema.items() if key not in ("$ref", "allOf")}
+
+
+def _local_fragment(ref: Any, where: str, seen: frozenset[str]) -> str:
+    """The JSON pointer a reference to this document names (empty for the document itself)."""
+    if not isinstance(ref, str):
+        raise invalid(where, "$ref must be a string")
+    if not ref.startswith("#"):
+        raise unsupported(
+            where,
+            f"$ref {ref!r} points outside this document; only references to this "
+            "document (#/...) are supported",
+        )
+    if ref in seen:
+        raise unsupported(where, f"$ref {ref!r} refers back to itself")
+    fragment = unquote(ref[1:])
+    if fragment and not fragment.startswith("/"):
+        raise unsupported(where, f"$ref {ref!r} is not a JSON pointer (anchors are not supported)")
+    return fragment
+
+
+def _step(node: Any, token: str, ref: str, where: str) -> Any:
+    """Follow one token of a JSON pointer into ``node``."""
+    key = token.replace("~1", "/").replace("~0", "~")
+    if isinstance(node, dict) and key in node:
+        return node[key]
+    if _is_index(key, node):
+        return node[int(key)]
+    raise invalid(where, f"$ref {ref!r} does not point to anything in this document")
+
+
 class Walker(Reader):
     """A reader that knows how to move through the document, and collects what it finds."""
 
@@ -58,30 +91,6 @@ class Walker(Reader):
         )
         self._root = root
 
-    def _declared_names(
-        self, schema: Any, pointer: str, depth: int, seen: frozenset[str]
-    ) -> set[str]:
-        """The names a schema declares in ``properties``, through ``$ref`` and ``allOf``."""
-        if depth > _MAX_DEPTH or not isinstance(schema, dict):
-            return set()
-        declared = schema.get("properties")
-        names: set[str] = set(declared) if isinstance(declared, dict) else set()
-        if "$ref" in schema:
-            try:
-                target, target_pointer = self._resolve(schema["$ref"], pointer, seen)
-            except ReadError:  # a reference that cannot be followed declares nothing we know
-                pass
-            else:
-                reference = schema["$ref"]
-                names |= self._declared_names(target, target_pointer, depth + 1, seen | {reference})
-        members = schema.get("allOf")
-        if isinstance(members, list):
-            for index, member in enumerate(members):
-                names |= self._declared_names(
-                    member, child(pointer, "allOf", index), depth + 1, seen
-                )
-        return names
-
     def _parts(
         self, schema: Any, pointer: str, depth: int, seen: frozenset[str]
     ) -> list[tuple[dict[str, Any], str]]:
@@ -90,54 +99,33 @@ class Walker(Reader):
         References and ``allOf`` members come first, the schema's own keywords last, so the
         fields of what is extended precede the new ones.
         """
-        if depth > _MAX_DEPTH:
-            raise unsupported(pointer, "the schema is nested too deeply")
-        if schema is True:
+        checked = self._checked(schema, pointer, depth)
+        if checked is None:
             return []
-        if schema is False:
-            raise unsupported(pointer, "a schema that accepts nothing cannot be imported")
-        if not isinstance(schema, dict):
-            raise invalid(
-                pointer, f"a schema must be an object or a boolean, found {describe(schema)}"
-            )
-        self._see(schema, pointer)
-        _refuse_dynamic_references(schema, pointer)
-
         parts: list[tuple[dict[str, Any], str]] = []
-        if "$ref" in schema:
-            target, target_pointer = self._resolve(schema["$ref"], pointer, seen)
-            parts += self._parts(target, target_pointer, depth + 1, seen | {schema["$ref"]})
-        if "allOf" in schema:
-            members = members_of(schema, "allOf", pointer)
+        if "$ref" in checked:
+            target, target_pointer = self._resolve(checked["$ref"], pointer, seen)
+            parts += self._parts(target, target_pointer, depth + 1, seen | {checked["$ref"]})
+        if "allOf" in checked:
+            members = members_of(checked, "allOf", pointer)
             for index, member in enumerate(members):
                 parts += self._parts(member, child(pointer, "allOf", index), depth + 1, seen)
-        own = {key: value for key, value in schema.items() if key not in ("$ref", "allOf")}
-        parts.append((own, pointer))
+        parts.append((_own_keywords(checked), pointer))
         return parts
 
     def _flatten(
         self, schema: Any, pointer: str, depth: int, seen: frozenset[str]
     ) -> dict[str, Any]:
         """Resolve ``$ref`` and a single-member ``allOf``; keywords next to them win."""
-        if depth > _MAX_DEPTH:
-            raise unsupported(pointer, "the schema is nested too deeply")
-        if schema is True:
+        checked = self._checked(schema, pointer, depth)
+        if checked is None:
             return {}
-        if schema is False:
-            raise unsupported(pointer, "a schema that accepts nothing cannot be imported")
-        if not isinstance(schema, dict):
-            raise invalid(
-                pointer, f"a schema must be an object or a boolean, found {describe(schema)}"
-            )
-        self._see(schema, pointer)
-        _refuse_dynamic_references(schema, pointer)
-
         flat: dict[str, Any] = {}
-        if "$ref" in schema:
-            target, target_pointer = self._resolve(schema["$ref"], pointer, seen)
-            flat = self._flatten(target, target_pointer, depth + 1, seen | {schema["$ref"]})
-        if "allOf" in schema:
-            members = members_of(schema, "allOf", pointer)
+        if "$ref" in checked:
+            target, target_pointer = self._resolve(checked["$ref"], pointer, seen)
+            flat = self._flatten(target, target_pointer, depth + 1, seen | {checked["$ref"]})
+        if "allOf" in checked:
+            members = members_of(checked, "allOf", pointer)
             if len(members) > 1:
                 raise unsupported(
                     child(pointer, "allOf"),
@@ -147,39 +135,63 @@ class Walker(Reader):
                 **flat,
                 **self._flatten(members[0], child(pointer, "allOf", 0), depth + 1, seen),
             }
-        own = {key: value for key, value in schema.items() if key not in ("$ref", "allOf")}
-        return {**flat, **own}
+        return {**flat, **_own_keywords(checked)}
+
+    def _checked(self, schema: Any, pointer: str, depth: int) -> dict[str, Any] | None:
+        """The schema as an object to read, after noting what it says that cannot be kept.
+
+        ``None`` is for ``true``, which accepts anything and says nothing.
+        """
+        if depth > _MAX_DEPTH:
+            raise unsupported(pointer, "the schema is nested too deeply")
+        if schema is True:
+            return None
+        if schema is False:
+            raise unsupported(pointer, "a schema that accepts nothing cannot be imported")
+        if not isinstance(schema, dict):
+            raise invalid(
+                pointer, f"a schema must be an object or a boolean, found {describe(schema)}"
+            )
+        self._see(schema, pointer)
+        _refuse_dynamic_references(schema, pointer)
+        return schema
+
+    def _declared_names(
+        self, schema: Any, pointer: str, depth: int, seen: frozenset[str]
+    ) -> set[str]:
+        """The names a schema declares in ``properties``, through ``$ref`` and ``allOf``."""
+        if depth > _MAX_DEPTH or not isinstance(schema, dict):
+            return set()
+        declared = schema.get("properties")
+        names: set[str] = set(declared) if isinstance(declared, dict) else set()
+        if "$ref" in schema:
+            names |= self._names_through_reference(schema["$ref"], pointer, depth, seen)
+        members = schema.get("allOf")
+        if isinstance(members, list):
+            for index, member in enumerate(members):
+                names |= self._declared_names(
+                    member, child(pointer, "allOf", index), depth + 1, seen
+                )
+        return names
+
+    def _names_through_reference(
+        self, reference: Any, pointer: str, depth: int, seen: frozenset[str]
+    ) -> set[str]:
+        try:
+            target, target_pointer = self._resolve(reference, pointer, seen)
+        except ReadError:  # a reference that cannot be followed declares nothing we know
+            return set()
+        return self._declared_names(target, target_pointer, depth + 1, seen | {reference})
 
     def _resolve(self, ref: Any, pointer: str, seen: frozenset[str]) -> tuple[Any, str]:
         """Follow a reference that points inside this same document."""
         where = child(pointer, "$ref")
-        if not isinstance(ref, str):
-            raise invalid(where, "$ref must be a string")
-        if not ref.startswith("#"):
-            raise unsupported(
-                where,
-                f"$ref {ref!r} points outside this document; only references to this "
-                "document (#/...) are supported",
-            )
-        if ref in seen:
-            raise unsupported(where, f"$ref {ref!r} refers back to itself")
-        fragment = unquote(ref[1:])
+        fragment = _local_fragment(ref, where, seen)
         if not fragment:
             return self._root, "#"
-        if not fragment.startswith("/"):
-            raise unsupported(
-                where, f"$ref {ref!r} is not a JSON pointer (anchors are not supported)"
-            )
-
         node = self._root
         for token in fragment[1:].split("/"):
-            key = token.replace("~1", "/").replace("~0", "~")
-            if isinstance(node, dict) and key in node:
-                node = node[key]
-            elif _is_index(key, node):
-                node = node[int(key)]
-            else:
-                raise invalid(where, f"$ref {ref!r} does not point to anything in this document")
+            node = _step(node, token, ref, where)
         return node, visible(ref)
 
     def _see(self, schema: dict[str, Any], pointer: str) -> None:
