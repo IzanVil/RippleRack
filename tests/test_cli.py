@@ -271,6 +271,42 @@ class TestTextErrors:
         assert "cannot read" in plain(result.stderr)
 
 
+# Text that Rich would take for markup: it must be printed as it was written, and must not crash.
+LOOKS_LIKE_MARKUP = ["x[/][/]", "a[/]b [red]c", "[bold]x", "50% [off]"]
+
+
+class TestTextThatLooksLikeMarkup:
+    @pytest.mark.parametrize("command", ["validate", "graph"])
+    @pytest.mark.parametrize("name", LOOKS_LIKE_MARKUP)
+    def test_the_name_of_the_datacenter_is_printed_as_it_is(
+        self, tmp_path: Path, command: str, name: str
+    ) -> None:
+        data = raw_datacenter()
+        data["name"] = name
+        file = write(tmp_path / "dc.yaml", yaml.safe_dump(data))
+        result = runner.invoke(app, [command, str(file)])
+        assert result.exit_code == 0, result.output
+        assert name in plain(result.stdout)
+
+    @pytest.mark.parametrize("component", LOOKS_LIKE_MARKUP)
+    def test_an_unknown_component_is_named_as_it_was_typed(
+        self, examples_dir: Path, component: str
+    ) -> None:
+        file = str(examples_dir / "mini_datacenter.yaml")
+        result = runner.invoke(app, ["simulate", file, "--fail", component])
+        assert result.exit_code == 1, result.output
+        assert f"unknown component(s): {component}" in plain(result.stderr)
+
+    def test_the_file_a_graph_is_written_to_is_named_as_it_was_typed(
+        self, examples_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        file = str(examples_dir / "mini_datacenter.yaml")
+        result = runner.invoke(app, ["graph", file, "-F", "dot", "-o", "a[red]b.dot"])
+        assert result.exit_code == 0, result.output
+        assert "graph written to a[red]b.dot" in plain(result.stdout)
+
+
 class TestGraphOutputFile:
     def test_a_graph_that_cannot_be_written_is_an_error_not_a_traceback(
         self, examples_dir: Path, tmp_path: Path
