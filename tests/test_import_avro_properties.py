@@ -515,6 +515,14 @@ def lists_of_records(
     return document, by_full
 
 
+def fields_of_the_record_named(select: str, by_full: dict[str, list[str]]) -> list[str] | None:
+    """What ``select`` has to give: the fields of the record, or none if it names none or two."""
+    if select in by_full:  # a full name is taken as it is, whatever else has that name
+        return by_full[select]
+    named = [full for full in by_full if full.rpartition(".")[2] == select]
+    return by_full[named[0]] if len(named) == 1 else None
+
+
 @settings(max_examples=200)
 @given(data=st.data(), records=lists_of_records())
 def test_select_finds_every_record_wherever_it_is_in_the_list(
@@ -526,24 +534,28 @@ def test_select_finds_every_record_wherever_it_is_in_the_list(
     def selecting(name: str) -> tuple[Any, ...]:
         return outcome(lambda: from_avro(shuffled, source="f.avsc", select=name))
 
-    for full, field_names_ in by_full.items():
-        assert [name for name, *_ in read(shuffled, select=full)] == field_names_
-    simple = [full.rpartition(".")[2] for full in by_full]
-    for name in sorted(set(simple)):
-        if simple.count(name) == 1:  # no other record has the name: it is enough
-            [full] = [full for full in by_full if full.rpartition(".")[2] == name]
-            assert [n for n, *_ in read(shuffled, select=name)] == by_full[full]
-        elif name in by_full:  # a full name is taken as it is, whatever else has that name
-            assert [n for n, *_ in read(shuffled, select=name)] == by_full[name]
+    names = {*by_full, *(full.rpartition(".")[2] for full in by_full), "Z"}  # Z is in none
+    for select in sorted(names):
+        expected = fields_of_the_record_named(select, by_full)
+        if expected is None:
+            assert selecting(select)[:2] == ("refused", UNSUPPORTED)
         else:
-            assert selecting(name)[:2] == ("refused", UNSUPPORTED)
-    assert selecting("Z")[:2] == ("refused", UNSUPPORTED)
+            assert [name for name, *_ in read(shuffled, select=select)] == expected
+
+
+@settings(max_examples=100)
+@given(data=st.data(), records=lists_of_records())
+def test_a_list_of_records_needs_select_unless_it_has_one(
+    data: st.DataObject, records: tuple[list[dict[str, Any]], dict[str, list[str]]]
+) -> None:
+    document, by_full = records
+    shuffled = data.draw(st.permutations(document))
     if len(document) == 1:
         [only] = by_full.values()
         assert [name for name, *_ in read(shuffled)] == only
     else:
-        outcome_ = outcome(lambda: from_avro(shuffled, source="f.avsc"))
-        assert outcome_[:2] == ("refused", UNSUPPORTED)
+        refused = outcome(lambda: from_avro(shuffled, source="f.avsc"))
+        assert refused[:2] == ("refused", UNSUPPORTED)
 
 
 # --------------------------------------------------------------------------- unions

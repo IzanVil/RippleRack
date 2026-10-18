@@ -276,6 +276,66 @@ def sink_diff(mini_dc: LoadedDatacenter) -> DatacenterDiff:
     return diff_datacenters(mini_dc, load_variant(kitchen_sink))
 
 
+# The keys of the ``diff`` document, in order, at each place of it: the path from the root
+# (a name for a key, a number for the position in a list) and the keys found there.
+DIFF_KEYS: dict[tuple[str | int, ...], list[str]] = {
+    (): [
+        "schemaVersion",
+        "tool",
+        "command",
+        "base",
+        "head",
+        "severity",
+        "summary",
+        "metadata",
+        "components",
+        "dependencies",
+        "schemaChanges",
+        "removedWithDependents",
+        "possibleRenames",
+        "warnings",
+    ],
+    ("base",): ["name"],
+    ("summary",): [
+        "added",
+        "removed",
+        "modified",
+        "dependenciesAdded",
+        "dependenciesRemoved",
+        "dependenciesModified",
+        "schemaChanges",
+        "brokenConsumers",
+        "warnings",
+    ],
+    ("metadata", 0): ["attribute", "before", "after"],
+    ("components",): ["added", "removed", "modified"],
+    ("components", "added", 0): ["id", "kind", "parent"],
+    ("components", "modified", 0): ["id", "kind", "changes"],
+    ("components", "modified", 0, "changes", 0): ["attribute", "before", "after"],
+    ("dependencies",): ["added", "removed", "modified"],
+    ("dependencies", "added", 0): ["source", "target", "kind"],
+    ("schemaChanges", 0): [
+        "pipeline",
+        "severity",
+        "schema",
+        "brokenConsumers",
+        "atRisk",
+        "affected",
+        "summary",
+    ],
+    ("removedWithDependents", 0): ["id", "kind", "dependents"],
+    ("possibleRenames", 0): ["kind", "from", "to"],
+    ("warnings", 0): ["code", "message"],
+}
+
+
+def follow(document: Any, place: tuple[str | int, ...]) -> Any:
+    """What is at ``place`` in a document."""
+    for step in place:
+        document = document[step]
+    return document
+
+
 class TestDiffPayload:
     def test_envelope(self, example_diff: DatacenterDiff) -> None:
         payload = diff_to_dict(example_diff)
@@ -285,57 +345,8 @@ class TestDiffPayload:
 
     def test_keys_are_exact(self, sink_diff: DatacenterDiff) -> None:
         payload = diff_to_dict(sink_diff)
-        assert list(payload) == [
-            "schemaVersion",
-            "tool",
-            "command",
-            "base",
-            "head",
-            "severity",
-            "summary",
-            "metadata",
-            "components",
-            "dependencies",
-            "schemaChanges",
-            "removedWithDependents",
-            "possibleRenames",
-            "warnings",
-        ]
-        assert list(payload["base"]) == ["name"]
-        assert list(payload["summary"]) == [
-            "added",
-            "removed",
-            "modified",
-            "dependenciesAdded",
-            "dependenciesRemoved",
-            "dependenciesModified",
-            "schemaChanges",
-            "brokenConsumers",
-            "warnings",
-        ]
-        assert list(payload["metadata"][0]) == ["attribute", "before", "after"]
-        assert list(payload["components"]) == ["added", "removed", "modified"]
-        assert list(payload["components"]["added"][0]) == ["id", "kind", "parent"]
-        assert list(payload["components"]["modified"][0]) == ["id", "kind", "changes"]
-        assert list(payload["components"]["modified"][0]["changes"][0]) == [
-            "attribute",
-            "before",
-            "after",
-        ]
-        assert list(payload["dependencies"]) == ["added", "removed", "modified"]
-        assert list(payload["dependencies"]["added"][0]) == ["source", "target", "kind"]
-        assert list(payload["schemaChanges"][0]) == [
-            "pipeline",
-            "severity",
-            "schema",
-            "brokenConsumers",
-            "atRisk",
-            "affected",
-            "summary",
-        ]
-        assert list(payload["removedWithDependents"][0]) == ["id", "kind", "dependents"]
-        assert list(payload["possibleRenames"][0]) == ["kind", "from", "to"]
-        assert list(payload["warnings"][0]) == ["code", "message"]
+        for place, keys in DIFF_KEYS.items():
+            assert list(follow(payload, place)) == keys, place
 
     def test_modified_dependencies_have_before_and_after(
         self, example_diff: DatacenterDiff
