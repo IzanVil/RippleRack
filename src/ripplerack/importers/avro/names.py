@@ -11,8 +11,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from ripplerack.importers.avro.problems import invalid, listing, unsupported
-from ripplerack.importers.common import child, describe
+from ripplerack.importers.avro.problems import invalid, unsupported
+from ripplerack.importers.common import child, describe, listing
 
 _MAX_DEPTH = 32
 RECORDS = ("record", "error")

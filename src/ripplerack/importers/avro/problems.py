@@ -1,11 +1,9 @@
-"""The two kinds of problem an Avro schema can have, and how a message lists names."""
+"""The two kinds of problem an Avro schema can have, with the code each one is given."""
 
 from __future__ import annotations
 
 from ripplerack.importers.common import ReadError
 from ripplerack.parser import ErrorCode
-
-_LISTED = 10  # how many names a message lists before it counts the rest
 
 
 def invalid(pointer: str, message: str) -> ReadError:
@@ -16,9 +14,3 @@ def invalid(pointer: str, message: str) -> ReadError:
 def unsupported(pointer: str, message: str, *, degradable: bool = True) -> ReadError:
     """The file is fine, but the construct has no RippleRack equivalent."""
     return ReadError(ErrorCode.UNSUPPORTED_AVRO_SCHEMA, pointer, message, degradable=degradable)
-
-
-def listing(items: list[str]) -> str:
-    """The first few names, quoted, and how many more there are."""
-    text = ", ".join(repr(item) for item in items[:_LISTED])
-    return f"{text}, … ({len(items)} in all)" if len(items) > _LISTED else text

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from ripplerack.importers.common import describe, name_schema
+from ripplerack.importers.common import describe, listing, name_schema
 
 
 @pytest.mark.parametrize(
@@ -50,3 +50,16 @@ def test_the_candidates_are_not_changed() -> None:
 )
 def test_a_value_is_described_by_the_kind_of_json_it_is(value: object, expected: str) -> None:
     assert describe(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("count", "expected"),
+    [
+        (0, ""),
+        (1, "'n0'"),
+        (10, ", ".join(f"'n{i}'" for i in range(10))),  # ten are all listed
+        (11, ", ".join(f"'n{i}'" for i in range(10)) + ", … (11 in all)"),  # more are counted
+    ],
+)
+def test_a_list_of_names_is_cut_after_ten_with_a_count(count: int, expected: str) -> None:
+    assert listing([f"n{i}" for i in range(count)]) == expected
