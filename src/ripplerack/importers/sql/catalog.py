@@ -16,6 +16,7 @@ from typing import Generic, TypeVar
 from sqlglot import exp
 
 from ripplerack.importers.common import ReadError, listing
+from ripplerack.importers.sql.column_types import NoEquivalentError
 from ripplerack.importers.sql.problems import invalid, place, unsupported
 
 V = TypeVar("V")
@@ -41,8 +42,6 @@ class Names(Generic[V]):
 
     def matches(self, parts: tuple[str, ...]) -> list[V]:
         """What the name refers to: the one whose whole name it is, else all that end with it."""
-        if not parts:
-            return []
         if parts in self._items:
             return [self._items[parts]]
         return [item for full, item in self._items.items() if full[-len(parts) :] == parts]
@@ -83,7 +82,10 @@ class Catalog:
     def enum_values(self, parts: tuple[str, ...]) -> list[str] | None:
         """The values of the enum a type name refers to; none if it is not one that is defined."""
         found = self._enums.matches(parts)
-        return found[0] if len(found) == 1 else None
+        if len(found) > 1:
+            name = ".".join(parts)
+            raise NoEquivalentError(f"several enums are called {name!r}; write it with its schema")
+        return found[0] if found else None
 
     def choose(self, select: str | None) -> Table:
         """The table to import: the one ``select`` names, or else the only one the file creates."""
@@ -156,12 +158,11 @@ class Catalog:
             self._alter(statement)
 
     def _comment(self, statement: exp.Comment) -> None:
-        column = statement.this
-        text = statement.args.get("expression")
-        if statement.args.get("kind") != "COLUMN" or not isinstance(column, exp.Column) or not text:
-            return
+        column, text = statement.this, statement.args.get("expression")
+        if not isinstance(column, exp.Column) or text is None:
+            return  # a comment on something other than a column
         tables = self._tables.matches(tuple(part.name for part in column.parts[:-1]))
-        if len(tables) == 1 and text.name:
+        if len(tables) == 1:
             tables[0].comments[column.name] = text.name
 
     def _alter(self, statement: exp.Alter) -> None:

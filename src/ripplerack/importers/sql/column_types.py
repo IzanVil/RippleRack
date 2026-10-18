@@ -114,7 +114,9 @@ def _numbers(kind: exp.DataType) -> list[int | None]:
 def _decimal(kind: exp.DataType, dialect: str | None, enums: EnumValues) -> ColumnType:
     """An integer when the scale is 0, whether it is written or not; else a float."""
     numbers = _numbers(kind)
-    whole = bool(numbers) and None not in numbers and (len(numbers) == 1 or numbers[1] == 0)
+    whole = (len(numbers) == 1 and numbers[0] is not None) or (
+        len(numbers) == 2 and numbers[1] == 0
+    )
     return ColumnType(FieldType.INTEGER if whole else FieldType.FLOAT)
 
 
