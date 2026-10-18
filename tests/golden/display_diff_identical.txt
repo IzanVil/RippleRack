@@ -1,0 +1,4 @@
+───────────────────────────────────────── Diff base.yaml → head.yaml ─────────────────────────────────────────
+mini-datacenter → mini-datacenter
+No differences.
+Severity:  NONE 

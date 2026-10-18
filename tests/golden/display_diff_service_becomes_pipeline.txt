@@ -1,0 +1,18 @@
+───────────────────────────────────────── Diff base.yaml → head.yaml ─────────────────────────────────────────
+mini-datacenter → mini-datacenter
+1 added · 1 removed · 0 modified · 0 schema change(s) · 0 broken consumer(s)
+Components                                
+┏━━━┳━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━┓
+┃   ┃ kind     ┃ id        ┃ details     ┃
+┡━━━╇━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━┩
+│ + │ pipeline │ dashboard │ runs on api │
+│ - │ service  │ dashboard │ on srv-b1   │
+└───┴──────────┴───────────┴─────────────┘
+Dependencies                            
+┏━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┓
+┃   ┃ dependency                ┃ kind ┃
+┡━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━┩
+│ - │ dashboard → revenue-daily │ data │
+└───┴───────────────────────────┴──────┘
+⚠ 'dashboard' changed from service to pipeline; it is reported as removed and added
+Severity:  LOW 

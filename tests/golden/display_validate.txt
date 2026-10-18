@@ -1,0 +1,7 @@
+✓ mini-datacenter is valid
+  racks                    2                   
+  servers                  3                   
+  services                 5                   
+  pipelines                4                   
+  explicit dependencies    4                   
+  graph                    14 nodes, 19 edges  
