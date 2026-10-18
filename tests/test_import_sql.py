@@ -180,7 +180,7 @@ def test_the_name_option_wins() -> None:
 
 def test_a_table_that_cannot_name_the_schema_leaves_it_to_the_file() -> None:
     result = import_sql('CREATE TABLE "日本語" (a int);', source="dir/Customer Data.sql")
-    assert result.schema.name == "customer_data_sql"
+    assert result.schema.name == "customer_data"
 
 
 def test_the_version_defaults_to_1_0_0() -> None:

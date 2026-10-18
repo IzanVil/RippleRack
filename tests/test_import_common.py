@@ -17,6 +17,7 @@ from ripplerack.importers.common import describe, listing, name_schema
         ([], "dir/Customer Data.json", "customer_data"),
         ([], "C:\\Users\\ana\\Order-Lines.SCHEMA.JSON", "order_lines"),
         ([], "events.avsc", "events"),
+        ([], "C:\\dumps\\Customer-Data.SQL", "customer_data"),
         (["!!!"], "<stdin>", "schema"),  # standard input has no name to give
         ([], "<stdin>", "schema"),
         ([], "dir/", "schema"),

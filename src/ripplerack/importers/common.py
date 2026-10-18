@@ -20,7 +20,7 @@ from ripplerack.parser import ErrorCode, RippleRackError
 
 MAX_ENUM_VALUES = 10
 _LISTED = 10  # how many names a message lists before it counts the rest
-_NAME_SUFFIXES = (".json", ".schema", ".avsc")
+_NAME_SUFFIXES = (".json", ".schema", ".avsc", ".sql")
 
 
 class ReadError(Exception):
