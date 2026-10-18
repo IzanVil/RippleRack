@@ -1,0 +1,30 @@
+─────────────────────────────────────────── Simulation (load x2.5) ───────────────────────────────────────────
+Racks                                       
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┓
+┃ rack   ┃ power (kW) ┃ usage ┃ status     ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━┩
+│ rack-a │  3.0 / 2.8 │  107% │ overloaded │
+│ rack-b │    2.5 / 4 │   62% │ ok         │
+└────────┴────────────┴───────┴────────────┘
+Servers                                                        
+┏━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ server ┃ rack   ┃   cpu (cores) ┃     memory (GB) ┃ status  ┃
+┡━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ srv-a1 │ rack-a │ 30 / 32 (94%) │ 120 / 128 (94%) │ warning │
+│ srv-a2 │ rack-a │   0 / 16 (0%) │     0 / 64 (0%) │ failed  │
+│ srv-b1 │ rack-b │   0 / 24 (0%) │     0 / 96 (0%) │ ok      │
+└────────┴────────┴───────────────┴─────────────────┴─────────┘
+Failed: srv-a2, kafka
+Unavailable as a consequence                                               
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ component       ┃ kind     ┃ via                                        ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ orders-ingest   │ pipeline │ kafka → orders-ingest                      │
+│ spark           │ service  │ srv-a2 → spark                             │
+│ customer-360    │ pipeline │ kafka → orders-ingest → customer-360       │
+│ orders-enriched │ pipeline │ srv-a2 → spark → orders-enriched           │
+│ revenue-daily   │ pipeline │ srv-a2 → spark → revenue-daily             │
+│ api             │ service  │ kafka → orders-ingest → customer-360 → api │
+│ dashboard       │ service  │ srv-a2 → spark → revenue-daily → dashboard │
+└─────────────────┴──────────┴────────────────────────────────────────────┘
+✗ Overloaded: rack-a

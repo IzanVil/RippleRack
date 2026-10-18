@@ -1,0 +1,27 @@
+────────────────────────────────────── Impact of changing orders-ingest ──────────────────────────────────────
+Schema orders 1.2.0 → 2.0.0   change: major   suggested version: 2.0.0
+Schema changes                                                 
+┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ level ┃ kind          ┃ detail                              ┃
+┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ major │ field_removed │ field 'amount' removed              │
+│ major │ field_added   │ required field 'amount_cents' added │
+└───────┴───────────────┴─────────────────────────────────────┘
+Broken consumers                                     
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ pipeline        ┃ fields ┃ reason                 ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ orders-enriched │ amount │ field 'amount' removed │
+│ customer-360    │ amount │ field 'amount' removed │
+└─────────────────┴────────┴────────────────────────┘
+Downstream components                                                                                
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ component         ┃ kind     ┃ hops ┃ path                                                        ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ ✗ customer-360    │ pipeline │    1 │ orders-ingest → customer-360                                │
+│ ✗ orders-enriched │ pipeline │    1 │ orders-ingest → orders-enriched                             │
+│ ! api             │ service  │    2 │ orders-ingest → customer-360 → api                          │
+│ ! revenue-daily   │ pipeline │    2 │ orders-ingest → orders-enriched → revenue-daily             │
+│ ! dashboard       │ service  │    3 │ orders-ingest → orders-enriched → revenue-daily → dashboard │
+└───────────────────┴──────────┴──────┴─────────────────────────────────────────────────────────────┘
+Severity:  CRITICAL 

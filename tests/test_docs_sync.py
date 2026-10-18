@@ -12,6 +12,7 @@ import pytest
 
 from ripplerack.models import Schema
 from ripplerack.semver import diff_schemas
+from tests.markdown import table_under
 
 DOC = Path(__file__).resolve().parent.parent / "docs" / "concepts.md"
 SECTION = "## Schema SemVer rules"
@@ -72,18 +73,8 @@ CASES = [
 
 def documented_rules() -> dict[str, tuple[str, str]]:
     """Rows of the table under the SemVer heading: ``change -> (level, breaks readers?)``."""
-    lines = DOC.read_text(encoding="utf-8").splitlines()
-    rules: dict[str, tuple[str, str]] = {}
-    for line in lines[lines.index(SECTION) + 1 :]:
-        if line.startswith("## "):
-            break
-        if not line.startswith("|"):
-            continue
-        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
-        if cells[0] == "change" or set(cells[0]) <= {"-", ":"}:
-            continue
-        rules[cells[0]] = (cells[1], cells[2])
-    return rules
+    rows = table_under(DOC.read_text(encoding="utf-8"), SECTION)
+    return {change: (level, breaks_readers) for change, level, breaks_readers, *_ in rows}
 
 
 def test_the_table_documents_exactly_the_rules_that_are_tested() -> None:

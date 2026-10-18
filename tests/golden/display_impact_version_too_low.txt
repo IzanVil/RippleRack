@@ -1,0 +1,20 @@
+────────────────────────────────────── Impact of changing orders-ingest ──────────────────────────────────────
+Schema orders 1.2.0 → 1.2.1   change: major   suggested version: 2.0.0
+⚠ declared version 1.2.1 is too low for a major change (expected ≥ 2.0.0)
+Schema changes                                          
+┏━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ level ┃ kind        ┃ detail                         ┃
+┡━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ major │ field_added │ required field 'channel' added │
+└───────┴─────────────┴────────────────────────────────┘
+Downstream components                                                                                
+┏━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ component         ┃ kind     ┃ hops ┃ path                                                        ┃
+┡━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│   customer-360    │ pipeline │    1 │ orders-ingest → customer-360                                │
+│   orders-enriched │ pipeline │    1 │ orders-ingest → orders-enriched                             │
+│   api             │ service  │    2 │ orders-ingest → customer-360 → api                          │
+│   revenue-daily   │ pipeline │    2 │ orders-ingest → orders-enriched → revenue-daily             │
+│   dashboard       │ service  │    3 │ orders-ingest → orders-enriched → revenue-daily → dashboard │
+└───────────────────┴──────────┴──────┴─────────────────────────────────────────────────────────────┘
+Severity:  MEDIUM 

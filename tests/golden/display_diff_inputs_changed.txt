@@ -1,0 +1,12 @@
+───────────────────────────────────────── Diff base.yaml → head.yaml ─────────────────────────────────────────
+mini-datacenter → mini-datacenter
+0 added · 0 removed · 3 modified · 0 schema change(s) · 0 broken consumer(s)
+Components                                                                                             
+┏━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃   ┃ kind     ┃ id              ┃ details                                                            ┃
+┡━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ ~ │ pipeline │ customer-360    │ inputs: orders-ingest: all fields → order_id                       │
+│ ~ │ pipeline │ orders-enriched │ inputs: orders-ingest: -amount -currency -customer_id +coupon_code │
+│ ~ │ pipeline │ revenue-daily   │ inputs: +customer-360                                              │
+└───┴──────────┴─────────────────┴────────────────────────────────────────────────────────────────────┘
+Severity:  LOW 

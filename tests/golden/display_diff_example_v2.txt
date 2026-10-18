@@ -1,0 +1,39 @@
+───────────────────────────────────────── Diff base.yaml → head.yaml ─────────────────────────────────────────
+mini-datacenter → mini-datacenter
+2 added · 0 removed · 3 modified · 1 schema change(s) · 1 broken consumer(s)
+Components                                                                       
+┏━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃   ┃ kind     ┃ id              ┃ details                                      ┃
+┡━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ + │ service  │ redis           │ on srv-b1                                    │
+│ + │ pipeline │ orders-audit    │ runs on postgres                             │
+│ ~ │ server   │ srv-b1          │ memory_gb: 96 → 64                           │
+│ ~ │ pipeline │ orders-enriched │ inputs: orders-ingest: -amount +amount_cents │
+│ ~ │ pipeline │ orders-ingest   │ schema.version: 1.2.0 → 2.0.0                │
+│   │          │                 │ schema.fields: changed (see below)           │
+└───┴──────────┴─────────────────┴──────────────────────────────────────────────┘
+Dependencies                          
+┏━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+┃   ┃ dependency    ┃ kind           ┃
+┡━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+│ + │ api → redis   │ runtime        │
+│ ~ │ spark → kafka │ network → data │
+└───┴───────────────┴────────────────┘
+
+orders-ingest
+Schema orders 1.2.0 → 2.0.0   change: major   suggested version: 2.0.0
+Schema changes                                                 
+┏━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ level ┃ kind          ┃ detail                              ┃
+┡━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ major │ field_removed │ field 'amount' removed              │
+│ major │ field_added   │ required field 'amount_cents' added │
+└───────┴───────────────┴─────────────────────────────────────┘
+Broken consumers                                  
+┏━━━━━━━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ pipeline     ┃ fields ┃ reason                 ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ customer-360 │ amount │ field 'amount' removed │
+└──────────────┴────────┴────────────────────────┘
+At risk: api
+Severity:  HIGH 

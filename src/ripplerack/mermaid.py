@@ -25,7 +25,7 @@ from dataclasses import dataclass
 import networkx as nx
 
 from ripplerack.graph import NodeKind
-from ripplerack.impact import ImpactReport
+from ripplerack.impact import ImpactReport, NodeStatus
 
 _ID_PREFIXES: dict[str, str] = {
     NodeKind.RACK: "rack",
@@ -44,6 +44,13 @@ _STYLES = {
     "broken": "fill:#ffcdd2,stroke:#c62828,stroke-width:3px,color:#b71c1c",
     "atRisk": "fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#e65100",
     "affected": "fill:#fff9c4,stroke:#f9a825,color:#5d4037",
+}
+
+# The class of a node, and of the arrow that leads to it, by what the change does to it.
+_STATUS_CLASSES = {
+    NodeStatus.BROKEN: "broken",
+    NodeStatus.AT_RISK: "atRisk",
+    NodeStatus.AFFECTED: "affected",
 }
 
 # Arrow colour by the status of the node the arrow leads to.
@@ -70,15 +77,7 @@ class MermaidHighlight:
     @classmethod
     def from_impact(cls, report: ImpactReport) -> MermaidHighlight:
         """Highlight everything reachable from the changed pipeline of ``report``."""
-        broken, at_risk = report.broken_ids, set(report.at_risk)
-        statuses = {
-            node.id: "broken"
-            if node.id in broken
-            else "atRisk"
-            if node.id in at_risk
-            else "affected"
-            for node in report.affected
-        }
+        statuses = {node: _STATUS_CLASSES[status] for node, status in report.statuses().items()}
         edges = {
             (upstream, downstream): statuses[downstream]
             for node in report.affected
@@ -89,81 +88,112 @@ class MermaidHighlight:
 
 def to_mermaid(graph: nx.DiGraph[str], highlight: MermaidHighlight | None = None) -> str:
     """Render ``graph`` as a Mermaid ``flowchart``, optionally highlighting an impact."""
-    ids = _mermaid_ids(graph)
-    kinds = {node: data.get("kind") for node, data in graph.nodes(data=True)}
+    return _Flowchart(graph, highlight).render()
 
-    children: dict[str, list[str]] = {node: [] for node in graph}
-    contained: set[str] = set()
-    for upstream, downstream, data in graph.edges(data=True):
-        if data.get("relation") == "hosts":
-            children[upstream].append(downstream)
-            contained.add(downstream)
-    pipelines = [node for node in graph if kinds[node] == NodeKind.PIPELINE]
-    top_level = [node for node in graph if node not in contained and node not in pipelines]
 
-    def node_class(node: str) -> str:
+class _Flowchart:
+    """The lines of a diagram, written in the order Mermaid needs them: nodes, arrows, styles."""
+
+    def __init__(self, graph: nx.DiGraph[str], highlight: MermaidHighlight | None) -> None:
+        self._graph = graph
+        self._highlight = highlight
+        self._ids = _mermaid_ids(graph)
+        self._kinds = {node: data.get("kind") for node, data in graph.nodes(data=True)}
+        self._children = _hosted(graph)
+        self._pipelines = [node for node in graph if self._kinds[node] == NodeKind.PIPELINE]
+        self._lines: list[str] = []
+        self._members: dict[str, list[str]] = defaultdict(list)  # node ids by class
+        self._container_styles: list[str] = []
+
+    def render(self) -> str:
+        """The diagram as text, in the order Mermaid needs: header, nodes, arrows, styles."""
+        self._add_header()
+        self._add_nodes()
+        link_indexes = self._add_links()
+        self._add_styles(link_indexes)
+        return "\n".join(self._lines) + "\n"
+
+    def _add_header(self) -> None:
+        self._lines.append("flowchart LR")
+        if name := _single_line(str(self._graph.graph.get("name", ""))):
+            self._lines.append(f"  %% {name}")
+        if self._highlight is not None:
+            source = _single_line(self._highlight.source)
+            self._lines.append(f"  %% impact of changing {source}: {self._highlight.severity}")
+
+    def _add_nodes(self) -> None:
+        """Racks and servers hold what they host; the pipelines go together in their own group."""
+        contained = {node for hosted in self._children.values() for node in hosted}
+        for node in self._graph:
+            if node not in contained and node not in self._pipelines:
+                self._add_node(node, 1)
+        if self._pipelines:
+            self._lines.append('  subgraph grp_pipelines["pipelines"]')
+            for node in self._pipelines:
+                self._add_node(node, 2)
+            self._lines.append("  end")
+
+    def _add_node(self, node: str, depth: int) -> None:
+        """A node, or a ``subgraph`` with everything the node hosts inside it."""
+        pad = "  " * depth
+        label = _label(node, self._graph.nodes[node])
+        if not self._children[node]:
+            self._lines.append(f"{pad}{self._ids[node]}{_shape(self._kinds[node], label)}")
+            self._members[self._node_class(node)].append(self._ids[node])
+            return
+        self._lines.append(f'{pad}subgraph {self._ids[node]}["{label}"]')
+        for hosted in self._children[node]:
+            self._add_node(hosted, depth + 1)
+        self._lines.append(f"{pad}end")
+        if (style := _STYLES.get(self._node_class(node))) is not None:
+            self._container_styles.append(f"  style {self._ids[node]} {style}")
+
+    def _node_class(self, node: str) -> str:
+        """The class that styles a node: changed, what the change does to it, or its kind."""
+        highlight = self._highlight
         if highlight is not None:
             if node == highlight.source:
                 return "changed"
             if node in highlight.statuses:
                 return highlight.statuses[node]
-        return str(kinds[node])
+        return str(self._kinds[node])
 
-    lines = ["flowchart LR"]
-    if name := _single_line(str(graph.graph.get("name", ""))):
-        lines.append(f"  %% {name}")
-    if highlight is not None:
-        source = _single_line(highlight.source)
-        lines.append(f"  %% impact of changing {source}: {highlight.severity}")
+    def _add_links(self) -> dict[str, list[int]]:
+        """One arrow per relation that is not containment; says which arrows are highlighted."""
+        link_indexes: dict[str, list[int]] = defaultdict(list)
+        arrows = [
+            (upstream, downstream, str(data.get("relation", "")))
+            for upstream, downstream, data in self._graph.edges(data=True)
+            if str(data.get("relation", "")) != "hosts"
+        ]
+        for index, (upstream, downstream, relation) in enumerate(arrows):
+            label = f"|{_escape(relation)}|" if relation else ""
+            self._lines.append(f"  {self._ids[upstream]} -->{label} {self._ids[downstream]}")
+            highlight = self._highlight
+            if highlight is not None and (upstream, downstream) in highlight.edges:
+                link_indexes[highlight.edges[(upstream, downstream)]].append(index)
+        return link_indexes
 
-    members: dict[str, list[str]] = defaultdict(list)
-    container_styles: list[str] = []
+    def _add_styles(self, link_indexes: dict[str, list[int]]) -> None:
+        """The classes of the nodes, the styles of the containers and of the arrows."""
+        for name, style in _STYLES.items():
+            if name in self._members:
+                self._lines.append(f"  classDef {name} {style}")
+                self._lines.append(f"  class {','.join(self._members[name])} {name}")
+        self._lines.extend(self._container_styles)
+        for status, style in _LINK_STYLES.items():
+            if status in link_indexes:
+                numbers = ",".join(str(i) for i in link_indexes[status])
+                self._lines.append(f"  linkStyle {numbers} {style}")
 
-    def emit(node: str, depth: int) -> None:
-        pad = "  " * depth
-        label = _label(node, graph.nodes[node])
-        if children[node]:
-            lines.append(f'{pad}subgraph {ids[node]}["{label}"]')
-            for child in children[node]:
-                emit(child, depth + 1)
-            lines.append(f"{pad}end")
-            style = _STYLES.get(node_class(node))
-            if style is not None:
-                container_styles.append(f"  style {ids[node]} {style}")
-        else:
-            lines.append(f"{pad}{ids[node]}{_shape(kinds[node], label)}")
-            members[node_class(node)].append(ids[node])
 
-    for node in top_level:
-        emit(node, 1)
-    if pipelines:
-        lines.append('  subgraph grp_pipelines["pipelines"]')
-        for node in pipelines:
-            emit(node, 2)
-        lines.append("  end")
-
-    link_indexes: dict[str, list[int]] = defaultdict(list)
-    index = 0
+def _hosted(graph: nx.DiGraph[str]) -> dict[str, list[str]]:
+    """What each node hosts: the targets of its ``hosts`` arrows, which are not drawn."""
+    hosted: dict[str, list[str]] = {node: [] for node in graph}
     for upstream, downstream, data in graph.edges(data=True):
-        relation = str(data.get("relation", ""))
-        if relation == "hosts":
-            continue
-        label = f"|{_escape(relation)}|" if relation else ""
-        lines.append(f"  {ids[upstream]} -->{label} {ids[downstream]}")
-        if highlight is not None and (upstream, downstream) in highlight.edges:
-            link_indexes[highlight.edges[(upstream, downstream)]].append(index)
-        index += 1
-
-    for name, style in _STYLES.items():
-        if name in members:
-            lines.append(f"  classDef {name} {style}")
-            lines.append(f"  class {','.join(members[name])} {name}")
-    lines.extend(container_styles)
-    for status, style in _LINK_STYLES.items():
-        if status in link_indexes:
-            numbers = ",".join(str(i) for i in link_indexes[status])
-            lines.append(f"  linkStyle {numbers} {style}")
-    return "\n".join(lines) + "\n"
+        if data.get("relation") == "hosts":
+            hosted[upstream].append(downstream)
+    return hosted
 
 
 def _mermaid_ids(graph: nx.DiGraph[str]) -> dict[str, str]:
@@ -189,6 +219,7 @@ def _label(node: str, data: dict[str, object]) -> str:
 
 
 def _shape(kind: object, label: str) -> str:
+    """The shape of a node: rounded for a service, a hexagon for a pipeline, else a box."""
     if kind == NodeKind.SERVICE:
         return f'("{label}")'
     if kind == NodeKind.PIPELINE:

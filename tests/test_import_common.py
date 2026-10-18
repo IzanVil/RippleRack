@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from ripplerack.importers.common import name_schema
+from ripplerack.importers.common import describe, name_schema
 
 
 @pytest.mark.parametrize(
@@ -33,3 +33,20 @@ def test_the_candidates_are_not_changed() -> None:
     candidates = ["Orders"]
     name_schema(candidates, "file.json")
     assert candidates == ["Orders"]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, "null"),
+        (True, "a boolean"),
+        (False, "a boolean"),
+        (3, "a number"),
+        (2.5, "a number"),
+        ("text", "a string"),
+        ([], "an array"),
+        ({}, "an object"),
+    ],
+)
+def test_a_value_is_described_by_the_kind_of_json_it_is(value: object, expected: str) -> None:
+    assert describe(value) == expected

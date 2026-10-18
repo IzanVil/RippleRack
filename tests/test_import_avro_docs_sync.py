@@ -18,7 +18,7 @@ from ripplerack.importers import IssueCode
 from ripplerack.importers.avro import from_avro
 from ripplerack.parser import ErrorCode, RippleRackError
 from tests.helpers import GOLDEN, SCHEMAS
-from tests.test_import_docs_sync import anchors, links
+from tests.markdown import anchors, links, table_under, unwrap
 
 ROOT = Path(__file__).resolve().parent.parent
 GUIDE = ROOT / "docs" / "import-avro.md"
@@ -26,27 +26,6 @@ IMPORT = ROOT / "docs" / "import.md"
 README = ROOT / "README.md"
 GUIDE_TEXT = GUIDE.read_text(encoding="utf-8")
 NO_VALUE = "—"
-
-
-def unwrap(cell: str) -> str:
-    return cell.strip("`")
-
-
-def rows_under(heading: str) -> list[tuple[str, ...]]:
-    """The rows of the first table after ``heading``, without its header, as lists of cells."""
-    lines = GUIDE_TEXT.splitlines()
-    rows: list[tuple[str, ...]] = []
-    for line in lines[lines.index(heading) + 1 :]:
-        if line.startswith("#"):
-            break
-        if not line.startswith("|"):
-            if rows:
-                break
-            continue
-        cells = tuple(cell.strip() for cell in line.strip().strip("|").split("|"))
-        if not set(cells[0]) <= {"-", " "}:
-            rows.append(cells)
-    return rows[1:]
 
 
 def one_field(type_cell: str, doc_cell: str = NO_VALUE) -> dict[str, Any]:
@@ -57,9 +36,9 @@ def one_field(type_cell: str, doc_cell: str = NO_VALUE) -> dict[str, Any]:
     return {"type": "record", "name": "Row", "fields": [field]}
 
 
-TRANSLATION = rows_under("## Translation")
-REFUSALS = rows_under("### Unions and what is refused")
-ERRORS = {unwrap(row[0]) for row in rows_under("## Errors")}
+TRANSLATION = table_under(GUIDE_TEXT, "## Translation")
+REFUSALS = table_under(GUIDE_TEXT, "### Unions and what is refused")
+ERRORS = {unwrap(row[0]) for row in table_under(GUIDE_TEXT, "## Errors")}
 
 
 def test_the_tables_have_their_rows() -> None:

@@ -53,8 +53,19 @@ target-version = "py311"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "N", "C4", "PT"]
+select = [
+    "E", "W", "F", "I", "B", "UP", "SIM", "RUF", "N", "C4", "PT",
+    "C901", "PLR0911", "PLR0912", "PLR0915",  # a function that grows too much must be split
+]
 ignore = ["B008"]  # Typer relies on function calls in argument defaults.
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-returns = 6
+max-branches = 12
+max-statements = 50
 
 [tool.mypy]
 python_version = "3.11"

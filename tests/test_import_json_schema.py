@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from ripplerack.importers import IMPORTERS, ImportIssue, IssueCode, SourceFormat
+from ripplerack.importers import ImportIssue, IssueCode
 from ripplerack.importers.json_schema import from_json_schema, import_json_schema, parse_json
 from ripplerack.parser import ErrorCode, RippleRackError
 
@@ -720,6 +720,18 @@ def test_a_name_that_is_not_an_identifier_is_never_renamed_or_skipped(name: str)
     fails(document, ErrorCode.UNSUPPORTED_JSON_SCHEMA, "not a valid field name")
 
 
+@pytest.mark.parametrize("lenient", [False, True])
+def test_a_required_name_that_is_not_an_identifier_is_never_made_a_field(lenient: bool) -> None:
+    document = {"type": "object", "properties": {"ok": {}}, "required": ["ok", "first name"]}
+    fails(
+        document,
+        ErrorCode.UNSUPPORTED_JSON_SCHEMA,
+        "#/required",
+        "required property name 'first name' is not a valid field name",
+        lenient=lenient,
+    )
+
+
 def test_names_with_dots_dashes_and_digits_are_fine() -> None:
     document = record(**{"a.b": {}, "c-d": {}, "_e": {}, "9": {}})
     assert [name for name, *_ in fields(document)] == ["a.b", "c-d", "_e", "9"]
@@ -1058,17 +1070,3 @@ def test_import_json_schema_parses_and_translates() -> None:
         ("id", "integer"),
         ("at", "timestamp"),
     ]
-
-
-def test_the_importers_are_registered_by_format() -> None:
-    importer = IMPORTERS[SourceFormat.JSON_SCHEMA]
-    result = importer(
-        '{"properties": {"a": {"type": "string"}}}',
-        source="<stdin>",
-        name="s",
-        version="1.0.0",
-        lenient=False,
-        select=None,
-    )
-    assert result.schema.name == "s"
-    assert result.issues == ()

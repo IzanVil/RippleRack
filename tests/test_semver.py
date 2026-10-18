@@ -42,6 +42,10 @@ class TestVersion:
         assert Version.parse("1.10.0") > Version.parse("1.9.9")
         assert Version.parse("2.0.0") >= Version.parse("2.0.0")
 
+    def test_a_version_is_only_ordered_with_another_version(self) -> None:
+        with pytest.raises(TypeError):
+            Version.parse("1.0.0") < 1  # noqa: B015
+
 
 class TestDiffSchemas:
     def test_identical_schemas_have_no_changes(self) -> None:

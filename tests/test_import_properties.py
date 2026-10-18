@@ -21,7 +21,7 @@ from hypothesis import strategies as st
 from ripplerack.importers import render_schema_yaml
 from ripplerack.importers.json_schema import from_json_schema, import_json_schema
 from ripplerack.models import FieldType, Schema, SchemaField
-from ripplerack.parser import RippleRackError
+from tests.helpers import outcome
 
 # ----------------------------------------------------------------- schemas to write
 
@@ -167,6 +167,33 @@ leaf_schemas = st.one_of(
 any_schema = st.recursive(leaf_schemas, schema_keywords, max_leaves=6)
 
 
+# How often a keyword of an object schema is there: the odds are read from a draw of 0 to 4.
+sometimes = st.booleans()
+usually = st.integers(0, 4).map(bool)
+rarely = st.integers(0, 4).map(lambda n: n == 0)
+very_rarely = st.integers(0, 6).map(lambda n: n == 0)
+two_members = st.lists(any_schema, min_size=1, max_size=2)
+
+# The keywords of an object schema that may or may not be there: name, odds and value.
+OPTIONAL_KEYWORDS = (
+    ("$defs", usually, st.fixed_dictionaries({"a": any_schema, "b": any_schema})),
+    ("definitions", sometimes, st.fixed_dictionaries({"a": any_schema})),
+    ("additionalProperties", sometimes, st.booleans()),
+    ("unevaluatedProperties", sometimes, st.booleans()),
+    ("title", sometimes, st.text(max_size=8)),
+    ("$id", sometimes, document_ids | st.text(max_size=8)),
+    ("allOf", rarely, two_members),
+    ("oneOf", rarely, two_members),
+    ("then", very_rarely, any_schema),
+)
+
+
+def required_names(properties: dict[str, Any]) -> st.SearchStrategy[list[str]]:
+    """A ``required`` list that usually names properties the schema declares."""
+    declared = st.lists(st.sampled_from(sorted(properties)), max_size=3)
+    return st.one_of(*[declared] * 5, st.lists(property_names, max_size=2))
+
+
 @st.composite
 def object_documents(
     draw: st.DrawFn, names: st.SearchStrategy[str] = property_names
@@ -175,28 +202,10 @@ def object_documents(
     properties = draw(st.dictionaries(names, any_schema, min_size=1, max_size=4))
     document: dict[str, Any] = {"type": "object", "properties": properties}
     if draw(st.booleans()):
-        declared = st.sampled_from(sorted(properties))
-        document["required"] = draw(
-            st.one_of(*[st.lists(declared, max_size=3)] * 5, st.lists(property_names, max_size=2))
-        )
-    if draw(st.integers(0, 4)):  # usually
-        document["$defs"] = {"a": draw(any_schema), "b": draw(any_schema)}
-    if draw(st.booleans()):
-        document["definitions"] = {"a": draw(any_schema)}
-    if draw(st.booleans()):
-        document["additionalProperties"] = draw(st.booleans())
-    if draw(st.booleans()):
-        document["unevaluatedProperties"] = draw(st.booleans())
-    if draw(st.booleans()):
-        document["title"] = draw(st.text(max_size=8))
-    if draw(st.booleans()):
-        document["$id"] = draw(document_ids | st.text(max_size=8))
-    if draw(st.integers(0, 4)) == 0:
-        document["allOf"] = draw(st.lists(any_schema, min_size=1, max_size=2))
-    if draw(st.integers(0, 4)) == 0:
-        document["oneOf"] = draw(st.lists(any_schema, min_size=1, max_size=2))
-    if draw(st.integers(0, 6)) == 0:
-        document["then"] = draw(any_schema)
+        document["required"] = draw(required_names(properties))
+    for keyword, odds, value in OPTIONAL_KEYWORDS:
+        if draw(odds):
+            document[keyword] = draw(value)
     return document
 
 
@@ -205,16 +214,7 @@ documents = st.one_of(
 )
 
 
-def outcome(read: Any) -> tuple[Any, ...]:
-    """What reading a document gave, in a form two readings can be compared by."""
-    try:
-        result = read()
-    except RippleRackError as error:
-        return ("refused", error.code, str(error))
-    return ("imported", result.schema, result.issues)
-
-
-@settings(max_examples=200)
+@settings(max_examples=300)
 @given(document=documents, lenient=st.booleans())
 def test_any_document_gives_a_schema_or_a_ripplerack_error(document: Any, lenient: bool) -> None:
     def from_the_document() -> Any:

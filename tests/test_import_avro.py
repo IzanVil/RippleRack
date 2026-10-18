@@ -8,15 +8,8 @@ from typing import Any
 
 import pytest
 
-from ripplerack.importers import (
-    IMPORTERS,
-    SELECTABLE,
-    ImportIssue,
-    IssueCode,
-    SourceFormat,
-)
+from ripplerack.importers import ImportIssue, IssueCode
 from ripplerack.importers.avro import from_avro, import_avro
-from ripplerack.importers.json_schema import import_json_schema
 from ripplerack.parser import ErrorCode, RippleRackError
 
 INVALID = ErrorCode.INVALID_AVRO_SCHEMA
@@ -1135,30 +1128,3 @@ def test_json_that_would_be_read_ambiguously_is_rejected(text: str, fragment: st
         import_avro(text, source="f.avsc")
     assert excinfo.value.code is ErrorCode.INVALID_JSON
     assert fragment in str(excinfo.value)
-
-
-# ------------------------------------------------------------------- the registry
-
-
-def test_the_importer_is_registered_by_format() -> None:
-    importer = IMPORTERS[SourceFormat.AVRO]
-    result = importer(
-        json.dumps(record(a="long")),
-        source="<stdin>",
-        name="s",
-        version="1.0.0",
-        lenient=False,
-        select=None,
-    )
-    assert result.schema.name == "s"
-    assert result.issues == ()
-
-
-def test_avro_is_the_only_format_that_can_select() -> None:
-    assert set(SELECTABLE) == {SourceFormat.AVRO}
-    assert set(IMPORTERS) == set(SourceFormat)
-
-
-def test_a_json_schema_has_nothing_to_select() -> None:
-    with pytest.raises(ValueError, match="select does not apply to JSON Schema"):
-        import_json_schema('{"properties": {"a": {}}}', source="x.json", select="Order")

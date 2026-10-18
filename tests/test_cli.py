@@ -80,6 +80,15 @@ def test_simulate(examples_dir: Path) -> None:
     assert "orders-ingest" in result.output
 
 
+def test_simulate_unknown_component(examples_dir: Path) -> None:
+    result = runner.invoke(
+        app, ["simulate", str(examples_dir / "mini_datacenter.yaml"), "--fail", "ghost"]
+    )
+    assert result.exit_code == 1
+    assert "unknown component(s): ghost" in plain(result.stderr)
+    assert result.stdout == ""
+
+
 def test_graph_json(examples_dir: Path, tmp_path: Path) -> None:
     out = tmp_path / "graph.json"
     result = runner.invoke(

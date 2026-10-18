@@ -19,8 +19,9 @@ from typing import Any
 import yaml
 
 from ripplerack.impact import ImpactReport, analyze_schema_change
+from ripplerack.importers.base import ImportResult
 from ripplerack.models import Schema
-from ripplerack.parser import LoadedDatacenter, load_schema, parse_datacenter
+from ripplerack.parser import LoadedDatacenter, RippleRackError, load_schema, parse_datacenter
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 GOLDEN = Path(__file__).resolve().parent / "golden"
@@ -63,6 +64,28 @@ def pipeline_of(data: dict[str, Any], pipeline_id: str) -> dict[str, Any]:
     return found
 
 
+def rename_kafka(data: dict[str, Any]) -> None:
+    """Rename the service ``kafka`` to ``broker``; what pointed at it follows."""
+    for service in server_of(data, "srv-a1")["services"]:
+        if service["id"] == "kafka":
+            service["id"] = "broker"
+    pipeline_of(data, "orders-ingest")["runs_on"] = "broker"
+    for dependency in data["dependencies"]:
+        if dependency["target"] == "kafka":
+            dependency["target"] = "broker"
+
+
+def set_orders_schema(
+    data: dict[str, Any], version: str, drop: str | None = None, **new_field: object
+) -> None:
+    """Give ``orders-ingest`` this version, without the field ``drop`` and with ``new_field``."""
+    schema = pipeline_of(data, "orders-ingest")["schema"]
+    schema["version"] = version
+    schema["fields"] = [f for f in schema["fields"] if f["name"] != drop]
+    if new_field:
+        schema["fields"].append({"type": "string", **new_field})
+
+
 def make_schema(version: str, *fields: dict[str, object], name: str = "orders") -> Schema:
     """Build a schema from compact field dicts (``type`` defaults to ``string``)."""
     return Schema.model_validate(
@@ -76,6 +99,15 @@ def impact_report(
     """The impact of applying ``examples/changes/<change>.yaml`` to ``pipeline``."""
     new_schema = load_schema(EXAMPLES / "changes" / f"{change}.yaml")
     return analyze_schema_change(loaded.datacenter, loaded.graph, pipeline, new_schema)
+
+
+def outcome(read: Callable[[], ImportResult]) -> tuple[Any, ...]:
+    """What reading a document gave, in a form two readings can be compared by."""
+    try:
+        result = read()
+    except RippleRackError as error:
+        return ("refused", error.code, str(error))
+    return ("imported", result.schema, result.issues)
 
 
 def assert_text_golden(name: str, actual: str) -> None:

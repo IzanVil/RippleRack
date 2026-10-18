@@ -28,8 +28,9 @@ from tests.helpers import (
     impact_report,
     load_variant,
     make_schema,
-    pipeline_of,
+    rename_kafka,
     server_of,
+    set_orders_schema,
 )
 
 CAMEL_CASE = re.compile(r"^[a-z][a-zA-Z0-9]*$")
@@ -238,19 +239,8 @@ def kitchen_sink(data: dict[str, Any]) -> None:
     data["name"] = "mini-datacenter-next"
     data["description"] = "Kitchen sink."
 
-    # kafka is renamed to broker, and everything that pointed at it follows
-    for service in server_of(data, "srv-a1")["services"]:
-        if service["id"] == "kafka":
-            service["id"] = "broker"
-    pipeline_of(data, "orders-ingest")["runs_on"] = "broker"
-    for dependency in data["dependencies"]:
-        if dependency["target"] == "kafka":
-            dependency["target"] = "broker"
-
-    # a breaking change shipped as a patch: coupon_code disappears in 1.2.1
-    schema = pipeline_of(data, "orders-ingest")["schema"]
-    schema["version"] = "1.2.1"
-    schema["fields"] = [f for f in schema["fields"] if f["name"] != "coupon_code"]
+    rename_kafka(data)  # and everything that pointed at it follows
+    set_orders_schema(data, "1.2.1", drop="coupon_code")  # a breaking change shipped as a patch
 
     # the dashboard service becomes a pipeline, and a redis service is added
     server = server_of(data, "srv-b1")
@@ -276,6 +266,66 @@ def sink_diff(mini_dc: LoadedDatacenter) -> DatacenterDiff:
     return diff_datacenters(mini_dc, load_variant(kitchen_sink))
 
 
+# The keys of the ``diff`` document, in order, at each place of it: the path from the root
+# (a name for a key, a number for the position in a list) and the keys found there.
+DIFF_KEYS: dict[tuple[str | int, ...], list[str]] = {
+    (): [
+        "schemaVersion",
+        "tool",
+        "command",
+        "base",
+        "head",
+        "severity",
+        "summary",
+        "metadata",
+        "components",
+        "dependencies",
+        "schemaChanges",
+        "removedWithDependents",
+        "possibleRenames",
+        "warnings",
+    ],
+    ("base",): ["name"],
+    ("summary",): [
+        "added",
+        "removed",
+        "modified",
+        "dependenciesAdded",
+        "dependenciesRemoved",
+        "dependenciesModified",
+        "schemaChanges",
+        "brokenConsumers",
+        "warnings",
+    ],
+    ("metadata", 0): ["attribute", "before", "after"],
+    ("components",): ["added", "removed", "modified"],
+    ("components", "added", 0): ["id", "kind", "parent"],
+    ("components", "modified", 0): ["id", "kind", "changes"],
+    ("components", "modified", 0, "changes", 0): ["attribute", "before", "after"],
+    ("dependencies",): ["added", "removed", "modified"],
+    ("dependencies", "added", 0): ["source", "target", "kind"],
+    ("schemaChanges", 0): [
+        "pipeline",
+        "severity",
+        "schema",
+        "brokenConsumers",
+        "atRisk",
+        "affected",
+        "summary",
+    ],
+    ("removedWithDependents", 0): ["id", "kind", "dependents"],
+    ("possibleRenames", 0): ["kind", "from", "to"],
+    ("warnings", 0): ["code", "message"],
+}
+
+
+def follow(document: Any, place: tuple[str | int, ...]) -> Any:
+    """What is at ``place`` in a document."""
+    for step in place:
+        document = document[step]
+    return document
+
+
 class TestDiffPayload:
     def test_envelope(self, example_diff: DatacenterDiff) -> None:
         payload = diff_to_dict(example_diff)
@@ -285,57 +335,8 @@ class TestDiffPayload:
 
     def test_keys_are_exact(self, sink_diff: DatacenterDiff) -> None:
         payload = diff_to_dict(sink_diff)
-        assert list(payload) == [
-            "schemaVersion",
-            "tool",
-            "command",
-            "base",
-            "head",
-            "severity",
-            "summary",
-            "metadata",
-            "components",
-            "dependencies",
-            "schemaChanges",
-            "removedWithDependents",
-            "possibleRenames",
-            "warnings",
-        ]
-        assert list(payload["base"]) == ["name"]
-        assert list(payload["summary"]) == [
-            "added",
-            "removed",
-            "modified",
-            "dependenciesAdded",
-            "dependenciesRemoved",
-            "dependenciesModified",
-            "schemaChanges",
-            "brokenConsumers",
-            "warnings",
-        ]
-        assert list(payload["metadata"][0]) == ["attribute", "before", "after"]
-        assert list(payload["components"]) == ["added", "removed", "modified"]
-        assert list(payload["components"]["added"][0]) == ["id", "kind", "parent"]
-        assert list(payload["components"]["modified"][0]) == ["id", "kind", "changes"]
-        assert list(payload["components"]["modified"][0]["changes"][0]) == [
-            "attribute",
-            "before",
-            "after",
-        ]
-        assert list(payload["dependencies"]) == ["added", "removed", "modified"]
-        assert list(payload["dependencies"]["added"][0]) == ["source", "target", "kind"]
-        assert list(payload["schemaChanges"][0]) == [
-            "pipeline",
-            "severity",
-            "schema",
-            "brokenConsumers",
-            "atRisk",
-            "affected",
-            "summary",
-        ]
-        assert list(payload["removedWithDependents"][0]) == ["id", "kind", "dependents"]
-        assert list(payload["possibleRenames"][0]) == ["kind", "from", "to"]
-        assert list(payload["warnings"][0]) == ["code", "message"]
+        for place, keys in DIFF_KEYS.items():
+            assert list(follow(payload, place)) == keys, place
 
     def test_modified_dependencies_have_before_and_after(
         self, example_diff: DatacenterDiff

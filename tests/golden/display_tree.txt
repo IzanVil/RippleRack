@@ -1,0 +1,26 @@
+mini-datacenter
+├── infrastructure
+│   ├── rack rack-a (2.8 kW)
+│   │   ├── server srv-a1 (32 cores, 128 GB)
+│   │   │   ├── service postgres
+│   │   │   └── service kafka
+│   │   └── server srv-a2 (16 cores, 64 GB)
+│   │       └── service spark
+│   └── rack rack-b (4 kW)
+│       └── server srv-b1 (24 cores, 96 GB)
+│           ├── service api
+│           └── service dashboard
+├── pipelines
+│   ├── pipeline orders-ingest (orders@1.2.0, on kafka)
+│   ├── pipeline orders-enriched (orders_enriched@1.0.0, on spark)
+│   │   └── ← orders-ingest order_id, customer_id, amount, currency, created_at
+│   ├── pipeline revenue-daily (revenue_daily@2.1.0, on spark)
+│   │   └── ← orders-enriched customer_segment, amount_eur, created_date
+│   └── pipeline customer-360 (customer_profile@0.4.0, on postgres)
+│       └── ← orders-ingest
+├── dependencies
+│   ├── api → postgres (runtime)
+│   ├── api → customer-360 (data)
+│   ├── dashboard → revenue-daily (data)
+│   └── spark → kafka (network)
+└── 2 racks, 3 servers, 5 services, 4 pipelines, 19 edges

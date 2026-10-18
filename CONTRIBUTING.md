@@ -26,7 +26,9 @@ uv run ruff format --check .
 uv run mypy src tests
 ```
 
-`uv run ruff format .` fixes formatting problems for you.
+`uv run ruff format .` fixes formatting problems for you. `ruff check` also refuses a function
+with too many branches, returns or statements (the limits are in `pyproject.toml`): split it
+into functions that each do one thing.
 
 The JSON output is a documented contract (see [docs/output-formats.md](docs/output-formats.md))
 pinned by the files in `tests/golden/`. If you change it on purpose, regenerate them

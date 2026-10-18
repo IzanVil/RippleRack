@@ -23,6 +23,8 @@ from ripplerack.models import Datacenter
 
 
 class NodeKind(StrEnum):
+    """What a node of the graph is."""
+
     RACK = "rack"
     SERVER = "server"
     SERVICE = "service"

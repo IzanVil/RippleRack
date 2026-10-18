@@ -20,7 +20,15 @@ from ripplerack.impact import Severity
 from ripplerack.models import DependencyKind
 from ripplerack.parser import LoadedDatacenter, load_datacenter
 from ripplerack.semver import ChangeLevel, diff_schemas
-from tests.helpers import EXAMPLES, load_variant, pipeline_of, rack_of, server_of
+from tests.helpers import (
+    EXAMPLES,
+    load_variant,
+    pipeline_of,
+    rack_of,
+    rename_kafka,
+    server_of,
+    set_orders_schema,
+)
 
 
 def changes_of(diff: DatacenterDiff, component_id: str) -> dict[str, tuple[object, object]]:
@@ -48,26 +56,6 @@ def remove_dashboard(data: dict[str, Any]) -> None:
     server = server_of(data, "srv-b1")
     server["services"] = [s for s in server["services"] if s["id"] != "dashboard"]
     data["dependencies"] = [d for d in data["dependencies"] if d["source"] != "dashboard"]
-
-
-def rename_kafka(data: dict[str, Any]) -> None:
-    for service in server_of(data, "srv-a1")["services"]:
-        if service["id"] == "kafka":
-            service["id"] = "broker"
-    pipeline_of(data, "orders-ingest")["runs_on"] = "broker"
-    for dependency in data["dependencies"]:
-        if dependency["target"] == "kafka":
-            dependency["target"] = "broker"
-
-
-def set_orders_schema(
-    data: dict[str, Any], version: str, drop: str | None = None, **new_field: object
-) -> None:
-    schema = pipeline_of(data, "orders-ingest")["schema"]
-    schema["version"] = version
-    schema["fields"] = [f for f in schema["fields"] if f["name"] != drop]
-    if new_field:
-        schema["fields"].append({"type": "string", **new_field})
 
 
 def retype_amount(data: dict[str, Any]) -> None:
