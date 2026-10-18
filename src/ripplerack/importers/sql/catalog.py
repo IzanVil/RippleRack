@@ -15,7 +15,7 @@ from typing import Generic, TypeVar
 
 from sqlglot import exp
 
-from ripplerack.importers.common import ReadError, listing
+from ripplerack.importers.common import ReadError, listing, one_line
 from ripplerack.importers.sql.column_types import NoEquivalentError
 from ripplerack.importers.sql.problems import invalid, place, unsupported
 
@@ -132,8 +132,7 @@ class Catalog:
             raise invalid("", self._not_understood(statement))
 
     def _not_understood(self, statement: exp.Command) -> str:
-        shown = " ".join(statement.sql().split())
-        shown = shown if len(shown) <= _SHOWN else shown[:_SHOWN] + "…"
+        shown = _excerpt(statement.sql())
         which = f"the {self._dialect} dialect" if self._dialect else "the dialect that is assumed"
         hint = "" if self._dialect else "; if the file is not standard SQL, give --dialect"
         return f"{which} does not understand this statement: {shown}{hint}"
@@ -179,14 +178,19 @@ class Catalog:
 
     def _refusal(self, table: Table, statement: exp.Alter, action: exp.Expr) -> ReadError:
         added = "ADD COLUMN " if isinstance(action, exp.ColumnDef) else ""
-        shown = added + " ".join(action.sql(self._dialect).split())
-        shown = shown if len(shown) <= _SHOWN else shown[:_SHOWN] + "…"
+        shown = _excerpt(added + action.sql(self._dialect))
         return unsupported(
             place(table.fullname, line_of(statement.this)),
             f"ALTER TABLE ... {shown} changes the columns, and the import does not apply ALTER "
             "statements: put the change in the CREATE TABLE",
             degradable=False,
         )
+
+
+def _excerpt(statement: str) -> str:
+    """A statement on one line, cut so that a message does not fill the screen."""
+    shown = one_line(statement)
+    return shown if len(shown) <= _SHOWN else shown[:_SHOWN] + "…"
 
 
 def _creates_table(command: exp.Command) -> bool:
