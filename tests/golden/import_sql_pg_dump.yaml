@@ -1,0 +1,9 @@
+name: orders
+version: 1.0.0
+fields:
+  - {name: id, type: integer}
+  - {name: customer_id, type: integer}
+  - {name: status, type: string, description: 'One of: pending, paid, refunded'}
+  - {name: amount, type: float, nullable: true, description: Order total}
+  - {name: created_at, type: timestamp}
+  - {name: meta, type: json, nullable: true}

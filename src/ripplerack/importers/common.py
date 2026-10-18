@@ -19,7 +19,8 @@ from ripplerack.models import Schema, SchemaField
 from ripplerack.parser import ErrorCode, RippleRackError
 
 MAX_ENUM_VALUES = 10
-_NAME_SUFFIXES = (".json", ".schema", ".avsc")
+_LISTED = 10  # how many names a message lists before it counts the rest
+_NAME_SUFFIXES = (".json", ".schema", ".avsc", ".sql")
 
 
 class ReadError(Exception):
@@ -86,12 +87,21 @@ class Reader:
         invalid = any(p.code is self._invalid_code for p in self._problems)
         lines = [
             f"{source}: cannot import this {self._subject}:",
-            *(f"  {p.pointer}: {p.message}" for p in self._problems),
+            *(
+                f"  {p.pointer}: {p.message}" if p.pointer else f"  {p.message}"
+                for p in self._problems
+            ),
         ]
         if not invalid and not self._lenient and any(p.degradable for p in self._problems):
             lines.append(f"  hint: --lenient imports {self._unit} like these as json fields")
         code = self._invalid_code if invalid else self._unsupported_code
         raise RippleRackError("\n".join(lines), code)
+
+
+def listing(items: list[str]) -> str:
+    """The first few names, quoted, and how many more there are."""
+    text = ", ".join(repr(item) for item in items[:_LISTED])
+    return f"{text}, … ({len(items)} in all)" if len(items) > _LISTED else text
 
 
 def one_line(text: str) -> str:

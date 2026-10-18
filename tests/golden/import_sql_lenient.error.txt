@@ -1,0 +1,4 @@
+error: lenient.sql: cannot import this SQL file:
+  places.location (line 4): the type GEOMETRY(POINT, 4326) has no equivalent
+  places.open_days (line 5): the type INT4RANGE has no equivalent
+  hint: --lenient imports columns like these as json fields

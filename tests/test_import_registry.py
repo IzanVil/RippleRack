@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from ripplerack.importers import IMPORTERS, SELECTABLE, SourceFormat
+from ripplerack.importers import DIALECTABLE, IMPORTERS, SELECTABLE, SourceFormat
 from ripplerack.importers.json_schema import import_json_schema
 
 # A document of each format that imports without a word: when a format is added, so is its sample.
@@ -15,6 +15,7 @@ SAMPLES = {
     SourceFormat.AVRO: json.dumps(
         {"type": "record", "name": "Row", "fields": [{"name": "a", "type": "long"}]}
     ),
+    SourceFormat.SQL: "CREATE TABLE s (a BIGINT NOT NULL);",
 }
 
 
@@ -34,13 +35,18 @@ def test_the_importer_of_each_format_is_called_with_the_same_arguments(
         version="1.0.0",
         lenient=False,
         select=None,
+        dialect=None,
     )
     assert result.schema.name == "s"
     assert result.issues == ()
 
 
-def test_avro_is_the_only_format_that_can_select() -> None:
-    assert set(SELECTABLE) == {SourceFormat.AVRO}
+def test_the_formats_that_define_several_schemas_can_select() -> None:
+    assert set(SELECTABLE) == {SourceFormat.AVRO, SourceFormat.SQL}
+
+
+def test_sql_is_the_only_format_that_has_a_dialect() -> None:
+    assert set(DIALECTABLE) == {SourceFormat.SQL}
 
 
 def test_a_json_schema_has_nothing_to_select() -> None:

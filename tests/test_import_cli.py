@@ -279,6 +279,137 @@ def test_warnings_do_not_stop_an_output_file(tmp_path: Path) -> None:
     assert "warning[additional_properties_ignored]" in plain(result.stderr)
 
 
+# -------------------------------------------------------------------------------- sql
+
+ORDERS_SQL = """
+CREATE TABLE orders (
+    order_id BIGINT NOT NULL,
+    amount_cents BIGINT NOT NULL,
+    coupon_code VARCHAR(32)
+);
+COMMENT ON COLUMN orders.amount_cents IS 'Order total in cents';
+"""
+TWO_TABLES = "CREATE TABLE a (x int NOT NULL); CREATE TABLE b (y text);"
+
+
+def write_sql(tmp_path: Path, sql: str = ORDERS_SQL, name: str = "orders.sql") -> Path:
+    path = tmp_path / name
+    path.write_text(sql, encoding="utf-8")
+    return path
+
+
+def test_sql_is_imported_as_the_documented_yaml(tmp_path: Path) -> None:
+    result = run(write_sql(tmp_path), "--from", "sql")
+    assert result.exit_code == 0, result.output
+    assert result.stdout == EXPECTED
+    assert result.stderr == ""
+
+
+def test_sql_from_standard_input_is_called_after_the_table() -> None:
+    result = run("-", "--from", "sql", input=ORDERS_SQL)
+    assert result.exit_code == 0, result.output
+    assert result.stdout == EXPECTED
+
+
+def test_sql_name_version_and_output_file(tmp_path: Path) -> None:
+    out = tmp_path / "mine.yaml"
+    args = ("--from", "sql", "--name", "mine", "--version", "2.3.4", "-o", out)
+    result = run(write_sql(tmp_path), *args)
+    assert result.exit_code == 0, result.output
+    schema = load_schema(out)
+    assert (schema.name, schema.version, len(schema.fields)) == ("mine", "2.3.4", 3)
+    assert "schema mine 2.3.4 (3 fields) written to" in plain(result.stdout)
+
+
+def test_a_file_with_several_tables_asks_which_one(tmp_path: Path) -> None:
+    result = run(write_sql(tmp_path, TWO_TABLES), "--from", "sql")
+    assert result.exit_code == 1
+    message = plain(result.stderr)
+    assert "the file creates several tables ('a', 'b')" in message
+    assert "choose one with --select" in message
+    assert result.stdout == ""
+
+
+def test_select_chooses_the_table(tmp_path: Path) -> None:
+    result = run(write_sql(tmp_path, TWO_TABLES), "--from", "sql", "--select", "b")
+    assert result.exit_code == 0, result.output
+    assert (
+        result.stdout
+        == "name: b\nversion: 1.0.0\nfields:\n  - {name: y, type: string, nullable: true}\n"
+    )
+
+
+def test_select_with_a_table_the_file_does_not_create(tmp_path: Path) -> None:
+    result = run(write_sql(tmp_path, TWO_TABLES), "--from", "sql", "--select", "c")
+    assert result.exit_code == 1
+    assert "no table called 'c'; its tables are 'a', 'b'" in plain(result.stderr)
+
+
+@pytest.mark.parametrize("source_format", ["json-schema", "avro"])
+def test_dialect_is_a_usage_error_for_a_format_that_is_not_sql(
+    tmp_path: Path, source_format: str
+) -> None:
+    out = tmp_path / "out.yaml"
+    result = run(write(tmp_path), "--from", source_format, "--dialect", "postgres", "-o", out)
+    assert result.exit_code == 2
+    assert "Invalid value for '--dialect'" in plain(result.output)
+    assert f"a {source_format} file is not SQL, so it has no dialect" in plain(result.output)
+    assert result.stdout == ""
+    assert not out.exists()
+
+
+def test_a_dialect_that_does_not_exist_is_a_usage_error_that_lists_the_dialects(
+    tmp_path: Path,
+) -> None:
+    result = run(write_sql(tmp_path), "--from", "sql", "--dialect", "nope")
+    assert result.exit_code == 2
+    message = plain(result.output)
+    assert "Invalid value for '--dialect'" in message
+    assert "unknown dialect 'nope'" in message
+    assert "postgres" in message
+    assert result.stdout == ""
+
+
+@pytest.mark.parametrize("dialect", ["mysql", "MySQL", "MYSQL"])
+def test_the_dialect_is_read_in_any_case(tmp_path: Path, dialect: str) -> None:
+    source = write_sql(tmp_path, "CREATE TABLE `t` (`flag` tinyint(1));")
+    result = run(source, "--from", "sql", "--dialect", dialect)
+    assert result.exit_code == 0, result.output
+    assert "{name: flag, type: boolean, nullable: true}" in result.stdout
+
+
+def test_a_file_in_another_dialect_says_to_give_it(tmp_path: Path) -> None:
+    source = write_sql(tmp_path, "CREATE TABLE `t` (`a` int) ENGINE=InnoDB;")
+    result = run(source, "--from", "sql")
+    assert result.exit_code == 1
+    message = plain(result.stderr)
+    assert "does not understand this statement" in message
+    assert "give --dialect" in message
+    assert result.stdout == ""
+
+
+def test_sql_strict_and_lenient(tmp_path: Path) -> None:
+    source = write_sql(tmp_path, "CREATE TABLE t (a int, g geometry(Point, 4326));")
+    strict = run(source, "--from", "sql", "--dialect", "postgres")
+    assert strict.exit_code == 1
+    message = plain(strict.stderr)
+    assert "t.g (line 1): the type GEOMETRY(POINT, 4326) has no equivalent" in message
+    assert "hint: --lenient imports columns like these as json fields" in message
+    assert strict.stdout == ""
+
+    lenient = run(source, "--from", "sql", "--dialect", "postgres", "--lenient")
+    assert lenient.exit_code == 0, lenient.output
+    assert "{name: g, type: json, nullable: true}" in lenient.stdout
+    assert plain(lenient.stderr).startswith("warning[degraded_to_json] t.g (line 1):")
+
+
+def test_an_alter_table_that_changes_a_column_is_an_error_for_the_user(tmp_path: Path) -> None:
+    source = write_sql(tmp_path, "CREATE TABLE t (a int); ALTER TABLE t ADD COLUMN b int;")
+    result = run(source, "--from", "sql")
+    assert result.exit_code == 1
+    assert "put the change in the CREATE TABLE" in plain(result.stderr)
+
+
 # ------------------------------------------------------------------- usage errors
 
 
@@ -318,7 +449,9 @@ def test_the_command_is_listed_and_documented() -> None:
         "--from",
         "json-schema",
         "avro",
+        "sql",
         "--select",
+        "--dialect",
         "--output",
         "--name",
         "--version",

@@ -1,0 +1,2 @@
+error: mysqldump.sql: cannot import this SQL file:
+  line 6, column 28: Invalid expression / Unexpected token; if the file is not standard SQL, give --dialect

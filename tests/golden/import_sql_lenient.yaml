@@ -1,0 +1,7 @@
+name: places
+version: 1.0.0
+fields:
+  - {name: id, type: integer}
+  - {name: location, type: json, nullable: true}
+  - {name: open_days, type: json}
+  - {name: label, type: string, nullable: true}

@@ -24,11 +24,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--lenient` the field becomes a `json` one with a `degraded_to_json` warning. There is a guide,
   [docs/import-avro.md](docs/import-avro.md), and an example, `examples/schemas/orders_v2.avsc`,
   that gives the same schema as the JSON Schema one.
+- `ripplerack import FILE --from sql`: reads the `CREATE TABLE` statements of a SQL file, such as
+  a `pg_dump`, a `mysqldump` or a migration, and writes one table as a RippleRack schema. A
+  column is `nullable` unless it is `NOT NULL`, part of the primary key (also when an
+  `ALTER TABLE` adds it) or a counter (`SERIAL`, `IDENTITY`, `AUTO_INCREMENT`); a `DECIMAL`
+  with a scale of 0 is an `integer`, other numbers with decimals a `float`, `TINYINT(1)` of MySQL
+  and `BIT(1)` a `boolean`, dates and timestamps what they say, and arrays, `JSON` and structures
+  `json` fields. The comment of a column, inline or `COMMENT ON COLUMN`, is its description, and
+  an enum, in the column or created with `CREATE TYPE`, keeps its values there. The parser is
+  [sqlglot](https://github.com/tobymao/sqlglot), a new dependency (MIT, pure Python) that is
+  loaded only when a SQL file is read.
+- `--dialect NAME` says which flavour of SQL a file is written in (`postgres`, `mysql`, `sqlite`,
+  `snowflake`, `bigquery`, `tsql`...); without it the standard syntax is assumed and a file that
+  is not standard SQL is refused with a hint. Using it with another format is a usage error.
+  `--select TABLE` chooses the table when a file creates several, by its name or by schema and
+  name.
+- The error codes `invalid_sql` and `unsupported_sql`. A type with no equivalent (a geometry, a
+  range) and a column with no type are errors, and with `--lenient` the column becomes a `json`
+  field with a `degraded_to_json` warning. An `ALTER TABLE` that adds, drops, renames or changes
+  a column of the table is an error in both modes: the import does not apply it. The place of a
+  problem is the table and the column with the line of the file, such as
+  `orders.status (line 57)`. There is a guide, [docs/import-sql.md](docs/import-sql.md), and an
+  example, `examples/schemas/orders_v2.sql`, that gives the same schema as the JSON Schema and
+  the Avro ones.
 
 ### Changed
 
 - The name of a schema taken from a title, an `$id` or a file name tells the words of a
-  CamelCase name apart: `OrderEvent` becomes `order_event` and no longer `orderevent`.
+  CamelCase name apart: `OrderEvent` becomes `order_event` and no longer `orderevent`. The
+  `.sql` ending of a file name is dropped, like `.json`, `.schema` and `.avsc`.
 
 ### Fixed
 

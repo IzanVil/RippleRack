@@ -35,13 +35,17 @@ def import_json_schema(
     version: str = "1.0.0",
     lenient: bool = False,
     select: str | None = None,
+    dialect: str | None = None,
 ) -> ImportResult:
     """Parse the JSON Schema in ``text`` and translate it; ``source`` names it in messages.
 
-    A JSON Schema file describes one schema, so there is nothing to ``select``.
+    A JSON Schema file describes one schema, so there is nothing to ``select``, and it is not SQL,
+    so it has no ``dialect``.
     """
     if select is not None:
         raise ValueError("select does not apply to JSON Schema: a file describes one schema")
+    if dialect is not None:
+        raise ValueError("dialect does not apply to JSON Schema: it is not SQL")
     return from_json_schema(
         parse_json(text, source), source=source, name=name, version=version, lenient=lenient
     )

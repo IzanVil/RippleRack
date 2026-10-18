@@ -23,6 +23,7 @@ class SourceFormat(StrEnum):
 
     JSON_SCHEMA = "json-schema"
     AVRO = "avro"
+    SQL = "sql"
 
 
 class IssueCode(StrEnum):
@@ -61,7 +62,8 @@ class Importer(Protocol):
     """Reads the text of a file in some format and returns the schema it describes.
 
     ``select`` names which of the schemas a file defines to read, for the formats that can hold
-    several; the others refuse it.
+    several, and ``dialect`` says which flavour of SQL a file is written in; the formats that
+    have no use for either refuse it.
     """
 
     def __call__(
@@ -73,6 +75,7 @@ class Importer(Protocol):
         version: str,
         lenient: bool,
         select: str | None,
+        dialect: str | None,
     ) -> ImportResult: ...
 
 

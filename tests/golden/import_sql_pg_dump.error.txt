@@ -1,0 +1,2 @@
+error: pg_dump.sql: cannot import this SQL file:
+  the file creates several tables ('public.customers', 'public.orders'); choose one with --select

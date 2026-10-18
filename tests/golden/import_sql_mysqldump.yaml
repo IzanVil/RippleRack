@@ -1,0 +1,8 @@
+name: orders
+version: 1.0.0
+fields:
+  - {name: id, type: integer}
+  - {name: status, type: string, description: 'Order state. One of: new, paid'}
+  - {name: flag, type: boolean, nullable: true}
+  - {name: amount, type: float, nullable: true}
+  - {name: created_at, type: timestamp}

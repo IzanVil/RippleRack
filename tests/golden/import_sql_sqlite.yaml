@@ -1,0 +1,11 @@
+name: events
+version: 1.0.0
+fields:
+  - {name: id, type: integer}
+  - {name: name, type: string}
+  - {name: price, type: float, nullable: true}
+  - {name: data, type: string, nullable: true}
+  - {name: at, type: timestamp, nullable: true}
+  - {name: flag, type: boolean, nullable: true}
+  - {name: payload, type: json, nullable: true}
+  - {name: legacy, type: json, nullable: true}

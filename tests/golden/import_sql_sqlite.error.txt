@@ -1,0 +1,3 @@
+error: sqlite.sql: cannot import this SQL file:
+  events.legacy (line 12): the column has no type
+  hint: --lenient imports columns like these as json fields

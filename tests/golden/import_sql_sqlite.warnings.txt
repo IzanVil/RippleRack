@@ -1,0 +1,1 @@
+warning[degraded_to_json] events.legacy (line 12): the column has no type; column 'legacy' imported as json

@@ -1,0 +1,2 @@
+error: shop.sql: cannot import this SQL file:
+  the file creates no table called 'Nope'; its tables are 'OrderEvents', 'customers', 'order_items'

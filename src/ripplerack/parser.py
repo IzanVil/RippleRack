@@ -30,6 +30,8 @@ class ErrorCode(StrEnum):
     UNSUPPORTED_JSON_SCHEMA = "unsupported_json_schema"
     INVALID_AVRO_SCHEMA = "invalid_avro_schema"
     UNSUPPORTED_AVRO_SCHEMA = "unsupported_avro_schema"
+    INVALID_SQL = "invalid_sql"
+    UNSUPPORTED_SQL = "unsupported_sql"
     OUTPUT_EXISTS = "output_exists"
 
 

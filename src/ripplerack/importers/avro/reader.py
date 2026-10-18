@@ -7,13 +7,14 @@ from typing import Any
 
 from ripplerack.importers.avro.logical import logical_type
 from ripplerack.importers.avro.names import CALLED, HOLDS, RECORDS, Named, Types
-from ripplerack.importers.avro.problems import invalid, listing, unsupported
+from ripplerack.importers.avro.problems import invalid, unsupported
 from ripplerack.importers.base import ImportResult, IssueCode, is_identifier
 from ripplerack.importers.common import (
     Reader,
     ReadError,
     child,
     describe,
+    listing,
     name_schema,
     one_line,
     values_note,
