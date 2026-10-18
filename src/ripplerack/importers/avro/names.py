@@ -128,13 +128,18 @@ def _full_name(
         raise invalid(child(pointer, "name"), f"{CALLED[kind]} needs a name")
     if "." in name:  # a full name: a namespace given next to it is ignored
         return name, name.rpartition(".")[0] or None
+    own = _namespace_of(schema, namespace, pointer)
+    return (f"{own}.{name}" if own else name), own
+
+
+def _namespace_of(schema: dict[str, Any], enclosing: str | None, pointer: str) -> str | None:
+    """The namespace a type is defined in: its own, else that of the type that contains it."""
     declared = schema.get("namespace")
     if declared is None:  # absent, or null: that of the type that contains this one
-        declared = namespace
+        declared = enclosing
     elif not isinstance(declared, str):
         raise invalid(child(pointer, "namespace"), "namespace must be a string")
-    own = declared or None  # the empty namespace is no namespace
-    return (f"{own}.{name}" if own else name), own
+    return declared or None  # the empty namespace is no namespace
 
 
 def _check_shape(kind: str, schema: dict[str, Any], pointer: str) -> None:

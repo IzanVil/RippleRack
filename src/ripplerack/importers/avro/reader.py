@@ -135,9 +135,7 @@ class AvroReader(Reader):
 
     def _union(self, branches: list[Any], namespace: str | None, pointer: str) -> _Translated:
         """A union of one type and ``null``, the way Avro writes an optional value."""
-        for index, branch in enumerate(branches):
-            if isinstance(branch, list):
-                raise invalid(child(pointer, index), "a union cannot contain another union")
+        _refuse_nested_unions(branches, pointer)
         others = [(index, branch) for index, branch in enumerate(branches) if not _is_null(branch)]
         if not others:
             what = "type 'null' on its own" if branches else "an empty union"
@@ -170,13 +168,22 @@ class AvroReader(Reader):
             return _Translated(logical_type(kind, schema) or FieldType.STRING)
         if kind == "enum":
             return _Translated(FieldType.STRING, note=values_note(schema["symbols"], "One of"))
-        if kind in RECORDS:
-            return _Translated(FieldType.JSON)
-        if kind in HOLDS:
-            if HOLDS[kind] not in schema:
-                raise invalid(pointer, f"{CALLED[kind]} needs {HOLDS[kind]}")
+        if kind in RECORDS or kind in HOLDS:
+            _check_holds(kind, schema, pointer)
             return _Translated(FieldType.JSON)
         return self._by_name(kind, namespace, pointer)  # {"type": "Name"} refers to a type too
+
+
+def _refuse_nested_unions(branches: list[Any], pointer: str) -> None:
+    for index, branch in enumerate(branches):
+        if isinstance(branch, list):
+            raise invalid(child(pointer, index), "a union cannot contain another union")
+
+
+def _check_holds(kind: str, schema: dict[str, Any], pointer: str) -> None:
+    """An array needs its ``items`` and a map its ``values``; a record holds nothing here."""
+    if kind in HOLDS and HOLDS[kind] not in schema:
+        raise invalid(pointer, f"{CALLED[kind]} needs {HOLDS[kind]}")
 
 
 def _field_name(declared: Any, pointer: str, seen: set[str]) -> str:
