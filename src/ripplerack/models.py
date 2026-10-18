@@ -8,7 +8,7 @@ Cross-references between entities are validated by :class:`Datacenter`.
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from enum import StrEnum
 from typing import Annotated, Any
 
@@ -239,5 +239,5 @@ def _input_errors(
         )
 
 
-def _duplicates(values: Iterator[str] | list[str]) -> list[str]:
+def _duplicates(values: Iterable[str]) -> list[str]:
     return sorted(name for name, count in Counter(values).items() if count > 1)
