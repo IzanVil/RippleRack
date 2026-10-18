@@ -72,16 +72,8 @@ def diff_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
         "severity": str(diff.severity),
         "summary": _diff_summary(diff),
         "metadata": [_attribute_to_dict(change) for change in diff.metadata],
-        "components": {
-            "added": [_component_ref_to_dict(ref) for ref in diff.added],
-            "removed": [_component_ref_to_dict(ref) for ref in diff.removed],
-            "modified": [_component_change_to_dict(change) for change in diff.modified],
-        },
-        "dependencies": {
-            "added": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_added],
-            "removed": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_removed],
-            "modified": [_dependency_change_to_dict(dep) for dep in diff.dependencies_modified],
-        },
+        "components": _components_to_dict(diff),
+        "dependencies": _dependencies_to_dict(diff),
         "schemaChanges": [impact_body(report) for report in diff.schema_impacts],
         "removedWithDependents": [
             _removed_with_dependents_to_dict(item) for item in diff.removed_with_dependents
@@ -102,6 +94,22 @@ def _diff_summary(diff: DatacenterDiff) -> dict[str, int]:
         "schemaChanges": len(diff.schema_impacts),
         "brokenConsumers": len(diff.broken_consumers),
         "warnings": len(diff.warnings),
+    }
+
+
+def _components_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
+    return {
+        "added": [_component_ref_to_dict(ref) for ref in diff.added],
+        "removed": [_component_ref_to_dict(ref) for ref in diff.removed],
+        "modified": [_component_change_to_dict(change) for change in diff.modified],
+    }
+
+
+def _dependencies_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
+    return {
+        "added": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_added],
+        "removed": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_removed],
+        "modified": [_dependency_change_to_dict(dep) for dep in diff.dependencies_modified],
     }
 
 

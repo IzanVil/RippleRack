@@ -102,6 +102,7 @@ class _Flowchart:
         self._ids = _mermaid_ids(graph)
         self._kinds = {node: data.get("kind") for node, data in graph.nodes(data=True)}
         self._children = _hosted(graph)
+        self._pipelines = [node for node in graph if self._kinds[node] == NodeKind.PIPELINE]
         self._lines: list[str] = []
         self._members: dict[str, list[str]] = defaultdict(list)  # node ids by class
         self._container_styles: list[str] = []
@@ -124,13 +125,12 @@ class _Flowchart:
     def _add_nodes(self) -> None:
         """Racks and servers hold what they host; the pipelines go together in their own group."""
         contained = {node for hosted in self._children.values() for node in hosted}
-        pipelines = [node for node in self._graph if self._kinds[node] == NodeKind.PIPELINE]
         for node in self._graph:
-            if node not in contained and node not in pipelines:
+            if node not in contained and node not in self._pipelines:
                 self._add_node(node, 1)
-        if pipelines:
+        if self._pipelines:
             self._lines.append('  subgraph grp_pipelines["pipelines"]')
-            for node in pipelines:
+            for node in self._pipelines:
                 self._add_node(node, 2)
             self._lines.append("  end")
 

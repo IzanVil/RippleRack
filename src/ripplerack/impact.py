@@ -7,14 +7,14 @@ fields they read) and derive an overall severity.
 
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Collection, Iterator
 from dataclasses import dataclass, field
 from enum import IntEnum
 
 import networkx as nx
 
 from ripplerack.graph import NodeKind
-from ripplerack.models import Datacenter, PipelineInput, Schema
+from ripplerack.models import Datacenter, Pipeline, PipelineInput, Schema
 from ripplerack.semver import ChangeLevel, SchemaChange, SchemaDiff, diff_schemas
 
 
@@ -139,27 +139,34 @@ def _broken_consumers(
     breaking = diff.reader_breaking_changes
     if not breaking:
         return []
-
-    inputs = (
-        (consumer, item)
-        for consumer in datacenter.pipelines
-        if consumer.id not in ignored
-        for item in consumer.inputs
-        if item.pipeline == pipeline_id
-    )
     result: list[BrokenConsumer] = []
-    for consumer, item in inputs:
+    for consumer, item in _readers_of(datacenter, pipeline_id, ignored):
         read = _fields_read(item, diff.old)
         hits = [change for change in breaking if change.field in read]
         if hits:
-            fields = sorted({change.field for change in hits if change.field is not None})
-            result.append(BrokenConsumer(consumer.id, fields, hits))
+            result.append(BrokenConsumer(consumer.id, _fields_of(hits), hits))
     return result
+
+
+def _readers_of(
+    datacenter: Datacenter, pipeline_id: str, ignored: set[str]
+) -> Iterator[tuple[Pipeline, PipelineInput]]:
+    """Every input that reads the pipeline, with the pipeline it belongs to; some are ignored."""
+    for consumer in datacenter.pipelines:
+        if consumer.id not in ignored:
+            for item in consumer.inputs:
+                if item.pipeline == pipeline_id:
+                    yield consumer, item
 
 
 def _fields_read(item: PipelineInput, upstream: Schema) -> set[str]:
     """The fields of ``upstream`` that an input reads: all of them unless it lists some."""
     return set(item.fields) if item.fields is not None else set(upstream.field_map())
+
+
+def _fields_of(changes: list[SchemaChange]) -> list[str]:
+    """The fields that some changes are about, sorted."""
+    return sorted({change.field for change in changes if change.field is not None})
 
 
 def _severity(

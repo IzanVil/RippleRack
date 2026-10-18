@@ -293,22 +293,24 @@ def _dependency_changes(
     """The explicit dependencies added, removed and whose kind changed, sorted."""
     before = {(d.source, d.target): d.kind for d in base_dc.dependencies}
     after = {(d.source, d.target): d.kind for d in head_dc.dependencies}
-    added = [
-        DependencyRef(source, target, kind)
-        for (source, target), kind in sorted(after.items())
-        if (source, target) not in before
-    ]
-    removed = [
-        DependencyRef(source, target, kind)
-        for (source, target), kind in sorted(before.items())
-        if (source, target) not in after
-    ]
     modified = [
         DependencyChange(source, target, before[(source, target)], kind)
         for (source, target), kind in sorted(after.items())
         if (source, target) in before and before[(source, target)] != kind
     ]
-    return added, removed, modified
+    return _only_in(after, before), _only_in(before, after), modified
+
+
+def _only_in(
+    dependencies: dict[tuple[str, str], DependencyKind],
+    others: dict[tuple[str, str], DependencyKind],
+) -> list[DependencyRef]:
+    """The dependencies that ``others`` does not have, sorted."""
+    return [
+        DependencyRef(source, target, kind)
+        for (source, target), kind in sorted(dependencies.items())
+        if (source, target) not in others
+    ]
 
 
 # ------------------------------------------------------------------------- the schemas
