@@ -9,7 +9,6 @@ without the other noticing.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +20,7 @@ from ripplerack.importers import IssueCode
 from ripplerack.importers.json_schema import from_json_schema
 from ripplerack.parser import ErrorCode
 from tests.helpers import GOLDEN
+from tests.markdown import anchors, links, table_under, unwrap
 
 ROOT = Path(__file__).resolve().parent.parent
 IMPORT = ROOT / "docs" / "import.md"
@@ -30,29 +30,7 @@ SECTION = "## Translation"
 NO_DESCRIPTION = "—"
 
 
-def unwrap(cell: str) -> str:
-    return cell.strip("`")
-
-
-def translation_rows() -> list[tuple[str, ...]]:
-    """The rows of the first table under the Translation heading, as lists of cells."""
-    lines = IMPORT.read_text(encoding="utf-8").splitlines()
-    rows: list[tuple[str, ...]] = []
-    for line in lines[lines.index(SECTION) + 1 :]:
-        if line.startswith("#"):
-            break
-        if not line.startswith("|"):
-            if rows:
-                break
-            continue
-        cells = tuple(cell.strip() for cell in line.strip().strip("|").split("|"))
-        if cells[0] == "Property schema" or set(cells[0]) <= {"-", " "}:
-            continue
-        rows.append(cells)
-    return rows
-
-
-ROWS = translation_rows()
+ROWS = table_under(IMPORT.read_text(encoding="utf-8"), SECTION)
 
 
 def test_the_table_has_its_rows() -> None:
@@ -167,38 +145,6 @@ def test_the_errors_import_can_give_are_explained_in_its_own_guide(code: ErrorCo
 
 
 # ------------------------------------------------------------------------------ links
-
-
-def slug(heading: str) -> str:
-    """The anchor GitHub gives a heading."""
-    text = re.sub(r"[^\w\- ]", "", heading.strip().lower().replace("`", ""))
-    return text.replace(" ", "-")
-
-
-def anchors(path: Path) -> set[str]:
-    found: set[str] = set()
-    in_code = False
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("```"):
-            in_code = not in_code
-        elif not in_code and (match := re.match(r"#{1,6}\s+(.*?)\s*$", line)):
-            found.add(slug(match.group(1)))
-    return found
-
-
-def links(path: Path) -> list[tuple[str, str]]:
-    """The ``(file, anchor)`` of every relative link outside code blocks."""
-    found: list[tuple[str, str]] = []
-    in_code = False
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("```"):
-            in_code = not in_code
-        elif not in_code:
-            for target in re.findall(r"\]\(([^)\s]+)\)", line):
-                if not re.match(r"[a-z]+:", target):
-                    file, _, anchor = target.partition("#")
-                    found.append((file, anchor))
-    return found
 
 
 @pytest.mark.parametrize("document", [IMPORT, README], ids=["import.md", "README.md"])
