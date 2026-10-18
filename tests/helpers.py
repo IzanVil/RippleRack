@@ -63,6 +63,28 @@ def pipeline_of(data: dict[str, Any], pipeline_id: str) -> dict[str, Any]:
     return found
 
 
+def rename_kafka(data: dict[str, Any]) -> None:
+    """Rename the service ``kafka`` to ``broker``; what pointed at it follows."""
+    for service in server_of(data, "srv-a1")["services"]:
+        if service["id"] == "kafka":
+            service["id"] = "broker"
+    pipeline_of(data, "orders-ingest")["runs_on"] = "broker"
+    for dependency in data["dependencies"]:
+        if dependency["target"] == "kafka":
+            dependency["target"] = "broker"
+
+
+def set_orders_schema(
+    data: dict[str, Any], version: str, drop: str | None = None, **new_field: object
+) -> None:
+    """Give ``orders-ingest`` this version, without the field ``drop`` and with ``new_field``."""
+    schema = pipeline_of(data, "orders-ingest")["schema"]
+    schema["version"] = version
+    schema["fields"] = [f for f in schema["fields"] if f["name"] != drop]
+    if new_field:
+        schema["fields"].append({"type": "string", **new_field})
+
+
 def make_schema(version: str, *fields: dict[str, object], name: str = "orders") -> Schema:
     """Build a schema from compact field dicts (``type`` defaults to ``string``)."""
     return Schema.model_validate(

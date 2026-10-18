@@ -28,8 +28,9 @@ from tests.helpers import (
     impact_report,
     load_variant,
     make_schema,
-    pipeline_of,
+    rename_kafka,
     server_of,
+    set_orders_schema,
 )
 
 CAMEL_CASE = re.compile(r"^[a-z][a-zA-Z0-9]*$")
@@ -238,19 +239,8 @@ def kitchen_sink(data: dict[str, Any]) -> None:
     data["name"] = "mini-datacenter-next"
     data["description"] = "Kitchen sink."
 
-    # kafka is renamed to broker, and everything that pointed at it follows
-    for service in server_of(data, "srv-a1")["services"]:
-        if service["id"] == "kafka":
-            service["id"] = "broker"
-    pipeline_of(data, "orders-ingest")["runs_on"] = "broker"
-    for dependency in data["dependencies"]:
-        if dependency["target"] == "kafka":
-            dependency["target"] = "broker"
-
-    # a breaking change shipped as a patch: coupon_code disappears in 1.2.1
-    schema = pipeline_of(data, "orders-ingest")["schema"]
-    schema["version"] = "1.2.1"
-    schema["fields"] = [f for f in schema["fields"] if f["name"] != "coupon_code"]
+    rename_kafka(data)  # and everything that pointed at it follows
+    set_orders_schema(data, "1.2.1", drop="coupon_code")  # a breaking change shipped as a patch
 
     # the dashboard service becomes a pipeline, and a redis service is added
     server = server_of(data, "srv-b1")
