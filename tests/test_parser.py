@@ -42,6 +42,10 @@ def test_inputs_shorthand(raw_mini: dict[str, Any]) -> None:
             lambda d: d["dependencies"].append({"source": "api", "target": "ghost"}),
             "unknown 'ghost'",
         ),
+        (
+            lambda d: d["dependencies"].append({"source": "api", "target": "api"}),
+            "component 'api' cannot depend on itself",
+        ),
         (lambda d: d["racks"][0].update(colour="red"), "Extra inputs are not permitted"),
         (lambda d: d["pipelines"][0]["schema"].update(version="1.0"), "version"),
         (lambda d: d["racks"][0].update(power_capacity_kw=-1), "greater than 0"),
