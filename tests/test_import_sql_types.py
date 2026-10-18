@@ -466,6 +466,11 @@ def test_the_name_of_a_type_is_read_whatever_the_parser_makes_of_it() -> None:
     assert _type_name(dotted) == ("app", "mood")
 
 
+def test_a_low_cardinality_type_that_wraps_nothing_has_no_equivalent() -> None:
+    sql = "CREATE TABLE t (c LowCardinality) ENGINE = Memory;"
+    fails(sql, UNSUPPORTED, "t.c", "has no equivalent", dialect="clickhouse")
+
+
 def test_a_composite_type_is_not_an_enum() -> None:
     sql = "CREATE TYPE pair AS (a int, b text); CREATE TABLE t (c pair);"
     fails(sql, UNSUPPORTED, "t.c", "pair", dialect="postgres")

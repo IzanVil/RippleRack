@@ -9,6 +9,7 @@ import sys
 import pytest
 
 from ripplerack.importers.sql import import_sql, sql_dialects
+from ripplerack.importers.sql.problems import place
 from ripplerack.parser import ErrorCode, RippleRackError
 from tests.sql_helpers import fails, fields, issues
 
@@ -40,6 +41,22 @@ CREATE VIEW public.v AS SELECT id FROM public.orders;
 COMMENT ON TABLE public.orders IS 'All the orders';
 GRANT SELECT ON TABLE public.orders TO readonly;
 """
+
+
+@pytest.mark.parametrize(
+    ("name", "line", "expected"),
+    [
+        ("orders.status", 57, "orders.status (line 57)"),
+        ("orders", None, "orders"),
+        ("", 57, "line 57"),
+        ("", None, ""),
+    ],
+)
+def test_a_place_says_the_name_and_the_line_when_it_has_them(
+    name: str, line: int | None, expected: str
+) -> None:
+    assert place(name, line) == expected
+
 
 # ---------------------------------------------------------------------- the table to import
 
