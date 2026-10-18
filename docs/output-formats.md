@@ -368,6 +368,8 @@ object:
 | `unsupported_json_schema` | `import`: the input is a JSON Schema that cannot be imported as it is. |
 | `invalid_avro_schema` | `import`: the input is JSON, but not a well-formed Avro schema. |
 | `unsupported_avro_schema` | `import`: the input is an Avro schema that cannot be imported as it is, or has no record to import. |
+| `invalid_sql`       | `import`: the input is not SQL that the dialect understands, or creates a table twice or a column twice. |
+| `unsupported_sql`   | `import`: the input is SQL that cannot be imported as it is, or has no table to import. |
 | `output_exists`     | `import`: the output file exists, or it is the input file. |
 
 For file-related codes `error.message` names the offending file, and for

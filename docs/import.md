@@ -1,8 +1,8 @@
 # Importing schemas
 
 `ripplerack import` reads a schema written in another format and writes it as the YAML that
-RippleRack reads, so nobody has to type it by hand. Today it reads **JSON Schema** and
-**Avro** (see [Importing Avro schemas](import-avro.md)); SQL DDL is planned. This page is about
+RippleRack reads, so nobody has to type it by hand. Today it reads **JSON Schema**,
+**Avro** (see [Importing Avro schemas](import-avro.md)) and **SQL**. This page is about
 JSON Schema and about what every format shares.
 
 ```bash
@@ -48,13 +48,15 @@ whether they are optional, is an error or a [warning](#warnings). Value constrai
 ```text
 ripplerack import FILE --from json-schema [-o OUT] [--name NAME] [--version X.Y.Z] [--lenient] [--force]
 ripplerack import FILE --from avro [--select NAME] [-o OUT] [--name NAME] [--version X.Y.Z] [--lenient] [--force]
+ripplerack import FILE --from sql [--dialect NAME] [--select TABLE] [-o OUT] [--name NAME] [--version X.Y.Z] [--lenient] [--force]
 ```
 
 | option | meaning |
 |--------|---------|
 | `FILE` | The file to import. `-` reads standard input. It is read as UTF-8; a byte order mark is accepted. |
-| `--from` | The format of `FILE`. Required: the format is never guessed. Today: `json-schema` and `avro`. |
-| `--select` | Avro only: the record to import when the file defines several, by its name or its full name. See [Avro](import-avro.md#several-records-in-one-file). Using it with `json-schema` is a usage error. |
+| `--from` | The format of `FILE`. Required: the format is never guessed. Today: `json-schema`, `avro` and `sql`. |
+| `--select` | Avro and SQL: the record, or the table, to import when the file defines several, by its name or its full name. See [Avro](import-avro.md#several-records-in-one-file). Using it with `json-schema` is a usage error. |
+| `--dialect` | SQL only: the flavour of SQL the file is written in, such as `postgres`, `mysql` or `sqlite`. Without it the standard syntax is assumed. Using it with another format is a usage error. |
 | `-o`, `--output` | Write the schema to this file instead of standard output. `-o -` is standard output. |
 | `--name` | The name of the schema. Letters, digits, `_`, `.` and `-` only. See [the name](#the-name-and-the-version). |
 | `--version` | The version to give the schema, `MAJOR.MINOR.PATCH`. Default: `1.0.0`. |
@@ -126,7 +128,7 @@ YAML. The output is deterministic: the same schema always gives the same bytes.
 | exit code | meaning |
 |-----------|---------|
 | `0` | The schema was imported, with or without warnings. |
-| `1` | The import failed: an unreadable file, invalid JSON, JSON Schema or Avro, something unsupported in strict mode, an output file that exists. |
+| `1` | The import failed: an unreadable file, invalid JSON, JSON Schema, Avro or SQL, something unsupported in strict mode, an output file that exists. |
 | `2` | The command line is wrong: a missing `--from`, an unknown format, an invalid `--name` or `--version`. |
 
 ## Translation
@@ -254,7 +256,7 @@ on standard error, `warning[code] pointer: message`, and the code is stable.
 | code | when | in modes |
 |------|------|----------|
 | `additional_properties_ignored` | A schema that is read says `additionalProperties: false` or `unevaluatedProperties: false` (the second is what the 2019-09 and later drafts use, notably next to `allOf`): it declares that no other fields exist, which a RippleRack schema cannot say. | strict and lenient |
-| `degraded_to_json` | A property (or, in Avro, a field) has no equivalent type and was imported as a `json` field. | `--lenient` only |
+| `degraded_to_json` | A property (in Avro a field, in SQL a column) has no equivalent type and was imported as a `json` field. | `--lenient` only |
 | `undeclared_required` | `required` names a property that `properties` does not declare; it was imported as a required `json` field. | `--lenient` only |
 
 ```text
@@ -284,6 +286,7 @@ no `--format json`, so the code itself is not printed.
 | `invalid_json_schema` | `FILE` is JSON, but a keyword the importer reads has the wrong shape (a `required` that is not a list, an unknown `type`), the root is not a schema, or a `$ref` points to nothing. |
 | `unsupported_json_schema` | `FILE` is a well-formed schema that uses something with no equivalent in strict mode, or something that cannot be imported at all, such as a root that is not an object. |
 | `invalid_avro_schema`, `unsupported_avro_schema` | The same two questions asked of an Avro schema; see [Avro errors](import-avro.md#errors). |
+| `invalid_sql`, `unsupported_sql` | The same two questions asked of a SQL file: is it SQL that the dialect understands, and can the table be imported as it is. |
 | `output_exists` | The output file exists and `--force` was not given, or it is the input file. |
 
 ## In CI

@@ -87,7 +87,10 @@ class Reader:
         invalid = any(p.code is self._invalid_code for p in self._problems)
         lines = [
             f"{source}: cannot import this {self._subject}:",
-            *(f"  {p.pointer}: {p.message}" for p in self._problems),
+            *(
+                f"  {p.pointer}: {p.message}" if p.pointer else f"  {p.message}"
+                for p in self._problems
+            ),
         ]
         if not invalid and not self._lenient and any(p.degradable for p in self._problems):
             lines.append(f"  hint: --lenient imports {self._unit} like these as json fields")

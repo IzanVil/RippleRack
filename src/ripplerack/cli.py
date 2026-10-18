@@ -29,6 +29,7 @@ from ripplerack.display import (
 from ripplerack.graph import to_dot, to_json
 from ripplerack.impact import ImpactReport, analyze_schema_change
 from ripplerack.importers import (
+    DIALECTABLE,
     IMPORTERS,
     SELECTABLE,
     STDIN,
@@ -39,6 +40,7 @@ from ripplerack.importers import (
     read_text,
     render_schema_yaml,
     source_label,
+    sql_dialects,
 )
 from ripplerack.mermaid import MermaidHighlight, to_mermaid
 from ripplerack.parser import (
@@ -245,6 +247,24 @@ def _check_select(select: str | None, source_format: SourceFormat) -> None:
         )
 
 
+def _check_dialect(dialect: str | None, source_format: SourceFormat) -> str | None:
+    """``--dialect`` names the flavour of a SQL file; it is lower case and one that exists."""
+    if dialect is None:
+        return None
+    if source_format not in DIALECTABLE:
+        raise typer.BadParameter(
+            f"a {source_format.value} file is not SQL, so it has no dialect",
+            param_hint="'--dialect'",
+        )
+    name = dialect.lower()
+    if name not in sql_dialects():
+        raise typer.BadParameter(
+            f"unknown dialect {dialect!r}; the dialects are {', '.join(sql_dialects())}",
+            param_hint="'--dialect'",
+        )
+    return name
+
+
 def _check_output(output: Path, source: Path, *, force: bool) -> None:
     """Refuse to overwrite the input, or any existing file unless ``--force`` is given."""
     if source != STDIN and output.resolve() == source.resolve():
@@ -324,7 +344,17 @@ def import_command(
         str | None,
         typer.Option(
             "--select",
-            help="Avro: the record to import when the file defines several, by name or full name.",
+            help="The record (Avro) or the table (SQL) to import when the file defines several, "
+            "by name or full name.",
+            show_default=False,
+        ),
+    ] = None,
+    dialect: Annotated[
+        str | None,
+        typer.Option(
+            "--dialect",
+            help="SQL: the flavour the file is written in, such as postgres, mysql or sqlite. "
+            "Without it the standard syntax is assumed.",
             show_default=False,
         ),
     ] = None,
@@ -346,6 +376,7 @@ def import_command(
     `schema:` key it describes what the pipeline produces. Warnings go to standard error.
     """
     _check_select(select, source_format)
+    dialect = _check_dialect(dialect, source_format)
     target = None if output is None or output == STDIN else output
     try:
         if target is not None:
@@ -357,6 +388,7 @@ def import_command(
             version=version,
             lenient=lenient,
             select=select,
+            dialect=dialect,
         )
         text = render_schema_yaml(result.schema)
         if target is not None:

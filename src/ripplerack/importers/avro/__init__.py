@@ -36,8 +36,14 @@ def import_avro(
     version: str = "1.0.0",
     lenient: bool = False,
     select: str | None = None,
+    dialect: str | None = None,
 ) -> ImportResult:
-    """Parse the Avro schema in ``text`` and translate a record of it; ``source`` names it."""
+    """Parse the Avro schema in ``text`` and translate a record of it; ``source`` names it.
+
+    An Avro schema is not SQL, so it has no ``dialect``.
+    """
+    if dialect is not None:
+        raise ValueError("dialect does not apply to Avro: it is not SQL")
     return from_avro(
         parse_json(text, source),
         source=source,

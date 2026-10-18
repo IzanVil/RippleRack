@@ -23,15 +23,20 @@ from ripplerack.importers.base import (
 )
 from ripplerack.importers.json_schema import import_json_schema
 from ripplerack.importers.render import render_schema_yaml
+from ripplerack.importers.sql import import_sql, sql_dialects
 
 IMPORTERS: dict[SourceFormat, Importer] = {
     SourceFormat.JSON_SCHEMA: import_json_schema,
     SourceFormat.AVRO: import_avro,
+    SourceFormat.SQL: import_sql,
 }
 # The formats whose files can define several schemas, one of which ``--select`` picks.
-SELECTABLE: frozenset[SourceFormat] = frozenset({SourceFormat.AVRO})
+SELECTABLE: frozenset[SourceFormat] = frozenset({SourceFormat.AVRO, SourceFormat.SQL})
+# The formats that come in flavours, which ``--dialect`` names.
+DIALECTABLE: frozenset[SourceFormat] = frozenset({SourceFormat.SQL})
 
 __all__ = [
+    "DIALECTABLE",
     "IMPORTERS",
     "SELECTABLE",
     "STDIN",
@@ -45,4 +50,5 @@ __all__ = [
     "read_text",
     "render_schema_yaml",
     "source_label",
+    "sql_dialects",
 ]
