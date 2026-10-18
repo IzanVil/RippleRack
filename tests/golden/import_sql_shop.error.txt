@@ -1,0 +1,2 @@
+error: shop.sql: cannot import this SQL file:
+  the file creates several tables ('OrderEvents', 'customers', 'order_items'); choose one with --select

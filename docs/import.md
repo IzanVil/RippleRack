@@ -2,8 +2,9 @@
 
 `ripplerack import` reads a schema written in another format and writes it as the YAML that
 RippleRack reads, so nobody has to type it by hand. Today it reads **JSON Schema**,
-**Avro** (see [Importing Avro schemas](import-avro.md)) and **SQL**. This page is about
-JSON Schema and about what every format shares.
+**Avro** (see [Importing Avro schemas](import-avro.md)) and **SQL** (see
+[Importing SQL](import-sql.md)). This page is about JSON Schema and about what every format
+shares.
 
 ```bash
 ripplerack import orders.schema.json --from json-schema > orders.yaml
@@ -55,8 +56,8 @@ ripplerack import FILE --from sql [--dialect NAME] [--select TABLE] [-o OUT] [--
 |--------|---------|
 | `FILE` | The file to import. `-` reads standard input. It is read as UTF-8; a byte order mark is accepted. |
 | `--from` | The format of `FILE`. Required: the format is never guessed. Today: `json-schema`, `avro` and `sql`. |
-| `--select` | Avro and SQL: the record, or the table, to import when the file defines several, by its name or its full name. See [Avro](import-avro.md#several-records-in-one-file). Using it with `json-schema` is a usage error. |
-| `--dialect` | SQL only: the flavour of SQL the file is written in, such as `postgres`, `mysql` or `sqlite`. Without it the standard syntax is assumed. Using it with another format is a usage error. |
+| `--select` | Avro and SQL: the record, or the table, to import when the file defines several, by its name or its full name. See [Avro](import-avro.md#several-records-in-one-file) and [SQL](import-sql.md#several-tables-in-one-file). Using it with `json-schema` is a usage error. |
+| `--dialect` | SQL only: the flavour of SQL the file is written in, such as `postgres`, `mysql` or `sqlite`. Without it the standard syntax is assumed. See [SQL](import-sql.md#the-dialect). Using it with another format is a usage error. |
 | `-o`, `--output` | Write the schema to this file instead of standard output. `-o -` is standard output. |
 | `--name` | The name of the schema. Letters, digits, `_`, `.` and `-` only. See [the name](#the-name-and-the-version). |
 | `--version` | The version to give the schema, `MAJOR.MINOR.PATCH`. Default: `1.0.0`. |
@@ -115,7 +116,8 @@ characters other than letters and digits turned into `_`, and the `.json` and `.
 of a file name or `$id` dropped.
 
 A JSON Schema has no version, so none is guessed: it is `--version`, or `1.0.0`. For the name of
-an Avro schema see [Avro](import-avro.md#the-name-and-the-version).
+an Avro schema see [Avro](import-avro.md#the-name-and-the-version), and for a table
+see [SQL](import-sql.md#the-name-and-the-version).
 
 ### Writing the result
 
@@ -286,7 +288,7 @@ no `--format json`, so the code itself is not printed.
 | `invalid_json_schema` | `FILE` is JSON, but a keyword the importer reads has the wrong shape (a `required` that is not a list, an unknown `type`), the root is not a schema, or a `$ref` points to nothing. |
 | `unsupported_json_schema` | `FILE` is a well-formed schema that uses something with no equivalent in strict mode, or something that cannot be imported at all, such as a root that is not an object. |
 | `invalid_avro_schema`, `unsupported_avro_schema` | The same two questions asked of an Avro schema; see [Avro errors](import-avro.md#errors). |
-| `invalid_sql`, `unsupported_sql` | The same two questions asked of a SQL file: is it SQL that the dialect understands, and can the table be imported as it is. |
+| `invalid_sql`, `unsupported_sql` | The same two questions asked of a SQL file: is it SQL that the dialect understands, and can the table be imported as it is; see [SQL errors](import-sql.md#errors). |
 | `output_exists` | The output file exists and `--force` was not given, or it is the input file. |
 
 ## In CI

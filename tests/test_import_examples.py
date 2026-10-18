@@ -119,6 +119,7 @@ def test_golden_output_and_warnings(
         ("lenient.sql", "sql", ["--dialect", "postgres"], "import_sql_lenient"),
         ("sqlite.sql", "sql", ["--dialect", "sqlite"], "import_sql_sqlite"),
         ("pg_dump.sql", "sql", ["--dialect", "postgres"], "import_sql_pg_dump"),
+        ("shop.sql", "sql", ["--dialect", "mysql"], "import_sql_shop"),
         ("shop.sql", "sql", ["--dialect", "mysql", "--select", "Nope"], "import_sql_shop_nope"),
         ("mysqldump.sql", "sql", [], "import_sql_mysqldump"),
     ],
