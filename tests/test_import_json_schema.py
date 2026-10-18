@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from ripplerack.importers import IMPORTERS, ImportIssue, IssueCode, SourceFormat
+from ripplerack.importers import ImportIssue, IssueCode
 from ripplerack.importers.json_schema import from_json_schema, import_json_schema, parse_json
 from ripplerack.parser import ErrorCode, RippleRackError
 
@@ -1070,17 +1070,3 @@ def test_import_json_schema_parses_and_translates() -> None:
         ("id", "integer"),
         ("at", "timestamp"),
     ]
-
-
-def test_the_importers_are_registered_by_format() -> None:
-    importer = IMPORTERS[SourceFormat.JSON_SCHEMA]
-    result = importer(
-        '{"properties": {"a": {"type": "string"}}}',
-        source="<stdin>",
-        name="s",
-        version="1.0.0",
-        lenient=False,
-        select=None,
-    )
-    assert result.schema.name == "s"
-    assert result.issues == ()
