@@ -17,7 +17,7 @@ from rich.tree import Tree
 
 from ripplerack.diff import AttributeChange, ComponentRef, DatacenterDiff
 from ripplerack.graph import NodeKind
-from ripplerack.impact import ImpactReport, Severity
+from ripplerack.impact import ImpactReport, NodeStatus, Severity
 from ripplerack.models import Datacenter
 from ripplerack.parser import LoadedDatacenter
 from ripplerack.semver import ChangeLevel, SchemaDiff
@@ -46,6 +46,11 @@ STATUS_STYLES = {
     Status.FAILED: "bold white on red",
 }
 PARENT_LABELS = {NodeKind.SERVER: "in", NodeKind.SERVICE: "on", NodeKind.PIPELINE: "runs on"}
+NODE_MARKERS = {
+    NodeStatus.BROKEN: "[bold red]✗[/] ",
+    NodeStatus.AT_RISK: "[yellow]![/] ",
+    NodeStatus.AFFECTED: "  ",
+}
 
 
 def _table(title: str) -> Table:
@@ -136,20 +141,11 @@ def _affected_table(report: ImpactReport) -> Table:
     affected.add_column("kind")
     affected.add_column("hops", justify="right")
     affected.add_column("path", style="dim")
-    broken, at_risk = report.broken_ids, set(report.at_risk)
+    statuses = report.statuses()
     for node in report.affected:
-        marker = _marker(node.id, broken, at_risk)
+        marker = NODE_MARKERS[statuses[node.id]]
         affected.add_row(marker + node.id, node.kind, str(node.distance), " → ".join(node.path))
     return affected
-
-
-def _marker(node_id: str, broken: set[str], at_risk: set[str]) -> str:
-    """How a downstream component is flagged: broken, at risk, or only affected."""
-    if node_id in broken:
-        return "[bold red]✗[/] "
-    if node_id in at_risk:
-        return "[yellow]![/] "
-    return "  "
 
 
 # -------------------------------------------------------------------------------- diff

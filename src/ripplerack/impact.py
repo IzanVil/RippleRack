@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Collection, Iterator
 from dataclasses import dataclass, field
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 
 import networkx as nx
 
@@ -29,6 +29,14 @@ class Severity(IntEnum):
 
     def __str__(self) -> str:
         return self.name.lower()
+
+
+class NodeStatus(StrEnum):
+    """What a change does to a component downstream of it."""
+
+    BROKEN = "broken"  # a consumer that reads a field the change breaks
+    AT_RISK = "at_risk"  # fed, directly or not, by a broken consumer
+    AFFECTED = "affected"  # reached by the change and nothing more
 
 
 @dataclass(frozen=True)
@@ -68,6 +76,11 @@ class ImpactReport:
     @property
     def broken_ids(self) -> set[str]:
         return {consumer.pipeline for consumer in self.broken_consumers}
+
+    def statuses(self) -> dict[str, NodeStatus]:
+        """What the change does to each component it reaches, by id."""
+        broken, at_risk = self.broken_ids, set(self.at_risk)
+        return {node.id: _status(node.id, broken, at_risk) for node in self.affected}
 
 
 def blast_radius(graph: nx.DiGraph[str], node: str) -> list[AffectedNode]:
@@ -117,11 +130,7 @@ def analyze_diff(
     affected = blast_radius(graph, pipeline_id)
 
     broken = _broken_consumers(datacenter, pipeline_id, diff, set(ignore_consumers))
-    broken_ids = {consumer.pipeline for consumer in broken}
-    at_risk: set[str] = set()
-    for consumer in broken_ids:
-        at_risk.update(nx.descendants(graph, consumer))
-    at_risk -= broken_ids
+    at_risk = _at_risk(graph, {consumer.pipeline for consumer in broken})
 
     return ImpactReport(
         pipeline=pipeline_id,
@@ -153,10 +162,19 @@ def _readers_of(
 ) -> Iterator[tuple[Pipeline, PipelineInput]]:
     """Every input that reads the pipeline, with the pipeline it belongs to; some are ignored."""
     for consumer in datacenter.pipelines:
-        if consumer.id not in ignored:
-            for item in consumer.inputs:
-                if item.pipeline == pipeline_id:
-                    yield consumer, item
+        if consumer.id in ignored:
+            continue
+        for item in consumer.inputs:
+            if item.pipeline == pipeline_id:
+                yield consumer, item
+
+
+def _at_risk(graph: nx.DiGraph[str], broken_ids: set[str]) -> set[str]:
+    """The components downstream of the broken consumers that are not broken themselves."""
+    downstream: set[str] = set()
+    for consumer in broken_ids:
+        downstream.update(nx.descendants(graph, consumer))
+    return downstream - broken_ids
 
 
 def _fields_read(item: PipelineInput, upstream: Schema) -> set[str]:
@@ -169,12 +187,25 @@ def _fields_of(changes: list[SchemaChange]) -> list[str]:
     return sorted({change.field for change in changes if change.field is not None})
 
 
+def _status(node_id: str, broken: set[str], at_risk: set[str]) -> NodeStatus:
+    if node_id in broken:
+        return NodeStatus.BROKEN
+    if node_id in at_risk:
+        return NodeStatus.AT_RISK
+    return NodeStatus.AFFECTED
+
+
 def _severity(
     diff: SchemaDiff,
     broken: list[BrokenConsumer],
     at_risk: set[str],
     graph: nx.DiGraph[str],
 ) -> Severity:
+    """How serious the change is: none if there is none, low if it is compatible.
+
+    An incompatible change is medium if no consumer reads what it breaks, high if some consumer
+    breaks, and critical if that puts another pipeline at risk.
+    """
     if diff.level is ChangeLevel.NONE:
         return Severity.NONE
     if diff.level < ChangeLevel.MAJOR:

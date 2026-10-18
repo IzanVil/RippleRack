@@ -6,6 +6,7 @@ import pytest
 
 from ripplerack.impact import (
     ImpactReport,
+    NodeStatus,
     Severity,
     analyze_diff,
     analyze_schema_change,
@@ -133,6 +134,40 @@ class TestAnalyzeSchemaChange:
         report = run(mini_dc, load_schema(examples_dir / "changes" / file))
         assert report.severity is severity
         assert report.diff.version_is_consistent is consistent
+
+
+class TestStatuses:
+    """What the change does to each component it reaches."""
+
+    def test_a_change_that_breaks_nobody_only_affects(
+        self, mini_dc: LoadedDatacenter, orders_schema: Schema
+    ) -> None:
+        new = with_changes(orders_schema, version="1.3.0", name="channel", nullable=True)
+        statuses = run(mini_dc, new).statuses()
+        assert set(statuses.values()) == {NodeStatus.AFFECTED}
+        assert set(statuses) == {
+            "orders-enriched",
+            "customer-360",
+            "revenue-daily",
+            "api",
+            "dashboard",
+        }
+
+    def test_broken_at_risk_and_only_affected_are_told_apart(
+        self, mini_dc: LoadedDatacenter, orders_schema: Schema
+    ) -> None:
+        # Only customer-360 reads coupon_code, and api depends on it.
+        new = with_changes(orders_schema, version="2.0.0", drop="coupon_code")
+        assert run(mini_dc, new).statuses() == {
+            "orders-enriched": NodeStatus.AFFECTED,
+            "customer-360": NodeStatus.BROKEN,
+            "revenue-daily": NodeStatus.AFFECTED,
+            "api": NodeStatus.AT_RISK,
+            "dashboard": NodeStatus.AFFECTED,
+        }
+
+    def test_the_status_is_what_the_json_document_says(self) -> None:
+        assert [str(status) for status in NodeStatus] == ["broken", "at_risk", "affected"]
 
 
 class TestAnalyzeDiff:

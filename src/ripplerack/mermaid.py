@@ -25,7 +25,7 @@ from dataclasses import dataclass
 import networkx as nx
 
 from ripplerack.graph import NodeKind
-from ripplerack.impact import ImpactReport
+from ripplerack.impact import ImpactReport, NodeStatus
 
 _ID_PREFIXES: dict[str, str] = {
     NodeKind.RACK: "rack",
@@ -44,6 +44,13 @@ _STYLES = {
     "broken": "fill:#ffcdd2,stroke:#c62828,stroke-width:3px,color:#b71c1c",
     "atRisk": "fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#e65100",
     "affected": "fill:#fff9c4,stroke:#f9a825,color:#5d4037",
+}
+
+# The class of a node, and of the arrow that leads to it, by what the change does to it.
+_STATUS_CLASSES = {
+    NodeStatus.BROKEN: "broken",
+    NodeStatus.AT_RISK: "atRisk",
+    NodeStatus.AFFECTED: "affected",
 }
 
 # Arrow colour by the status of the node the arrow leads to.
@@ -70,22 +77,13 @@ class MermaidHighlight:
     @classmethod
     def from_impact(cls, report: ImpactReport) -> MermaidHighlight:
         """Highlight everything reachable from the changed pipeline of ``report``."""
-        broken, at_risk = report.broken_ids, set(report.at_risk)
-        statuses = {node.id: _status(node.id, broken, at_risk) for node in report.affected}
+        statuses = {node: _STATUS_CLASSES[status] for node, status in report.statuses().items()}
         edges = {
             (upstream, downstream): statuses[downstream]
             for node in report.affected
             for upstream, downstream in zip(node.path, node.path[1:], strict=False)
         }
         return cls(report.pipeline, str(report.severity), statuses, edges)
-
-
-def _status(node_id: str, broken: set[str], at_risk: set[str]) -> str:
-    if node_id in broken:
-        return "broken"
-    if node_id in at_risk:
-        return "atRisk"
-    return "affected"
 
 
 def to_mermaid(graph: nx.DiGraph[str], highlight: MermaidHighlight | None = None) -> str:

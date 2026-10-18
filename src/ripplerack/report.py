@@ -28,7 +28,7 @@ from ripplerack.diff import (
     PossibleRename,
     RemovedWithDependents,
 )
-from ripplerack.impact import AffectedNode, BrokenConsumer, ImpactReport
+from ripplerack.impact import AffectedNode, BrokenConsumer, ImpactReport, NodeStatus
 from ripplerack.semver import SchemaChange, SchemaDiff
 
 SCHEMA_VERSION = 1
@@ -156,8 +156,7 @@ def _warning_to_dict(warning: DiffWarning) -> dict[str, Any]:
 
 def impact_body(report: ImpactReport) -> dict[str, Any]:
     """Build the part of an impact document that does not depend on the envelope."""
-    broken_ids = report.broken_ids
-    at_risk_ids = set(report.at_risk)
+    statuses = report.statuses()
     return {
         "pipeline": report.pipeline,
         "severity": str(report.severity),
@@ -167,7 +166,7 @@ def impact_body(report: ImpactReport) -> dict[str, Any]:
             for consumer in sorted(report.broken_consumers, key=lambda c: c.pipeline)
         ],
         "atRisk": sorted(report.at_risk),
-        "affected": [_affected_to_dict(node, broken_ids, at_risk_ids) for node in report.affected],
+        "affected": [_affected_to_dict(node, statuses[node.id]) for node in report.affected],
         "summary": {
             "affected": len(report.affected),
             "broken": len(report.broken_consumers),
@@ -188,22 +187,14 @@ def _broken_consumer_to_dict(consumer: BrokenConsumer) -> dict[str, Any]:
     }
 
 
-def _affected_to_dict(node: AffectedNode, broken: set[str], at_risk: set[str]) -> dict[str, Any]:
+def _affected_to_dict(node: AffectedNode, status: NodeStatus) -> dict[str, Any]:
     return {
         "id": node.id,
         "kind": node.kind,
         "distance": node.distance,
         "path": list(node.path),
-        "status": _status(node.id, broken, at_risk),
+        "status": str(status),
     }
-
-
-def _status(node_id: str, broken: set[str], at_risk: set[str]) -> str:
-    if node_id in broken:
-        return "broken"
-    if node_id in at_risk:
-        return "at_risk"
-    return "affected"
 
 
 def schema_diff_to_dict(diff: SchemaDiff) -> dict[str, Any]:
