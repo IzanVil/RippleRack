@@ -147,6 +147,8 @@ class DatacenterDiff:
 
 @dataclass(frozen=True)
 class _Component:
+    """A component as it is compared: its kind, what it hangs from and its attributes."""
+
     kind: NodeKind
     parent: str | None
     attributes: dict[str, object]
@@ -240,6 +242,7 @@ def _kind_changed(
 def _kind_change_warnings(
     kind_changed: list[str], base_index: dict[str, _Component], head_index: dict[str, _Component]
 ) -> list[DiffWarning]:
+    """A warning for each id that is now a component of another kind."""
     return [
         DiffWarning(
             WarningCode.COMPONENT_KIND_CHANGED,
@@ -449,6 +452,7 @@ def _canonical_inputs(pipeline: Pipeline) -> list[dict[str, object]]:
 
 
 def _compare(component_id: str, before: _Component, after: _Component) -> ComponentChange | None:
+    """The attributes that differ between the two versions of a component; none if none does."""
     changes = [
         AttributeChange(name, value, after.attributes[name])
         for name, value in before.attributes.items()
@@ -458,6 +462,7 @@ def _compare(component_id: str, before: _Component, after: _Component) -> Compon
 
 
 def _by_kind_then_id(item: ComponentRef | ComponentChange) -> tuple[int, str]:
+    """The order components are reported in: racks, servers, services, pipelines; then by id."""
     return (_KIND_ORDER[item.kind], item.id)
 
 
@@ -472,20 +477,23 @@ def _possible_renames(
     Only unambiguous one-to-one matches are reported; if several components share
     the same description, none of them is paired.
     """
-
-    def signature(component: _Component) -> str:
-        return repr((component.kind, component.parent, sorted(component.attributes.items())))
-
-    removed_by_signature: dict[str, list[str]] = defaultdict(list)
-    added_by_signature: dict[str, list[str]] = defaultdict(list)
-    for ref in removed:
-        removed_by_signature[signature(base_index[ref.id])].append(ref.id)
-    for ref in added:
-        added_by_signature[signature(head_index[ref.id])].append(ref.id)
-
+    removed_by_signature = _ids_by_signature(removed, base_index)
+    added_by_signature = _ids_by_signature(added, head_index)
     renames = [
         PossibleRename(base_index[old[0]].kind, old[0], added_by_signature[key][0])
         for key, old in removed_by_signature.items()
         if len(old) == 1 and len(added_by_signature.get(key, [])) == 1
     ]
     return sorted(renames, key=lambda r: (_KIND_ORDER[r.kind], r.old))
+
+
+def _ids_by_signature(
+    refs: list[ComponentRef], index: dict[str, _Component]
+) -> dict[str, list[str]]:
+    """The ids of these components grouped by everything about them except the id."""
+    grouped: dict[str, list[str]] = defaultdict(list)
+    for ref in refs:
+        component = index[ref.id]
+        signature = repr((component.kind, component.parent, sorted(component.attributes.items())))
+        grouped[signature].append(ref.id)
+    return grouped
