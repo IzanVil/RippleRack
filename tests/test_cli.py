@@ -271,6 +271,26 @@ class TestTextErrors:
         assert "cannot read" in plain(result.stderr)
 
 
+class TestGraphOutputFile:
+    @pytest.mark.parametrize(
+        ("name", "first_line"),
+        [
+            ('My "main" DC', r'digraph "My \"main\" DC" {'),
+            ("back\\slash", r'digraph "back\\slash" {'),
+            ("ends with \\", r'digraph "ends with \\" {'),
+        ],
+    )
+    def test_the_name_of_the_datacenter_is_quoted_in_dot(
+        self, tmp_path: Path, name: str, first_line: str
+    ) -> None:
+        data = raw_datacenter()
+        data["name"] = name
+        file = write(tmp_path / "dc.yaml", yaml.safe_dump(data))
+        result = runner.invoke(app, ["graph", str(file), "-F", "dot"])
+        assert result.exit_code == 0, result.output
+        assert result.stdout.splitlines()[0] == first_line
+
+
 def test_graph_json_uses_camel_case_keys(examples_dir: Path) -> None:
     result = runner.invoke(app, ["graph", str(examples_dir / "mini_datacenter.yaml"), "-F", "json"])
     assert result.exit_code == 0
