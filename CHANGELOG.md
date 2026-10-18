@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `graph --format dot` quotes the name of the datacenter, so a name with a quote or a backslash
   in it gives valid DOT. It used to end the string early.
+- `graph --output` to a path that cannot be written ends with an error message, as
+  `import --output` does, and no longer with a Python traceback.
 
 ## [0.2.1] - 2026-10-17
 

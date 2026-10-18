@@ -272,6 +272,17 @@ class TestTextErrors:
 
 
 class TestGraphOutputFile:
+    def test_a_graph_that_cannot_be_written_is_an_error_not_a_traceback(
+        self, examples_dir: Path, tmp_path: Path
+    ) -> None:
+        target = tmp_path / "missing" / "graph.dot"
+        file = str(examples_dir / "mini_datacenter.yaml")
+        result = runner.invoke(app, ["graph", file, "-F", "dot", "-o", str(target)])
+        assert result.exit_code == 1
+        assert isinstance(result.exception, SystemExit)  # the command ended itself, nothing broke
+        assert plain(result.stderr).startswith("error: cannot write")
+        assert result.stdout == ""
+
     @pytest.mark.parametrize(
         ("name", "first_line"),
         [
