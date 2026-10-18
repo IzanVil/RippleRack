@@ -82,6 +82,7 @@ class Reader:
         return ImportResult(schema=schema, issues=tuple(self._issues))
 
     def _fail(self, source: str) -> NoReturn:
+        """Raise the error that lists every problem; its code says whether the file is malformed."""
         invalid = any(p.code is self._invalid_code for p in self._problems)
         lines = [
             f"{source}: cannot import this {self._subject}:",

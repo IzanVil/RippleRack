@@ -145,6 +145,7 @@ def analyze_diff(
 def _broken_consumers(
     datacenter: Datacenter, pipeline_id: str, diff: SchemaDiff, ignored: set[str]
 ) -> list[BrokenConsumer]:
+    """The direct consumers that read a field the change breaks, with the fields."""
     breaking = diff.reader_breaking_changes
     if not breaking:
         return []
@@ -188,6 +189,7 @@ def _fields_of(changes: list[SchemaChange]) -> list[str]:
 
 
 def _status(node_id: str, broken: set[str], at_risk: set[str]) -> NodeStatus:
+    """Broken if the component is a broken consumer, at risk if one feeds it, else affected."""
     if node_id in broken:
         return NodeStatus.BROKEN
     if node_id in at_risk:

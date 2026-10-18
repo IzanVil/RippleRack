@@ -111,6 +111,7 @@ def load_schema(path: Path) -> Schema:
 
 
 def _format_validation_error(exc: ValidationError) -> str:
+    """The errors of a validation, one line each: where it is and what is wrong."""
     messages = []
     for error in exc.errors():
         location = ".".join(str(part) for part in error["loc"])

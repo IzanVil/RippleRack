@@ -344,6 +344,7 @@ def _version_warnings(schema_changes: list[tuple[str, SchemaDiff]]) -> list[Diff
 
 
 def _version_warning(pipeline_id: str, schema_diff: SchemaDiff) -> DiffWarning:
+    """The warning for a schema whose version is lower than its changes require."""
     if schema_diff.level is ChangeLevel.NONE:
         detail = f"version went backwards from {schema_diff.old.version}"
     else:
@@ -392,6 +393,7 @@ def _rack_component(rack: Rack) -> _Component:
 
 
 def _server_component(rack: Rack, server: Server) -> _Component:
+    """A server is compared by its rack and its capacities."""
     return _Component(
         NodeKind.SERVER,
         rack.id,
@@ -405,6 +407,7 @@ def _server_component(rack: Rack, server: Server) -> _Component:
 
 
 def _service_component(server: Server, service: Service) -> _Component:
+    """A service is compared by its server, its resources and its description."""
     return _Component(
         NodeKind.SERVICE,
         server.id,
@@ -418,6 +421,7 @@ def _service_component(server: Server, service: Service) -> _Component:
 
 
 def _pipeline_component(pipeline: Pipeline) -> _Component:
+    """A pipeline is compared by where it runs, what it reads and its schema."""
     return _Component(
         NodeKind.PIPELINE,
         pipeline.runs_on,

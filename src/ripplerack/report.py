@@ -84,6 +84,7 @@ def diff_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
 
 
 def _diff_summary(diff: DatacenterDiff) -> dict[str, int]:
+    """The counts at the top of the ``diff`` document."""
     return {
         "added": len(diff.added),
         "removed": len(diff.removed),
@@ -98,6 +99,7 @@ def _diff_summary(diff: DatacenterDiff) -> dict[str, int]:
 
 
 def _components_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
+    """The components added, removed and modified."""
     return {
         "added": [_component_ref_to_dict(ref) for ref in diff.added],
         "removed": [_component_ref_to_dict(ref) for ref in diff.removed],
@@ -106,6 +108,7 @@ def _components_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
 
 
 def _dependencies_to_dict(diff: DatacenterDiff) -> dict[str, Any]:
+    """The explicit dependencies added, removed and modified."""
     return {
         "added": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_added],
         "removed": [_dependency_ref_to_dict(dep) for dep in diff.dependencies_removed],

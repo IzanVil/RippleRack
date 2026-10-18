@@ -193,6 +193,7 @@ class Datacenter(StrictModel):
 
     @model_validator(mode="after")
     def _check_references(self) -> Datacenter:
+        """Reject duplicate ids and references to components that do not exist."""
         ids = self.all_ids()
         duplicates = _duplicates(ids)
         if duplicates:

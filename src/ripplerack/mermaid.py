@@ -106,6 +106,7 @@ class _Flowchart:
         self._container_styles: list[str] = []
 
     def render(self) -> str:
+        """The diagram as text, in the order Mermaid needs: header, nodes, arrows, styles."""
         self._add_header()
         self._add_nodes()
         link_indexes = self._add_links()
@@ -148,6 +149,7 @@ class _Flowchart:
             self._container_styles.append(f"  style {self._ids[node]} {style}")
 
     def _node_class(self, node: str) -> str:
+        """The class that styles a node: changed, what the change does to it, or its kind."""
         highlight = self._highlight
         if highlight is not None:
             if node == highlight.source:
@@ -173,6 +175,7 @@ class _Flowchart:
         return link_indexes
 
     def _add_styles(self, link_indexes: dict[str, list[int]]) -> None:
+        """The classes of the nodes, the styles of the containers and of the arrows."""
         for name, style in _STYLES.items():
             if name in self._members:
                 self._lines.append(f"  classDef {name} {style}")
@@ -216,6 +219,7 @@ def _label(node: str, data: dict[str, object]) -> str:
 
 
 def _shape(kind: object, label: str) -> str:
+    """The shape of a node: rounded for a service, a hexagon for a pipeline, else a box."""
     if kind == NodeKind.SERVICE:
         return f'("{label}")'
     if kind == NodeKind.PIPELINE:

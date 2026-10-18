@@ -112,6 +112,7 @@ class Version:
 
     @classmethod
     def parse(cls, value: str) -> Version:
+        """Read ``MAJOR.MINOR.PATCH``; anything else is a ``ValueError``."""
         match = _SEMVER_RE.match(value.strip())
         if match is None:
             raise ValueError(f"invalid semantic version: {value!r}")

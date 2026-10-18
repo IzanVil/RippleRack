@@ -79,6 +79,7 @@ def infer(values: list[Any], flat: dict[str, Any], pointer: str) -> tuple[FieldT
 
 
 def string_type(flat: dict[str, Any], pointer: str) -> FieldType:
+    """``timestamp`` or ``date`` for the strings with those formats, else ``string``."""
     fmt = flat.get("format")
     if fmt is not None and not isinstance(fmt, str):
         raise invalid(child(pointer, "format"), "format must be a string")
@@ -86,6 +87,7 @@ def string_type(flat: dict[str, Any], pointer: str) -> FieldType:
 
 
 def type_names(value: Any, pointer: str) -> list[str]:
+    """The names in ``type``, one or a list, checked to be JSON Schema types."""
     where = child(pointer, "type")
     if isinstance(value, str):
         names = [value]
@@ -100,6 +102,7 @@ def type_names(value: Any, pointer: str) -> list[str]:
 
 
 def is_null_schema(schema: Any) -> bool:
+    """Whether a schema accepts only null: ``type: null`` or ``const: null``."""
     if not isinstance(schema, dict):
         return False
     return schema.get("type") == "null" or (
@@ -127,6 +130,7 @@ def own_description(schema: Any) -> str:
 
 
 def boolean_flag(flat: dict[str, Any], key: str, pointer: str) -> bool:
+    """The value of a keyword that must be true or false; false when it is absent."""
     value = flat.get(key, False)
     if not isinstance(value, bool):
         raise invalid(child(pointer, key), f"{key} must be true or false")
@@ -134,6 +138,7 @@ def boolean_flag(flat: dict[str, Any], key: str, pointer: str) -> bool:
 
 
 def value_kind(value: Any) -> str:
+    """The JSON Schema type of a value, or ``json`` for an array or an object."""
     if value is None:
         return "null"
     if isinstance(value, bool):  # before int: True is an int in Python

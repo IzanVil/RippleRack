@@ -58,6 +58,7 @@ class AvroReader(Reader):
     def read(
         self, *, source: str, name: str | None, version: str, select: str | None
     ) -> ImportResult:
+        """The schema of the record chosen, or the error listing all that is wrong."""
         fields: list[SchemaField] = []
         record_name = ""
         try:
@@ -71,6 +72,7 @@ class AvroReader(Reader):
         return self._finish(source=source, name=schema_name, version=version, fields=fields)
 
     def _fields(self, record: Named) -> list[SchemaField]:
+        """The fields of a record; a problem is noted and the next field is read."""
         fields: list[SchemaField] = []
         seen: set[str] = set()
         for index, declared in enumerate(record.schema["fields"]):
@@ -88,6 +90,7 @@ class AvroReader(Reader):
         return fields
 
     def _field(self, declared: Any, record: Named, pointer: str, seen: set[str]) -> SchemaField:
+        """One field of the record: its name, the type it gives and its ``doc``."""
         name = _field_name(declared, pointer, seen)
         if "type" not in declared:
             raise invalid(pointer, f"field {name!r} has no type")
@@ -148,6 +151,7 @@ class AvroReader(Reader):
         return _Translated(inner.type, len(others) < len(branches), inner.note)
 
     def _by_name(self, name: str, namespace: str | None, pointer: str) -> _Translated:
+        """A type written as a name: a primitive, or a type that the file defines."""
         if name in _PLAIN_TYPES:
             return _Translated(_PLAIN_TYPES[name])
         named = self._types.find(name, namespace)
@@ -159,6 +163,7 @@ class AvroReader(Reader):
         return self._object(named.schema, named.namespace, named.pointer)
 
     def _object(self, schema: dict[str, Any], namespace: str | None, pointer: str) -> _Translated:
+        """A type written as an object: a logical type, an enum, a record or a container."""
         kind = schema.get("type")
         if not isinstance(kind, str):
             raise invalid(child(pointer, "type"), "the type of a schema must be a name")
@@ -175,6 +180,7 @@ class AvroReader(Reader):
 
 
 def _refuse_nested_unions(branches: list[Any], pointer: str) -> None:
+    """Refuse a union that holds another union, which Avro does not allow."""
     for index, branch in enumerate(branches):
         if isinstance(branch, list):
             raise invalid(child(pointer, index), "a union cannot contain another union")
@@ -207,6 +213,7 @@ def _field_name(declared: Any, pointer: str, seen: set[str]) -> str:
 
 
 def _is_null(schema: Any) -> bool:
+    """Whether a type is ``null``, written as a name or as an object."""
     return schema == "null" or (isinstance(schema, dict) and schema.get("type") == "null")
 
 

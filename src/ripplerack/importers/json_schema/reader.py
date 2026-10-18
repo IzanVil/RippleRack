@@ -43,11 +43,13 @@ class JsonSchemaReader(Walker):
     """Reads one document; collects every problem and warning before reporting."""
 
     def read(self, *, source: str, name: str | None, version: str) -> ImportResult:
+        """The schema the document describes, or the error listing all that is wrong."""
         fields = self._fields()
         schema_name = name if name is not None else self._schema_name(source)
         return self._finish(source=source, name=schema_name, version=version, fields=fields)
 
     def _fields(self) -> list[SchemaField]:
+        """The fields of the root object: its properties, then the required names it lacks."""
         try:
             properties, required = self._root_object()
         except ReadError as error:
@@ -158,6 +160,7 @@ class JsonSchemaReader(Walker):
                 )
 
     def _translate(self, schema: Any, pointer: str, depth: int) -> _Translated:
+        """What a property schema says about its field: type, null, description."""
         if schema is True:  # accepts anything
             return _Translated(FieldType.JSON, False, "")
         flat = self._flatten(schema, pointer, depth, frozenset())
@@ -200,6 +203,7 @@ class JsonSchemaReader(Walker):
         return name_schema(candidates, source)
 
     def _text(self, schema: dict[str, Any], key: str) -> str | None:
+        """A text keyword of the root, such as ``title``; a value that is not text is a problem."""
         value = schema.get(key)
         if value is not None and not isinstance(value, str):
             self._problems.append(invalid(child("#", key), f"{key} must be a string"))

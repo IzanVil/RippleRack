@@ -71,6 +71,7 @@ class Types:
         return self._only_record(records)
 
     def _register(self, schema: Any, namespace: str | None, pointer: str, depth: int) -> None:
+        """Note the types that ``schema`` defines and those defined by what it holds."""
         if depth > _MAX_DEPTH:
             raise unsupported(pointer, "the schema is nested too deeply", degradable=False)
         held: list[tuple[tuple[str | int, ...], Any]]

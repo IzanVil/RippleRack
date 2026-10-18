@@ -18,6 +18,7 @@ _CLOSING_KEYWORDS = ("additionalProperties", "unevaluatedProperties")
 
 
 def members_of(schema: dict[str, Any], keyword: str, pointer: str) -> list[Any]:
+    """The alternatives under ``oneOf``, ``anyOf`` or ``allOf``: a non-empty list."""
     members = schema[keyword]
     if not isinstance(members, list) or not members:
         raise invalid(child(pointer, keyword), f"{keyword} must be a non-empty list")
@@ -177,6 +178,7 @@ class Walker(Reader):
     def _names_through_reference(
         self, reference: Any, pointer: str, depth: int, seen: frozenset[str]
     ) -> set[str]:
+        """The names declared behind a ``$ref``; none if it cannot be followed."""
         try:
             target, target_pointer = self._resolve(reference, pointer, seen)
         except ReadError:  # a reference that cannot be followed declares nothing we know

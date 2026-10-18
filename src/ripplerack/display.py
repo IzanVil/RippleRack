@@ -262,6 +262,7 @@ def _removed_with_dependents_table(result: DatacenterDiff) -> Table:
 
 
 def _describe_change(change: AttributeChange) -> str:
+    """One changed attribute as a line; schema fields and inputs have their own words."""
     if change.attribute == "schema.fields":
         return "schema.fields: changed (see below)"
     if (
@@ -308,6 +309,7 @@ def _describe_fields_change(was: list[str] | None, now: list[str] | None) -> str
 
 
 def _format_value(value: object) -> str:
+    """A value as a comparison shows it: no float noise, lists joined, empty said so."""
     if isinstance(value, float):
         return f"{value:g}"
     if isinstance(value, list):

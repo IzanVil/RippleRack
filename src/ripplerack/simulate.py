@@ -19,6 +19,8 @@ WARNING_THRESHOLD = 0.8
 
 
 class Status(StrEnum):
+    """How a component fares under the simulation."""
+
     OK = "ok"
     WARNING = "warning"
     OVERLOADED = "overloaded"
@@ -39,6 +41,8 @@ class ResourceUsage:
 
 @dataclass(frozen=True)
 class ServerReport:
+    """The load on one server and how it fares."""
+
     id: str
     rack: str
     cpu: ResourceUsage
@@ -48,6 +52,8 @@ class ServerReport:
 
 @dataclass(frozen=True)
 class RackReport:
+    """The power drawn from one rack and how it fares."""
+
     id: str
     power: ResourceUsage
     status: Status
