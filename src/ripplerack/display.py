@@ -67,7 +67,7 @@ def _print_severity(severity: Severity) -> None:
 def print_validation(loaded: LoadedDatacenter) -> None:
     """The summary of a datacenter that is valid."""
     datacenter, graph = loaded.datacenter, loaded.graph
-    console.print(f"[bold green]✓[/] [bold]{datacenter.name}[/] is valid")
+    console.print(f"[bold green]✓[/] [bold]{escape(datacenter.name)}[/] is valid")
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_row("racks", str(len(datacenter.racks)))
     table.add_row("servers", str(len(list(datacenter.iter_servers()))))
@@ -398,7 +398,7 @@ def _status(status: Status) -> str:
 def render_tree(loaded: LoadedDatacenter) -> Tree:
     """The datacenter as a tree: infrastructure, pipelines and explicit dependencies."""
     datacenter = loaded.datacenter
-    root = Tree(f"[bold]{datacenter.name}[/]")
+    root = Tree(f"[bold]{escape(datacenter.name)}[/]")
     _add_infrastructure(root.add("[bold]infrastructure[/]"), datacenter)
     _add_pipelines(root.add("[bold]pipelines[/]"), datacenter)
     if datacenter.dependencies:

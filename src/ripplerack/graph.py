@@ -75,14 +75,21 @@ def to_dot(graph: nx.DiGraph[str]) -> str:
         NodeKind.SERVICE: "ellipse",
         NodeKind.PIPELINE: "cds",
     }
-    lines = [f'digraph "{graph.graph.get("name", "ripplerack")}" {{', "  rankdir=LR;"]
+    name = _quoted(str(graph.graph.get("name", "ripplerack")))
+    lines = [f"digraph {name} {{", "  rankdir=LR;"]
     for node, data in graph.nodes(data=True):
         shape = shapes.get(data.get("kind", NodeKind.SERVICE), "ellipse")
-        lines.append(f'  "{node}" [shape={shape}];')
+        lines.append(f"  {_quoted(node)} [shape={shape}];")
     for source, target, data in graph.edges(data=True):
-        lines.append(f'  "{source}" -> "{target}" [label="{data.get("relation", "")}"];')
+        label = _quoted(str(data.get("relation", "")))
+        lines.append(f"  {_quoted(source)} -> {_quoted(target)} [label={label}];")
     lines.append("}")
     return "\n".join(lines) + "\n"
+
+
+def _quoted(text: str) -> str:
+    """``text`` as a DOT string: a quote or a backslash inside it cannot end the string early."""
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def to_json(graph: nx.DiGraph[str]) -> str:

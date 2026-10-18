@@ -30,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The name of a schema taken from a title, an `$id` or a file name tells the words of a
   CamelCase name apart: `OrderEvent` becomes `order_event` and no longer `orderevent`.
 
+### Fixed
+
+- `graph --format dot` quotes the name of the datacenter, so a name with a quote or a backslash
+  in it gives valid DOT. It used to end the string early.
+- `graph --output` to a path that cannot be written ends with an error message, as
+  `import --output` does, and no longer with a Python traceback.
+- `validate`, `graph` and `simulate` print as they are the names that look like Rich markup, such
+  as `x[/]` or `[red]`. A datacenter called `x[/][/]` made `validate` and `graph` crash, and one
+  called `a[/]b [red]c` was drawn wrong.
+
 ## [0.2.1] - 2026-10-17
 
 ### Added

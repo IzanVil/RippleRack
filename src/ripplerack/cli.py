@@ -257,7 +257,8 @@ def _check_output(output: Path, source: Path, *, force: bool) -> None:
         )
 
 
-def _write_schema(target: Path, text: str) -> None:
+def _write_text(target: Path, text: str) -> None:
+    """Write ``text`` to ``target``; a file that cannot be written is a ``RippleRackError``."""
     try:
         target.write_text(text, encoding="utf-8")
     except OSError as exc:
@@ -360,7 +361,7 @@ def import_command(
         )
         text = render_schema_yaml(result.schema)
         if target is not None:
-            _write_schema(target, text)
+            _write_text(target, text)
     except RippleRackError as exc:
         _fail(str(exc), code=exc.code, command="import")
     _report_import(result, text, target)
@@ -385,7 +386,7 @@ def simulate_command(
     try:
         report = simulate(loaded.datacenter, loaded.graph, load_factor=load, failures=fail)
     except KeyError as exc:
-        err_console.print(f"[bold red]error:[/] unknown component(s): {exc.args[0]}")
+        err_console.print(f"[bold red]error:[/] unknown component(s): {escape(exc.args[0])}")
         raise typer.Exit(code=1) from exc
     print_simulation(report)
 
@@ -412,6 +413,9 @@ def graph(
     text = GRAPH_EXPORTERS[output_format](loaded.graph)
     if output is None:
         typer.echo(text, nl=False)
-    else:
-        output.write_text(text, encoding="utf-8")
-        console.print(f"[green]✓[/] graph written to {output}")
+        return
+    try:
+        _write_text(output, text)
+    except RippleRackError as exc:
+        _fail(str(exc), code=exc.code, command="graph")
+    console.print(f"[green]✓[/] graph written to {escape(str(output))}")
