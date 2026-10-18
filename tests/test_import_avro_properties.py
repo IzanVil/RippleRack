@@ -28,7 +28,8 @@ from hypothesis import strategies as st
 from ripplerack.importers import IssueCode, render_schema_yaml
 from ripplerack.importers.avro import from_avro, import_avro
 from ripplerack.models import Schema
-from ripplerack.parser import ErrorCode, RippleRackError
+from ripplerack.parser import ErrorCode
+from tests.helpers import outcome
 
 INVALID = ErrorCode.INVALID_AVRO_SCHEMA
 UNSUPPORTED = ErrorCode.UNSUPPORTED_AVRO_SCHEMA
@@ -404,15 +405,6 @@ documents = st.one_of(
     noise,
 )
 selects = st.one_of(st.none(), st.sampled_from(["A", "B", "C", "x.A", "a.B", "Nope", ""]))
-
-
-def outcome(read_it: Any) -> tuple[Any, ...]:
-    """What reading a document gave, in a form two readings can be compared by."""
-    try:
-        result = read_it()
-    except RippleRackError as error:
-        return ("refused", error.code, str(error))
-    return ("imported", result.schema, result.issues)
 
 
 @settings(max_examples=200)

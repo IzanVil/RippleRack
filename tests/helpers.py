@@ -19,8 +19,9 @@ from typing import Any
 import yaml
 
 from ripplerack.impact import ImpactReport, analyze_schema_change
+from ripplerack.importers.base import ImportResult
 from ripplerack.models import Schema
-from ripplerack.parser import LoadedDatacenter, load_schema, parse_datacenter
+from ripplerack.parser import LoadedDatacenter, RippleRackError, load_schema, parse_datacenter
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 GOLDEN = Path(__file__).resolve().parent / "golden"
@@ -98,6 +99,15 @@ def impact_report(
     """The impact of applying ``examples/changes/<change>.yaml`` to ``pipeline``."""
     new_schema = load_schema(EXAMPLES / "changes" / f"{change}.yaml")
     return analyze_schema_change(loaded.datacenter, loaded.graph, pipeline, new_schema)
+
+
+def outcome(read: Callable[[], ImportResult]) -> tuple[Any, ...]:
+    """What reading a document gave, in a form two readings can be compared by."""
+    try:
+        result = read()
+    except RippleRackError as error:
+        return ("refused", error.code, str(error))
+    return ("imported", result.schema, result.issues)
 
 
 def assert_text_golden(name: str, actual: str) -> None:

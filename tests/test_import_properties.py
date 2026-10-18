@@ -21,7 +21,7 @@ from hypothesis import strategies as st
 from ripplerack.importers import render_schema_yaml
 from ripplerack.importers.json_schema import from_json_schema, import_json_schema
 from ripplerack.models import FieldType, Schema, SchemaField
-from ripplerack.parser import RippleRackError
+from tests.helpers import outcome
 
 # ----------------------------------------------------------------- schemas to write
 
@@ -212,15 +212,6 @@ def object_documents(
 documents = st.one_of(
     *[object_documents()] * 10, object_documents(odd_names | property_names), any_schema, noise
 )
-
-
-def outcome(read: Any) -> tuple[Any, ...]:
-    """What reading a document gave, in a form two readings can be compared by."""
-    try:
-        result = read()
-    except RippleRackError as error:
-        return ("refused", error.code, str(error))
-    return ("imported", result.schema, result.issues)
 
 
 @settings(max_examples=300)
