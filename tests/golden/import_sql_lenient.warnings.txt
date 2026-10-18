@@ -1,0 +1,2 @@
+warning[degraded_to_json] places.location (line 4): the type GEOMETRY(POINT, 4326) has no equivalent; column 'location' imported as json
+warning[degraded_to_json] places.open_days (line 5): the type INT4RANGE has no equivalent; column 'open_days' imported as json

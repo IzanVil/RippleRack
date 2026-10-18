@@ -1,0 +1,26 @@
+name: kitchen_sink
+version: 1.0.0
+fields:
+  - {name: id, type: integer}
+  - {name: small, type: integer}
+  - {name: counter, type: integer}
+  - {name: whole_money, type: integer, nullable: true}
+  - {name: price, type: float, description: 'Price, in euros'}
+  - {name: anything, type: float, nullable: true}
+  - {name: ratio, type: float, nullable: true}
+  - {name: flag, type: boolean}
+  - {name: bits, type: boolean, nullable: true}
+  - {name: name, type: string}
+  - {name: notes, type: string, nullable: true}
+  - {name: email, type: string, nullable: true}
+  - {name: token, type: string}
+  - {name: raw, type: string, nullable: true}
+  - {name: address, type: string, nullable: true}
+  - {name: started, type: string, nullable: true}
+  - {name: elapsed, type: string, nullable: true}
+  - {name: born, type: date, nullable: true}
+  - {name: created_at, type: timestamp}
+  - {name: seen_at, type: timestamp, nullable: true}
+  - {name: meta, type: json, nullable: true}
+  - {name: tags, type: json, nullable: true}
+  - {name: feeling, type: string, description: 'How the customer felt. One of: sad, ok, happy'}

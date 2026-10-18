@@ -16,13 +16,14 @@ from tests.helpers import EXAMPLES, SCHEMAS, assert_json_golden, assert_text_gol
 runner = CliRunner()
 ORDERS_V2 = EXAMPLES / "schemas" / "orders_v2.schema.json"
 ORDERS_V2_AVRO = EXAMPLES / "schemas" / "orders_v2.avsc"
+ORDERS_V2_SQL = EXAMPLES / "schemas" / "orders_v2.sql"
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 # The same schema, written in each format: the examples are one and the same thing.
 EXAMPLE_IN_EVERY_FORMAT = pytest.mark.parametrize(
     ("source_format", "example"),
-    [("json-schema", ORDERS_V2), ("avro", ORDERS_V2_AVRO)],
-    ids=["json-schema", "avro"],
+    [("json-schema", ORDERS_V2), ("avro", ORDERS_V2_AVRO), ("sql", ORDERS_V2_SQL)],
+    ids=["json-schema", "avro", "sql"],
 )
 
 
@@ -86,6 +87,17 @@ def test_from_the_example_to_impact_gives_the_orders_v2_golden(
         ("kitchen_sink.avsc", "avro", [], "import_avro_kitchen_sink"),
         ("lenient.avsc", "avro", ["--lenient"], "import_avro_lenient"),
         ("shop.avsc", "avro", ["--select", "OrderEvent"], "import_avro_shop"),
+        ("kitchen_sink.sql", "sql", ["--dialect", "postgres"], "import_sql_kitchen_sink"),
+        ("lenient.sql", "sql", ["--dialect", "postgres", "--lenient"], "import_sql_lenient"),
+        (
+            "pg_dump.sql",
+            "sql",
+            ["--dialect", "postgres", "--select", "orders"],
+            "import_sql_pg_dump",
+        ),
+        ("mysqldump.sql", "sql", ["--dialect", "mysql"], "import_sql_mysqldump"),
+        ("shop.sql", "sql", ["--dialect", "mysql", "--select", "OrderEvents"], "import_sql_shop"),
+        ("sqlite.sql", "sql", ["--dialect", "sqlite", "--lenient"], "import_sql_sqlite"),
     ],
 )
 def test_golden_output_and_warnings(
@@ -104,6 +116,11 @@ def test_golden_output_and_warnings(
         ("lenient.avsc", "avro", [], "import_avro_lenient"),
         ("shop.avsc", "avro", [], "import_avro_shop"),
         ("shop.avsc", "avro", ["--select", "Nope"], "import_avro_shop_nope"),
+        ("lenient.sql", "sql", ["--dialect", "postgres"], "import_sql_lenient"),
+        ("sqlite.sql", "sql", ["--dialect", "sqlite"], "import_sql_sqlite"),
+        ("pg_dump.sql", "sql", ["--dialect", "postgres"], "import_sql_pg_dump"),
+        ("shop.sql", "sql", ["--dialect", "mysql", "--select", "Nope"], "import_sql_shop_nope"),
+        ("mysqldump.sql", "sql", [], "import_sql_mysqldump"),
     ],
 )
 def test_golden_error_for_a_schema_strict_mode_refuses(
