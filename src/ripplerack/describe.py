@@ -25,10 +25,13 @@ def diff_counts(result: DatacenterDiff) -> str:
     )
 
 
-def describe_change(change: AttributeChange) -> str:
-    """One changed attribute as a line; schema fields and inputs have their own words."""
+def describe_change(change: AttributeChange, *, details: str = "below") -> str:
+    """One changed attribute as a line; schema fields and inputs have their own words.
+
+    The schema fields are analysed field by field elsewhere in the output, ``details`` says where.
+    """
     if change.attribute == "schema.fields":
-        return "schema.fields: changed (see below)"
+        return f"schema.fields: changed (see {details})"
     if (
         change.attribute == "inputs"
         and isinstance(change.before, list)
