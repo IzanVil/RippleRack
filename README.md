@@ -81,6 +81,7 @@ ripplerack --help
 | [Datacenter file format](docs/yaml-format.md) | The YAML you write and the validation rules |
 | [Concepts](docs/concepts.md) | The impact graph, the schema SemVer rules, severity, `diff` and `simulate` |
 | [Output formats](docs/output-formats.md) | The JSON documents, error codes, exit codes and Mermaid diagrams |
+| [RippleRack in CI](docs/ci.md) | The command as a gate, the Markdown report and the GitHub Action that comments on a pull request |
 | [Importing schemas](docs/import.md) | `ripplerack import`: turn a JSON Schema into a schema file, the translation rules, warnings and known limitations |
 | [Importing Avro schemas](docs/import-avro.md) | `import --from avro`: the same for an `.avsc` file, choosing one record of many, and its known limitations |
 | [Importing SQL](docs/import-sql.md) | `import --from sql`: the same for the `CREATE TABLE` of a dump, with a dialect, choosing one table of many, and its known limitations |
@@ -265,7 +266,9 @@ uv run ripplerack impact examples/mini_datacenter.yaml -p orders-ingest \
 
 Names that come from your files are written as code, so none of them can mention anybody or break
 the comment, and the report is shortened to fit the 65,536 characters GitHub allows. See
-[`docs/output-formats.md`](docs/output-formats.md#markdown) for the layout and its options.
+[`docs/output-formats.md`](docs/output-formats.md#markdown) for the layout and its options, and
+[`docs/ci.md`](docs/ci.md#the-github-action) for the GitHub Action that posts it on every pull
+request and keeps one comment up to date.
 
 ### `diff`: what does this change do to my datacenter?
 
