@@ -252,6 +252,21 @@ JSON error with a stable `error.code`, such as `file_not_found` or
 `unknown_pipeline`. The full contract, the error codes and the exit codes are
 documented in [`docs/output-formats.md`](docs/output-formats.md).
 
+#### Markdown for pull requests
+
+`--format markdown` (`-F markdown`) writes a report to paste in the comment of a pull request:
+the schema change and the consumers that break in tables, what is at risk, the long lists folded
+and a diagram of the impact that GitHub draws.
+
+```bash
+uv run ripplerack impact examples/mini_datacenter.yaml -p orders-ingest \
+  -s examples/changes/orders_v2.yaml -F markdown
+```
+
+Names that come from your files are written as code, so none of them can mention anybody or break
+the comment, and the report is shortened to fit the 65,536 characters GitHub allows. See
+[`docs/output-formats.md`](docs/output-formats.md#markdown) for the layout and its options.
+
 ### `diff`: what does this change do to my datacenter?
 
 ```bash
@@ -446,7 +461,6 @@ CI runs all of the above on Python 3.11, 3.12 and 3.13.
 ## Roadmap
 
 - Throughput and latency modelling for pipelines
-- Markdown reports for CI comments
 - Web UI to explore the graph
 
 Ideas and contributions are welcome. Please open an issue to discuss them.

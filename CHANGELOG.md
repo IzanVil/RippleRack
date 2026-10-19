@@ -47,6 +47,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `orders.status (line 57)`. There is a guide, [docs/import-sql.md](docs/import-sql.md), and an
   example, `examples/schemas/orders_v2.sql`, that gives the same schema as the JSON Schema and
   the Avro ones.
+- `diff --format markdown` and `impact --format markdown` write a report in GitHub-flavoured
+  Markdown, to paste in the comment of a pull request: the schema changes and the consumers that
+  break in tables, what is at risk, the removed components that something still depends on, the
+  warnings, and the components and dependencies that changed, folded. The impact is drawn as a
+  Mermaid diagram of what the change reaches and the racks and servers that host it. `--max-items N`
+  (25 by default, `0` for all) limits the rows of each table and `--no-diagram` leaves the diagram
+  out; both are a usage error with another format. Names and descriptions from a file are always
+  written as code, so `@team` or `</details>` mention nobody and cannot break the comment, and a
+  report is shortened, diagrams first, to fit the 65,536 characters that GitHub allows. See
+  [docs/output-formats.md](docs/output-formats.md#markdown).
 
 ### Changed
 

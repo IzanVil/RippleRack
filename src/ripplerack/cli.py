@@ -42,6 +42,7 @@ from ripplerack.importers import (
     source_label,
     sql_dialects,
 )
+from ripplerack.markdown import DEFAULT_MAX_ITEMS, diff_to_markdown, impact_to_markdown
 from ripplerack.mermaid import MermaidHighlight, to_mermaid
 from ripplerack.parser import (
     ErrorCode,
@@ -76,12 +77,33 @@ class ImpactFormat(StrEnum):
     TEXT = "text"
     JSON = "json"
     MERMAID = "mermaid"
+    MARKDOWN = "markdown"
 
 
 class DiffFormat(StrEnum):
     TEXT = "text"
     JSON = "json"
+    MARKDOWN = "markdown"
 
+
+MaxItems = Annotated[
+    int | None,
+    typer.Option(
+        "--max-items",
+        min=0,
+        help="Markdown: how many rows a table or list shows before it says how many more "
+        f"there are (default {DEFAULT_MAX_ITEMS}; 0 shows all).",
+        show_default=False,
+    ),
+]
+Diagram = Annotated[
+    bool | None,
+    typer.Option(
+        "--diagram/--no-diagram",
+        help="Markdown: draw the diagram of the impact (default: draw it).",
+        show_default=False,
+    ),
+]
 
 # How each format that is not the tree turns the graph into text.
 GRAPH_EXPORTERS: dict[GraphFormat, Callable[[nx.DiGraph[str]], str]] = {
@@ -119,6 +141,25 @@ def _fail(message: str, *, code: ErrorCode, command: str, json_mode: bool = Fals
     else:
         err_console.print(f"[bold red]error:[/] {escape(message)}")
     raise typer.Exit(code=1)
+
+
+def _markdown_options(
+    *, markdown: bool, max_items: int | None, diagram: bool | None
+) -> tuple[int, bool]:
+    """The ``--max-items`` and ``--diagram`` of a Markdown report, with their defaults.
+
+    They shape a Markdown report, so asking for them with another format is a usage error.
+    """
+    if not markdown:
+        for given, option in ((max_items, "--max-items"), (diagram, "--diagram/--no-diagram")):
+            if given is not None:
+                raise typer.BadParameter(
+                    "it only applies to --format markdown", param_hint=f"'{option}'"
+                )
+    return (
+        DEFAULT_MAX_ITEMS if max_items is None else max_items,
+        True if diagram is None else diagram,
+    )
 
 
 def _load(path: Path, *, command: str, json_mode: bool = False) -> LoadedDatacenter:
@@ -166,17 +207,22 @@ def impact(
         typer.Option(
             "--format",
             "-F",
-            help="Output format: text, json (documented, versioned) or a mermaid diagram "
-            "of the graph with the impact highlighted.",
+            help="Output format: text, json (documented, versioned), a mermaid diagram "
+            "of the graph with the impact highlighted, or a markdown report for a pull request.",
         ),
     ] = ImpactFormat.TEXT,
     fail_on_breaking: Annotated[
         bool,
         typer.Option("--fail-on-breaking", help="Exit with code 2 if any consumer breaks."),
     ] = False,
+    max_items: MaxItems = None,
+    diagram: Diagram = None,
 ) -> None:
     """Compute the cascading impact of a schema change on a pipeline."""
     json_mode = output_format is ImpactFormat.JSON
+    rows, draw = _markdown_options(
+        markdown=output_format is ImpactFormat.MARKDOWN, max_items=max_items, diagram=diagram
+    )
     loaded = _load(file, command="impact", json_mode=json_mode)
     report = _impact_report(loaded, pipeline, schema, json_mode=json_mode)
     if json_mode:
@@ -184,6 +230,11 @@ def impact(
     elif output_format is ImpactFormat.MERMAID:
         highlight = MermaidHighlight.from_impact(report)
         typer.echo(to_mermaid(loaded.graph, highlight), nl=False)
+    elif output_format is ImpactFormat.MARKDOWN:
+        text = impact_to_markdown(
+            loaded.datacenter.name, report, loaded.graph, max_items=rows, diagram=draw
+        )
+        typer.echo(text, nl=False)
     else:
         print_impact(report)
     if fail_on_breaking and report.broken_consumers:
@@ -202,21 +253,35 @@ def diff(
     ],
     output_format: Annotated[
         DiffFormat,
-        typer.Option("--format", "-F", help="Output format (json is documented and versioned)."),
+        typer.Option(
+            "--format",
+            "-F",
+            help="Output format: text, json (documented and versioned) or a markdown report "
+            "for a pull request.",
+        ),
     ] = DiffFormat.TEXT,
     fail_on_breaking: Annotated[
         bool,
         typer.Option("--fail-on-breaking", help="Exit with code 2 if any consumer breaks."),
     ] = False,
+    max_items: MaxItems = None,
+    diagram: Diagram = None,
 ) -> None:
     """Compare two datacenter files: components, schemas and cascading impact."""
     json_mode = output_format is DiffFormat.JSON
+    rows, draw = _markdown_options(
+        markdown=output_format is DiffFormat.MARKDOWN, max_items=max_items, diagram=diagram
+    )
     base_loaded = _load(base, command="diff", json_mode=json_mode)
     head_loaded = _load(head, command="diff", json_mode=json_mode)
     result = diff_datacenters(base_loaded, head_loaded)
 
     if json_mode:
         typer.echo(dumps(diff_to_dict(result)), nl=False)
+    elif output_format is DiffFormat.MARKDOWN:
+        typer.echo(
+            diff_to_markdown(result, head_loaded.graph, max_items=rows, diagram=draw), nl=False
+        )
     else:
         print_diff(result, base, head)
     if fail_on_breaking and result.broken_consumers:
