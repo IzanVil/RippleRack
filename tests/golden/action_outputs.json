@@ -1,0 +1,42 @@
+{
+  "diff_identical": {
+    "severity": "none",
+    "broken-count": 0,
+    "at-risk-count": 0
+  },
+  "diff_example_v2": {
+    "severity": "high",
+    "broken-count": 1,
+    "at-risk-count": 1
+  },
+  "diff_everything": {
+    "severity": "high",
+    "broken-count": 1,
+    "at-risk-count": 1
+  },
+  "diff_compatible_schema_change": {
+    "severity": "low",
+    "broken-count": 0,
+    "at-risk-count": 0
+  },
+  "diff_inputs_changed": {
+    "severity": "low",
+    "broken-count": 0,
+    "at-risk-count": 0
+  },
+  "diff_inputs_changed_back": {
+    "severity": "low",
+    "broken-count": 0,
+    "at-risk-count": 0
+  },
+  "diff_inputs_listed_twice": {
+    "severity": "low",
+    "broken-count": 0,
+    "at-risk-count": 0
+  },
+  "diff_service_becomes_pipeline": {
+    "severity": "low",
+    "broken-count": 0,
+    "at-risk-count": 0
+  }
+}

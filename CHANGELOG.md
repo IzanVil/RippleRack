@@ -57,6 +57,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   written as code, so `@team` or `</details>` mention nobody and cannot break the comment, and a
   report is shortened, diagrams first, to fit the 65,536 characters that GitHub allows. See
   [docs/output-formats.md](docs/output-formats.md#markdown).
+- A GitHub Action, in the folder `action/` (`uses: IzanVil/RippleRack/action@<tag>`), that compares
+  a datacenter file with the one in the commit a pull request is based on, writes the report in the
+  summary of the job and posts it as one comment on the pull request, which every push updates
+  instead of adding another (one comment for each file). With `fail-on-breaking` it fails the step,
+  after commenting, when a consumer breaks. Its outputs are `severity`, `broken-count`,
+  `at-risk-count` (the components at risk, without the consumers that another change breaks) and
+  `report-path`. It installs the RippleRack it comes with, so a tag of this repository is the action
+  and RippleRack at once and nothing has to be on PyPI, and it uses no other action. A pull request
+  from a fork gets a warning instead of a comment, and a file that the pull request adds has
+  nothing to compare. A new workflow, `.github/workflows/action-test.yml`, tries the action on the
+  example datacenters, and its Python glue is tested against a copy of the GitHub API.
 
 ### Changed
 

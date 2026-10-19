@@ -1,0 +1,66 @@
+name: Action
+
+# Tries the action of this repository on the example datacenters, as a user of it would, and
+# checks what it reports and that its gate fails. It does not comment: that needs a pull request,
+# and tests/test_action.py runs it against a copy of the GitHub API.
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "action/**"
+      - "src/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - ".github/workflows/action-test.yml"
+
+permissions:
+  contents: read
+
+# A newer push to the same ref makes the run in progress obsolete, so cancel it.
+# Never cancel runs on main: every commit there should finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  example:
+    name: The action on the example datacenters
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare the two example datacenters
+        id: example
+        uses: ./action
+        with:
+          base: examples/mini_datacenter.yaml
+          head: examples/mini_datacenter_v2.yaml
+          comment-on-pr: "false"
+
+      - name: Check what the action reported
+        env:
+          SEVERITY: ${{ steps.example.outputs.severity }}
+          BROKEN: ${{ steps.example.outputs.broken-count }}
+          AT_RISK: ${{ steps.example.outputs.at-risk-count }}
+          REPORT: ${{ steps.example.outputs.report-path }}
+        run: |
+          test "$SEVERITY" = high
+          test "$BROKEN" = 1
+          test "$AT_RISK" = 1
+          head -n 1 "$REPORT" | grep -q '^## RippleRack · '
+          grep -q 'customer-360' "$REPORT"
+
+      - name: Compare them again, failing on a breaking change
+        id: gate
+        continue-on-error: true
+        uses: ./action
+        with:
+          base: examples/mini_datacenter.yaml
+          head: examples/mini_datacenter_v2.yaml
+          fail-on-breaking: "true"
+          comment-on-pr: "false"
+
+      - name: Check that the gate failed
+        env:
+          OUTCOME: ${{ steps.gate.outcome }}
+        run: test "$OUTCOME" = failure

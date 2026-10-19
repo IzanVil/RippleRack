@@ -1,0 +1,71 @@
+name: RippleRack
+description: >-
+  Compare two versions of a datacenter file with RippleRack and report the severity of the change
+  and the consumers it breaks, as one comment on the pull request that every push updates.
+
+inputs:
+  head:
+    description: Path of the datacenter file, in the repository that was checked out.
+    required: true
+  base:
+    description: >-
+      Path of the same file before the change. Empty, it is the file at the path of head in the
+      commit that the pull request is based on.
+    required: false
+    default: ""
+  fail-on-breaking:
+    description: >-
+      Fail the step, with exit code 2, when a consumer breaks. The comment is posted first.
+    required: false
+    default: "false"
+  comment-on-pr:
+    description: >-
+      Post the report as a comment on the pull request. Every later run updates that comment.
+    required: false
+    default: "true"
+  github-token:
+    description: Token that posts the comment. It needs the permission pull-requests write.
+    required: false
+    default: ${{ github.token }}
+  max-items:
+    description: How many rows each table or list of the report shows. 0 shows all of them.
+    required: false
+    default: "25"
+  diagram:
+    description: Draw the diagram of the impact in the report.
+    required: false
+    default: "true"
+
+outputs:
+  severity:
+    description: The severity of the change, one of none, low, medium, high and critical.
+    value: ${{ steps.compare.outputs.severity }}
+  broken-count:
+    description: The number of consumers that break.
+    value: ${{ steps.compare.outputs.broken-count }}
+  at-risk-count:
+    description: The number of components at risk, not counting the consumers that break.
+    value: ${{ steps.compare.outputs.at-risk-count }}
+  report-path:
+    description: Path of the Markdown report. Empty when there was nothing to compare.
+    value: ${{ steps.compare.outputs.report-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install RippleRack
+      shell: bash
+      run: python3 "$GITHUB_ACTION_PATH/rr_action.py" install
+
+    - name: Compare the two versions
+      id: compare
+      shell: bash
+      env:
+        RR_HEAD: ${{ inputs.head }}
+        RR_BASE: ${{ inputs.base }}
+        RR_FAIL_ON_BREAKING: ${{ inputs.fail-on-breaking }}
+        RR_COMMENT_ON_PR: ${{ inputs.comment-on-pr }}
+        RR_TOKEN: ${{ inputs.github-token }}
+        RR_MAX_ITEMS: ${{ inputs.max-items }}
+        RR_DIAGRAM: ${{ inputs.diagram }}
+      run: python3 "$GITHUB_ACTION_PATH/rr_action.py" run
