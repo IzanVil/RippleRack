@@ -18,7 +18,8 @@ steps:
       fail-on-breaking: "true"
 ```
 
-The inputs and the outputs are described in `action.yml`.
+The inputs, the outputs, what the comment looks like, forks, gating a merge and how to try the
+action are in [docs/ci.md](../docs/ci.md#the-github-action).
 
 | file | what it is |
 |------|------------|

@@ -68,6 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from a fork gets a warning instead of a comment, and a file that the pull request adds has
   nothing to compare. A new workflow, `.github/workflows/action-test.yml`, tries the action on the
   example datacenters, and its Python glue is tested against a copy of the GitHub API.
+- A guide to RippleRack in CI, [docs/ci.md](docs/ci.md): the command as a gate with its exit
+  codes, how to install it (also where PyPI cannot be reached), the Markdown report, and the
+  GitHub Action with its inputs and outputs, an example of the comment, what happens in forks and
+  with new files, how to gate a merge and how to try the action before trusting it. A workflow to
+  copy is in `examples/ci/ripplerack.yml`. Tests compare the tables of inputs and outputs with
+  `action.yml`, the example of the comment with what the command prints, and the version of the
+  action that every file names.
 
 ### Changed
 

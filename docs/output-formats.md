@@ -5,7 +5,7 @@ commands below can emit **JSON** instead. This page is the reference for that JS
 its conventions, its stability guarantees, the error documents and the exit codes. The
 graph can also be drawn as a [Mermaid diagram](#mermaid), with or without the impact of
 a change highlighted, and `diff` and `impact` can write a [Markdown report](#markdown) to
-paste in the comment of a pull request.
+paste in the comment of a pull request. [RippleRack in CI](ci.md) puts them to work.
 
 | command                                   | JSON                               |
 |-------------------------------------------|------------------------------------|
@@ -587,3 +587,6 @@ ripplerack diff base.yaml head.yaml -F markdown > report.md
 gh pr comment 123 --body-file report.md          # a comment on a pull request
 cat report.md >> "$GITHUB_STEP_SUMMARY"          # the summary of a GitHub Actions job
 ```
+
+The [GitHub Action](ci.md#the-github-action) does this for a pull request, and keeps one comment
+up to date instead of adding one for every push.

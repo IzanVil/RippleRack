@@ -305,3 +305,5 @@ The first command exits with `1` when the schema cannot be imported and the seco
 when a consumer breaks, so either stops a pull request. Use strict mode there, so that a
 construct the importer cannot represent is not turned into a `json` field without anyone
 reading the warning.
+
+To check a whole datacenter file on every pull request, see [RippleRack in CI](ci.md).
