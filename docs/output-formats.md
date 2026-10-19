@@ -4,7 +4,8 @@ RippleRack prints human-friendly tables by default. For CI and other tooling, th
 commands below can emit **JSON** instead. This page is the reference for that JSON:
 its conventions, its stability guarantees, the error documents and the exit codes. The
 graph can also be drawn as a [Mermaid diagram](#mermaid), with or without the impact of
-a change highlighted.
+a change highlighted, and `diff` and `impact` can write a [Markdown report](#markdown) to
+paste in the comment of a pull request.
 
 | command                                   | JSON                               |
 |-------------------------------------------|------------------------------------|
@@ -401,7 +402,7 @@ Without `--format json`, errors are a single human-readable line on stderr.
 
 Status `2` has two meanings. To tell them apart in a script, look at stdout: with
 `--format json` a breaking-change result always leaves a JSON document there,
-whereas a usage error leaves it empty.
+whereas a usage error leaves it empty. The same goes for `--format markdown`.
 
 ```bash
 ripplerack impact dc.yaml -p orders-ingest -s new.yaml --format json --fail-on-breaking > impact.json
@@ -497,3 +498,92 @@ mmdc -i impact.mmd -o impact.svg
   the output (balanced boxes, declared ids, one class per node, valid arrow indexes) and
   compare it with the golden files in [`tests/golden/`](../tests/golden). Those files
   were also accepted by the Mermaid 11 parser, but the project does not check rendering.
+
+## Markdown
+
+`ripplerack diff BASE HEAD --format markdown` and `ripplerack impact ... --format markdown` print
+a report in GitHub-flavoured Markdown, to paste in the comment of a pull request. Like the
+[Mermaid diagram](#mermaid) it is meant to be read by people, so unlike the JSON documents it has
+no envelope and no `schemaVersion`, and its wording can change in any release: read the JSON when
+a script needs the facts. Output is deterministic and ends with a newline. Errors are plain text
+on standard error with an empty standard output, and the exit codes are those of the same command
+with any other format.
+
+The report is the one that a reviewer needs first: what the schema change is, who breaks, what is
+at risk. The long lists that follow are folded. Complete reports are in
+[`tests/golden/`](../tests/golden), in the files called `markdown_*.md`.
+
+| section | `diff` | `impact` |
+|---------|--------|----------|
+| Heading with the [severity](#severities-and-statuses) | always | always |
+| One line with the counts | the names of the two datacenters and how much differs | what the change reaches and how much of it breaks |
+| Schema change: the versions, a warning if the version is too low, the table of changes | one section for each pipeline whose schema changed | the pipeline |
+| Broken consumers, and what is at risk | in each schema section | yes |
+| Diagram of the impact | folded, for each schema change that breaks a consumer | open if a consumer breaks, folded if not |
+| Downstream components | no | open if a consumer breaks, folded if not |
+| Removed components that something still depends on, warnings and hints about renames | yes | no |
+| Components and dependencies that were added, removed or modified | folded | no |
+
+A schema change that breaks no consumer says `✅ No consumer breaks.`, and a comparison of two equal
+files says `No differences.`: there is always a report, so a comment that was written before can
+be replaced by the new one. `impact` with a schema that changes nothing says so and stops there.
+
+### Severities and statuses
+
+The words are always written, because a colour alone is not read by everyone.
+
+| word | written as |
+|------|------------|
+| `none` | ⚪ NONE |
+| `low` | 🟢 LOW |
+| `medium` | 🟡 MEDIUM |
+| `high` | 🟠 HIGH |
+| `critical` | 🔴 CRITICAL |
+| `broken` | ❌ broken |
+| `at_risk` | ⚠️ at risk |
+| `affected` | affected |
+
+The first five are the `severity` of the [impact](#impact) and [diff](#diff) documents, the last
+three the `status` of a component.
+
+### Options
+
+| option | default | meaning |
+|--------|---------|---------|
+| `--max-items N` | `25` | How many rows each table or list shows. The rest are counted in a line (`_… and 15 more_`), and the counts at the top are always the real ones. `0` shows every row. |
+| `--diagram`, `--no-diagram` | `--diagram` | Whether to draw the diagram of the impact. |
+
+Both are usage errors (exit code `2`) with any other format. The diagram is also left out, with a
+note, when the change reaches more components than `--max-items`; `--max-items 0` draws it.
+
+### The diagram
+
+The diagram of a report draws the pipeline that changes, everything it reaches and the racks and
+servers that host those components, not the whole datacenter: a large datacenter would drown what
+the reviewer needs to see. It is the same Mermaid diagram as `impact -F mermaid`, with the same
+[colours](#impact-highlight). GitHub draws it inside a comment. For the whole datacenter use
+`impact -F mermaid` or `graph -F mermaid`.
+
+### Text from your files
+
+Names and descriptions come from your files and a Markdown comment can do things with them: `@team`
+mentions a team, `#12` links an issue and `</details>` closes a section. So everything that comes
+from a file is written as code, where none of that happens. A `|` in a table cell is escaped, a
+code span is one backtick longer than any run of backticks it holds, and a text of more than 200
+characters is cut with `…`. The tests run reports with names made of the characters that mean
+something in Markdown and check that the structure of the report does not change.
+
+### How long a report can be
+
+GitHub refuses a comment of more than 65,536 characters. A report that is longer than 60,000 loses,
+one step after another, until it fits: first its diagrams, then the tables of components and
+dependencies, and as a last resort the lines that do not fit are cut. Each step adds a line that
+says so.
+
+### Using the output
+
+```bash
+ripplerack diff base.yaml head.yaml -F markdown > report.md
+gh pr comment 123 --body-file report.md          # a comment on a pull request
+cat report.md >> "$GITHUB_STEP_SUMMARY"          # the summary of a GitHub Actions job
+```
