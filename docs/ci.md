@@ -59,9 +59,8 @@ pip install "git+https://github.com/IzanVil/RippleRack@v0.2.2"
 uv tool install "git+https://github.com/IzanVil/RippleRack@v0.2.2"
 ```
 
-`v0.2.2` stands for the release that has the Markdown report and the action; until it is tagged,
-use the commit you want. Pin a tag or a commit, not `main`, so that a change to RippleRack cannot
-turn a green check red on its own.
+`v0.2.2` is the first release with the Markdown report and the action. Pin a tag or a commit,
+not `main`, so that a change to RippleRack cannot turn a green check red on its own.
 
 On a runner with no access to PyPI, point pip at a mirror that has RippleRack's dependencies and
 `uv_build` (`PIP_INDEX_URL`, or `UV_INDEX_URL` for uv), or build the wheel once with `uv build` and
