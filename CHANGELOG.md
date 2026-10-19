@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-19
+
 ### Added
 
 - `ripplerack import FILE --from avro`: reads an Avro schema (an `.avsc` file) and writes one of
