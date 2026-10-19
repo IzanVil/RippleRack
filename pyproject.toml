@@ -51,7 +51,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "tests", "action"]
 
 [tool.ruff.lint]
 select = [
@@ -72,8 +72,9 @@ max-statements = 50
 python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
-mypy_path = "src"
+mypy_path = ["src", "action"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["action"]  # the glue of the GitHub Action is tested as a module
 addopts = "-ra"
