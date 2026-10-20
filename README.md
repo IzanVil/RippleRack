@@ -3,9 +3,9 @@
 **See the ripple before you make the splash.**
 
 [![CI](https://github.com/IzanVil/RippleRack/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/IzanVil/RippleRack/actions/workflows/ci.yml)
-[![Python versions](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](pyproject.toml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FIzanVil%2FRippleRack%2Fmain%2Fpyproject.toml&query=%24.project.version&label=version)](CHANGELOG.md)
+[![Python versions](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://github.com/IzanVil/RippleRack/blob/main/pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/IzanVil/RippleRack/blob/main/LICENSE)
+[![Version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FIzanVil%2FRippleRack%2Fmain%2Fpyproject.toml&query=%24.project.version&label=version)](https://github.com/IzanVil/RippleRack/blob/main/CHANGELOG.md)
 
 RippleRack is a local-first simulator for datacenters and data pipelines. You
 describe your racks, servers, services and pipelines in a single YAML file and
@@ -26,11 +26,11 @@ accounts and no databases.
 
 > Status: **alpha**. The CLI and the engines work and are tested. The file format and the
 > JSON output may still change before 1.0; JSON changes bump `schemaVersion` and are listed in
-> the [changelog](CHANGELOG.md).
+> the [changelog](https://github.com/IzanVil/RippleRack/blob/main/CHANGELOG.md).
 
 ## In 10 seconds
 
-From a checkout (see [Installation](#installation)):
+From a checkout (see [Installation](https://github.com/IzanVil/RippleRack#installation)):
 
 ```bash
 # What breaks if orders-ingest renames `amount` to `amount_cents`?
@@ -45,7 +45,7 @@ uv run ripplerack diff examples/mini_datacenter.yaml examples/mini_datacenter_v2
 
 Without `--format json`, `impact` prints tables for people:
 
-![Terminal: ripplerack impact on the example datacenter. Renaming amount to amount_cents in orders-ingest is a major change that breaks customer-360 and orders-enriched, puts api, revenue-daily and dashboard at risk, and the severity is CRITICAL.](docs/images/impact.svg)
+![Terminal: ripplerack impact on the example datacenter. Renaming amount to amount_cents in orders-ingest is a major change that breaks customer-360 and orders-enriched, puts api, revenue-daily and dashboard at risk, and the severity is CRITICAL.](https://raw.githubusercontent.com/IzanVil/RippleRack/main/docs/images/impact.svg)
 
 ## Why?
 
@@ -78,19 +78,19 @@ ripplerack --help
 
 | Guide | What you will find |
 |-------|--------------------|
-| [Datacenter file format](docs/yaml-format.md) | The YAML you write and the validation rules |
-| [Concepts](docs/concepts.md) | The impact graph, the schema SemVer rules, severity, `diff` and `simulate` |
-| [Output formats](docs/output-formats.md) | The JSON documents, error codes, exit codes and Mermaid diagrams |
-| [RippleRack in CI](docs/ci.md) | The command as a gate, the Markdown report and the GitHub Action that comments on a pull request |
-| [Importing schemas](docs/import.md) | `ripplerack import`: turn a JSON Schema into a schema file, the translation rules, warnings and known limitations |
-| [Importing Avro schemas](docs/import-avro.md) | `import --from avro`: the same for an `.avsc` file, choosing one record of many, and its known limitations |
-| [Importing SQL](docs/import-sql.md) | `import --from sql`: the same for the `CREATE TABLE` of a dump, with a dialect, choosing one table of many, and its known limitations |
-| [Changelog](CHANGELOG.md) | What changed in each version |
-| [Contributing](CONTRIBUTING.md) | Setup, checks and conventions |
+| [Datacenter file format](https://github.com/IzanVil/RippleRack/blob/main/docs/yaml-format.md) | The YAML you write and the validation rules |
+| [Concepts](https://github.com/IzanVil/RippleRack/blob/main/docs/concepts.md) | The impact graph, the schema SemVer rules, severity, `diff` and `simulate` |
+| [Output formats](https://github.com/IzanVil/RippleRack/blob/main/docs/output-formats.md) | The JSON documents, error codes, exit codes and Mermaid diagrams |
+| [RippleRack in CI](https://github.com/IzanVil/RippleRack/blob/main/docs/ci.md) | The command as a gate, the Markdown report and the GitHub Action that comments on a pull request |
+| [Importing schemas](https://github.com/IzanVil/RippleRack/blob/main/docs/import.md) | `ripplerack import`: turn a JSON Schema into a schema file, the translation rules, warnings and known limitations |
+| [Importing Avro schemas](https://github.com/IzanVil/RippleRack/blob/main/docs/import-avro.md) | `import --from avro`: the same for an `.avsc` file, choosing one record of many, and its known limitations |
+| [Importing SQL](https://github.com/IzanVil/RippleRack/blob/main/docs/import-sql.md) | `import --from sql`: the same for the `CREATE TABLE` of a dump, with a dialect, choosing one table of many, and its known limitations |
+| [Changelog](https://github.com/IzanVil/RippleRack/blob/main/CHANGELOG.md) | What changed in each version |
+| [Contributing](https://github.com/IzanVil/RippleRack/blob/main/CONTRIBUTING.md) | Setup, checks and conventions |
 
 ## Quick tour
 
-The repository ships with [`examples/mini_datacenter.yaml`](examples/mini_datacenter.yaml):
+The repository ships with [`examples/mini_datacenter.yaml`](https://github.com/IzanVil/RippleRack/blob/main/examples/mini_datacenter.yaml):
 2 racks, 3 servers, 5 services and 4 pipelines forming an order analytics
 stack.
 
@@ -100,7 +100,7 @@ stack.
 uv run ripplerack validate examples/mini_datacenter.yaml
 ```
 
-![Terminal: ripplerack validate on the example file says that mini-datacenter is valid, with 2 racks, 3 servers, 5 services, 4 pipelines, 4 explicit dependencies and a graph of 14 nodes and 19 edges.](docs/images/validate.svg)
+![Terminal: ripplerack validate on the example file says that mini-datacenter is valid, with 2 racks, 3 servers, 5 services, 4 pipelines, 4 explicit dependencies and a graph of 14 nodes and 19 edges.](https://raw.githubusercontent.com/IzanVil/RippleRack/main/docs/images/validate.svg)
 
 This checks types, unique ids, references between components, the fields that
 consumers read and dependency cycles. Typos in keys are reported instead of
@@ -117,7 +117,7 @@ uv run ripplerack graph examples/mini_datacenter.yaml -F mermaid # Mermaid flowc
 
 The default is a tree in the terminal:
 
-![Terminal: ripplerack graph prints the example datacenter as a tree of racks, servers and services, then its pipelines with the fields each one reads, then its explicit dependencies.](docs/images/graph.svg)
+![Terminal: ripplerack graph prints the example datacenter as a tree of racks, servers and services, then its pipelines with the fields each one reads, then its explicit dependencies.](https://raw.githubusercontent.com/IzanVil/RippleRack/main/docs/images/graph.svg)
 
 `-F mermaid` prints a [Mermaid](https://mermaid.js.org) flowchart: racks and servers are
 nested boxes, services and pipelines have their own shapes, and arrows are labelled with
@@ -162,7 +162,7 @@ Downstream components
 Severity:  CRITICAL
 ```
 
-Try the other examples in [`examples/changes/`](examples/changes):
+Try the other examples in [`examples/changes/`](https://github.com/IzanVil/RippleRack/tree/main/examples/changes):
 
 | file | what it shows | severity |
 |------|---------------|----------|
@@ -251,7 +251,7 @@ Every document starts with an envelope (`schemaVersion`, `tool`, `command`) and
 all keys are camelCase. If the command fails, stdout stays empty and stderr gets a
 JSON error with a stable `error.code`, such as `file_not_found` or
 `unknown_pipeline`. The full contract, the error codes and the exit codes are
-documented in [`docs/output-formats.md`](docs/output-formats.md).
+documented in [`docs/output-formats.md`](https://github.com/IzanVil/RippleRack/blob/main/docs/output-formats.md).
 
 #### Markdown for pull requests
 
@@ -266,8 +266,8 @@ uv run ripplerack impact examples/mini_datacenter.yaml -p orders-ingest \
 
 Names that come from your files are written as code, so none of them can mention anybody or break
 the comment, and the report is shortened to fit the 65,536 characters GitHub allows. See
-[`docs/output-formats.md`](docs/output-formats.md#markdown) for the layout and its options, and
-[`docs/ci.md`](docs/ci.md#the-github-action) for the GitHub Action that posts it on every pull
+[`docs/output-formats.md`](https://github.com/IzanVil/RippleRack/blob/main/docs/output-formats.md#markdown) for the layout and its options, and
+[`docs/ci.md`](https://github.com/IzanVil/RippleRack/blob/main/docs/ci.md#the-github-action) for the GitHub Action that posts it on every pull
 request and keeps one comment up to date.
 
 ### `diff`: what does this change do to my datacenter?
@@ -327,7 +327,7 @@ fine. `customer-360` was not touched and reads every field, so it breaks, and `a
 which depends on it, is at risk. `orders-audit` is new and was written against the new
 schema, so it is never reported.
 
-Add `--format json` for the [documented JSON](docs/output-formats.md#diff) or
+Add `--format json` for the [documented JSON](https://github.com/IzanVil/RippleRack/blob/main/docs/output-formats.md#diff) or
 `--fail-on-breaking` to exit with code `2` when a consumer breaks, which makes the
 command a good pull request gate:
 
@@ -367,8 +367,8 @@ Properties that `required` lists become required fields and the others become `n
 references inside the file are followed; objects and arrays become `json` fields. What cannot
 be represented is an error, or with `--lenient` a `json` field and a warning, and
 `additionalProperties: false` and `unevaluatedProperties: false` are reported as warnings. The
-[import guide](docs/import.md) has the translation rules and the
-[known limitations](docs/import.md#known-limitations).
+[import guide](https://github.com/IzanVil/RippleRack/blob/main/docs/import.md) has the translation rules and the
+[known limitations](https://github.com/IzanVil/RippleRack/blob/main/docs/import.md#known-limitations).
 
 The same schema written in Avro gives the same file:
 
@@ -379,8 +379,8 @@ uv run ripplerack import examples/schemas/orders_v2.avsc --from avro --version 2
 A union with `null` becomes `nullable`, a logical type such as `timestamp-millis` becomes
 `timestamp`, an enum keeps its symbols in the description, and a file that defines several
 records is told which to read with `--select`. A union of several types is an error, or with
-`--lenient` a `json` field and a warning. The [Avro guide](docs/import-avro.md) has the rules and
-its [known limitations](docs/import-avro.md#known-limitations).
+`--lenient` a `json` field and a warning. The [Avro guide](https://github.com/IzanVil/RippleRack/blob/main/docs/import-avro.md) has the rules and
+its [known limitations](https://github.com/IzanVil/RippleRack/blob/main/docs/import-avro.md#known-limitations).
 
 So does a table of a SQL file:
 
@@ -393,8 +393,8 @@ with no decimals is an `integer`; the comment of a column is its description, an
 its values there. A dump with many tables is told which to read with `--select`, and a file that
 is not standard SQL which `--dialect` it is written in (`postgres`, `mysql`, `sqlite`,
 `snowflake`...). A type with no equivalent, such as a geometry, is an error, or with `--lenient`
-a `json` field and a warning. The [SQL guide](docs/import-sql.md) has the rules and its
-[known limitations](docs/import-sql.md#known-limitations).
+a `json` field and a warning. The [SQL guide](https://github.com/IzanVil/RippleRack/blob/main/docs/import-sql.md) has the rules and its
+[known limitations](https://github.com/IzanVil/RippleRack/blob/main/docs/import-sql.md#known-limitations).
 
 ### `simulate`: load surges and failures
 
@@ -405,7 +405,7 @@ uv run ripplerack simulate examples/mini_datacenter.yaml --load 1.5 --fail srv-a
 
 The second command, with `srv-a2` taken down:
 
-![Terminal: ripplerack simulate with the load at 1.5 and srv-a2 failed. srv-a1 is at warning with 94% of its CPU and memory, srv-a2 is failed, and spark, orders-enriched, revenue-daily and dashboard are unavailable as a consequence.](docs/images/simulate.svg)
+![Terminal: ripplerack simulate with the load at 1.5 and srv-a2 failed. srv-a1 is at warning with 94% of its CPU and memory, srv-a2 is failed, and spark, orders-enriched, revenue-daily and dashboard are unavailable as a consequence.](https://raw.githubusercontent.com/IzanVil/RippleRack/main/docs/images/simulate.svg)
 
 `--load` scales every service's CPU/memory demand and every server's power draw.
 `--fail` (repeatable) takes a component down along with everything that depends
@@ -432,7 +432,7 @@ flowchart LR
   simulate --> out
 ```
 
-Each module has one job; the [concepts guide](docs/concepts.md) explains the ideas behind them.
+Each module has one job; the [concepts guide](https://github.com/IzanVil/RippleRack/blob/main/docs/concepts.md) explains the ideas behind them.
 
 | module | responsibility |
 |--------|----------------|
@@ -467,11 +467,11 @@ CI runs all of the above on Python 3.11, 3.12 and 3.13.
 - Web UI to explore the graph
 
 Ideas and contributions are welcome. Please open an issue to discuss them.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and
-[CHANGELOG.md](CHANGELOG.md) for release notes. Everyone taking part is expected to follow
-the [Code of Conduct](CODE_OF_CONDUCT.md); please report vulnerabilities privately, as
-described in [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](https://github.com/IzanVil/RippleRack/blob/main/CONTRIBUTING.md) for the development workflow and
+[CHANGELOG.md](https://github.com/IzanVil/RippleRack/blob/main/CHANGELOG.md) for release notes. Everyone taking part is expected to follow
+the [Code of Conduct](https://github.com/IzanVil/RippleRack/blob/main/CODE_OF_CONDUCT.md); please report vulnerabilities privately, as
+described in [SECURITY.md](https://github.com/IzanVil/RippleRack/blob/main/SECURITY.md).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/IzanVil/RippleRack/blob/main/LICENSE)

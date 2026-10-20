@@ -19,7 +19,9 @@ ROOT = Path(__file__).resolve().parent.parent
 IMAGES = ROOT / "docs" / "images"
 README = ROOT / "README.md"
 REGENERATE = "run `uv run python docs/images/generate.py` and commit the images"
-IMAGE_LINK = re.compile(r"!\[([^\]]*)\]\((docs/images/[^)\s]+)\)")
+IMAGE_LINK = re.compile(
+    r"!\[([^\]]*)\]\(https://raw\.githubusercontent\.com/IzanVil/RippleRack/main/(docs/images/[^)\s]+)\)"
+)
 
 
 def load_generator() -> ModuleType:
