@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-20
+
+### Fixed
+
+- The page of the package on PyPI. `pyproject.toml` now names the home, documentation, source,
+  issues and changelog of the project (`[project.urls]`), and every link and image of the README is
+  an absolute address, so PyPI shows the four screenshots and the links to the guides instead of
+  broken relative paths. The README is the only page that PyPI shows; the other guides keep their
+  relative links. Nothing else changes from 0.2.2.
+
 ## [0.2.2] - 2026-10-19
 
 ### Added
