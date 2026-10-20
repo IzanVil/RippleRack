@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - id: ripplerack
-        uses: IzanVil/RippleRack/action@v0.2.2   # a tag or a commit: never a branch
+        uses: IzanVil/RippleRack/action@v0.2.3   # a tag or a commit: never a branch
         with:
           head: datacenter.yaml
           fail-on-breaking: "true"               # "false" only comments

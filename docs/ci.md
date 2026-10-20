@@ -54,13 +54,14 @@ checkout of the pull request does not have that commit, so ask for it:
 RippleRack is not on PyPI yet, so install it from the repository, at a release or a commit:
 
 ```bash
-pip install "git+https://github.com/IzanVil/RippleRack@v0.2.2"
+pip install "git+https://github.com/IzanVil/RippleRack@v0.2.3"
 # or, with uv:
-uv tool install "git+https://github.com/IzanVil/RippleRack@v0.2.2"
+uv tool install "git+https://github.com/IzanVil/RippleRack@v0.2.3"
 ```
 
-`v0.2.2` is the first release with the Markdown report and the action. Pin a tag or a commit,
-not `main`, so that a change to RippleRack cannot turn a green check red on its own.
+The Markdown report and the action are in every release from `v0.2.2` on, and `v0.2.3` is the
+latest. Pin a tag or a commit, not `main`, so that a change to RippleRack cannot turn a green check
+red on its own.
 
 On a runner with no access to PyPI, point pip at a mirror that has RippleRack's dependencies and
 `uv_build` (`PIP_INDEX_URL`, or `UV_INDEX_URL` for uv), or build the wheel once with `uv build` and
@@ -116,14 +117,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: IzanVil/RippleRack/action@v0.2.2
+      - uses: IzanVil/RippleRack/action@v0.2.3
         with:
           head: datacenter.yaml
           fail-on-breaking: "true"
 ```
 
 A copy to start from is in [`examples/ci/ripplerack.yml`](../examples/ci/ripplerack.yml). The
-action is versioned with RippleRack: `@v0.2.2` is the action of the release `v0.2.2` and installs
+action is versioned with RippleRack: `@v0.2.3` is the action of the release `v0.2.3` and installs
 that release, so pin a tag or a commit. It needs Python 3.11 or newer on the runner, which the
 `ubuntu-latest` image has, and it is written with `bash` and `python3`, so it is meant for Linux
 and macOS runners.
@@ -153,7 +154,7 @@ Use them in the steps that follow:
 
 ```yaml
       - id: ripplerack
-        uses: IzanVil/RippleRack/action@v0.2.2
+        uses: IzanVil/RippleRack/action@v0.2.3
         with:
           head: datacenter.yaml
       - if: steps.ripplerack.outputs.severity == 'critical'

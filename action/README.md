@@ -12,7 +12,7 @@ permissions:
 
 steps:
   - uses: actions/checkout@v4
-  - uses: IzanVil/RippleRack/action@v0.2.2
+  - uses: IzanVil/RippleRack/action@v0.2.3
     with:
       head: datacenter.yaml
       fail-on-breaking: "true"
