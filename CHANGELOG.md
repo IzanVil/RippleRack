@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependabot opens a weekly pull request for the dependencies in `uv.lock` and for the actions that
   the workflows use. The development tools come in one pull request; each dependency that users
   install comes alone.
+- A workflow to publish to PyPI (`.github/workflows/publish.yml`). It runs only when someone starts
+  it by hand on the tag of a release, and stops unless that tag is `v` plus the version in
+  `pyproject.toml`. It builds the wheel and the source distribution, checks them with
+  `twine check --strict` and uploads them with PyPI's Trusted Publishing, so the repository stores
+  no token.
 
 ### Changed
 
