@@ -52,6 +52,16 @@ def test_every_link_of_the_readme_to_the_repository_finds_its_file_and_heading()
             assert anchor in anchors(target), f"README.md: no heading #{anchor} in {file}"
 
 
+def test_the_readme_and_the_ci_guide_install_the_package_by_its_name() -> None:
+    name = PROJECT["name"]
+    readme = README.read_text(encoding="utf-8")
+    guide = (ROOT / "docs" / "ci.md").read_text(encoding="utf-8")
+    for command in (f"pip install {name}", f"uv tool install {name}", f"uvx {name} --help"):
+        assert command in readme, f"the README does not say: {command}"
+    assert f"pip install {name}\n" in guide
+    assert f"https://pypi.org/project/{name}/" in readme
+
+
 def test_the_other_guides_keep_their_relative_links() -> None:
     """The other guides are read on GitHub, where a relative link is the right one."""
     guide = Path(ROOT / "docs" / "ci.md")

@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The package page on PyPI also says that RippleRack is pure Python that runs on any operating
   system (`Operating System :: OS Independent`) and on Python 3 only. It adds no code.
+- The README and the CI guide tell how to install RippleRack from PyPI (`pip install ripplerack`,
+  `uv tool install ripplerack` or `uvx ripplerack`), and keep the checkout for working on the
+  project or trying what is not released. The guide advises pinning the version, and the install
+  from the repository is for a tag or a commit.
 
 ## [0.2.3] - 2026-10-20
 

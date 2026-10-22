@@ -58,20 +58,27 @@ or just to learn how these systems fit together.
 
 ## Installation
 
-RippleRack requires Python 3.11+ and uses [uv](https://docs.astral.sh/uv/).
+RippleRack requires Python 3.11+. Install it from [PyPI](https://pypi.org/project/ripplerack/):
+
+```bash
+pip install ripplerack
+ripplerack --help
+```
+
+With [uv](https://docs.astral.sh/uv/), install it as a tool, or run it once without installing it:
+
+```bash
+uv tool install ripplerack
+uvx ripplerack --help
+```
+
+To work on RippleRack itself, or to try what is not released yet, use a checkout:
 
 ```bash
 git clone https://github.com/IzanVil/RippleRack.git
 cd RippleRack
 uv sync
 uv run ripplerack --help
-```
-
-To install the CLI globally from a checkout:
-
-```bash
-uv tool install .
-ripplerack --help
 ```
 
 ## Documentation
@@ -92,7 +99,8 @@ ripplerack --help
 
 The repository ships with [`examples/mini_datacenter.yaml`](https://github.com/IzanVil/RippleRack/blob/main/examples/mini_datacenter.yaml):
 2 racks, 3 servers, 5 services and 4 pipelines forming an order analytics
-stack.
+stack. The commands below are written as they run in a checkout (`uv run ripplerack ...`); if you
+installed RippleRack with pip or `uv tool`, leave out `uv run` and download that file first.
 
 ### `validate`: check the file
 

@@ -51,17 +51,19 @@ checkout of the pull request does not have that commit, so ask for it:
 
 ### Installing RippleRack
 
-RippleRack is not on PyPI yet, so install it from the repository, at a release or a commit:
+Install it from PyPI:
 
 ```bash
-pip install "git+https://github.com/IzanVil/RippleRack@v0.2.3"
+pip install ripplerack
 # or, with uv:
-uv tool install "git+https://github.com/IzanVil/RippleRack@v0.2.3"
+uv tool install ripplerack
 ```
 
-The Markdown report and the action are in every release from `v0.2.2` on, and `v0.2.3` is the
-latest. Pin a tag or a commit, not `main`, so that a change to RippleRack cannot turn a green check
-red on its own.
+The Markdown report and the action are in every release from `0.2.2` on. Pin the version you
+tested (`pip install "ripplerack==X.Y.Z"`), so that a new release cannot turn a green check red on
+its own. To try what is not released yet, install a tag or a commit of the repository instead
+(`pip install "git+https://github.com/IzanVil/RippleRack@<tag or commit>"`); never `main`, for the
+same reason.
 
 On a runner with no access to PyPI, point pip at a mirror that has RippleRack's dependencies and
 `uv_build` (`PIP_INDEX_URL`, or `UV_INDEX_URL` for uv), or build the wheel once with `uv build` and
