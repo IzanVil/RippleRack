@@ -17,7 +17,7 @@ uv sync
 ## Running the checks
 
 All four must pass before you open a pull request (CI runs them on Python
-3.11, 3.12 and 3.13):
+3.11, 3.12, 3.13 and 3.14):
 
 ```bash
 uv run pytest
