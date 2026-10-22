@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python 3.14 is supported. The whole suite, the linter and the type checker pass on it, CI runs
   them on it next to 3.11, 3.12 and 3.13, and the package, the README and the contributing guide
   name it. A test keeps those lists equal, so a version cannot be declared without being tested.
+- Dependabot opens a weekly pull request for the dependencies in `uv.lock` and for the actions that
+  the workflows use. The development tools come in one pull request; each dependency that users
+  install comes alone.
 
 ### Changed
 
