@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The CI guide, the README of the action and the workflow to copy use `actions/checkout@v7`, the
+  version that the workflows of this repository run. The action was tried with it on a real pull
+  request: with the shallow checkout that the workflow to copy makes, it still finds the base
+  commit, updates the same comment and fails the check when a consumer breaks.
 - The package page on PyPI also says that RippleRack is pure Python that runs on any operating
   system (`Operating System :: OS Independent`) and on Python 3 only. It adds no code.
 
