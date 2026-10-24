@@ -20,7 +20,7 @@ jobs:
     name: Build the distribution
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check that this run is on the tag of the declared version
         run: |
@@ -31,7 +31,7 @@ jobs:
           fi
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Build the wheel and the source distribution
         run: uv build
@@ -61,7 +61,7 @@ jobs:
           path: dist/
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
 
       - name: Upload
         run: uv publish --trusted-publishing always dist/*
