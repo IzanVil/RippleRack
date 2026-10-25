@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependabot opens a weekly pull request for the dependencies in `uv.lock` and for the actions that
   the workflows use. The development tools come in one pull request; each dependency that users
   install comes alone.
+- A workflow to publish to PyPI (`.github/workflows/publish.yml`). It runs only when someone starts
+  it by hand on the tag of a release, and stops unless that tag is `v` plus the version in
+  `pyproject.toml`. It builds the wheel and the source distribution, checks them with
+  `twine check --strict` and uploads them with PyPI's Trusted Publishing, so the repository stores
+  no token.
 
 ### Changed
 
@@ -24,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commit, updates the same comment and fails the check when a consumer breaks.
 - The package page on PyPI also says that RippleRack is pure Python that runs on any operating
   system (`Operating System :: OS Independent`) and on Python 3 only. It adds no code.
+- The README and the CI guide tell how to install RippleRack from PyPI (`pip install ripplerack`,
+  `uv tool install ripplerack` or `uvx ripplerack`), and keep the checkout for working on the
+  project or trying what is not released. The guide advises pinning the version, and the install
+  from the repository is for a tag or a commit.
 
 ## [0.2.3] - 2026-10-20
 

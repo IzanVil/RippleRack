@@ -1,0 +1,67 @@
+name: Publish to PyPI
+
+# Nothing here runs by itself: a release made on GitHub does not publish anything. To publish, open
+# Actions > Publish to PyPI > Run workflow and choose the tag of the release (for example v0.2.4)
+# in "Use workflow from". The run stops at once if it is not on the tag of the version that
+# pyproject.toml declares.
+#
+# It uses PyPI's Trusted Publishing, so this repository stores no token. PyPI has to trust the
+# workflow first: on pypi.org add a publisher (a "pending publisher" for the first upload) with
+# owner IzanVil, repository RippleRack, workflow publish.yml and environment pypi.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build the distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check that this run is on the tag of the declared version
+        run: |
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          if [ "$GITHUB_REF_TYPE" != "tag" ] || [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Run this workflow on the tag v$version, not on the $GITHUB_REF_TYPE $GITHUB_REF_NAME."
+            exit 1
+          fi
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Build the wheel and the source distribution
+        run: uv build
+
+      - name: Check how PyPI will show them
+        run: uvx twine check --strict dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Upload to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/ripplerack
+    permissions:
+      id-token: write # Trusted Publishing: PyPI accepts the identity of this run, not a token
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Upload
+        run: uv publish --trusted-publishing always dist/*
