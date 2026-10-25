@@ -89,18 +89,46 @@ def test_only_the_job_that_uploads_can_ask_pypi_for_an_identity() -> None:
     assert set(jobs) == {"build", "publish"}
 
 
-def test_the_upload_waits_for_the_build_and_names_the_project_it_publishes() -> None:
+def uploads() -> list[dict[str, Any]]:
+    steps = PUBLISH["jobs"]["publish"]["steps"]
+    return [step for step in steps if "uv publish" in step.get("run", "")]
+
+
+def test_the_workflow_asks_which_index_to_upload_to_and_defaults_to_pypi() -> None:
+    triggers = PUBLISH["on"] if "on" in PUBLISH else PUBLISH[True]
+    choice = triggers["workflow_dispatch"]["inputs"]["environment"]
+    assert choice["type"] == "choice"
+    assert choice["options"] == ["pypi", "testpypi"]
+    assert choice["default"] == "pypi"
+
+
+def test_the_upload_waits_for_the_build_and_runs_in_the_environment_of_the_chosen_index() -> None:
     publish = PUBLISH["jobs"]["publish"]
     assert publish["needs"] == "build"
-    assert publish["environment"]["name"] == "pypi"
+    assert publish["environment"]["name"] == "${{ inputs.environment }}"
     name = PYPROJECT["project"]["name"]
-    assert publish["environment"]["url"] == f"https://pypi.org/p/{name}"
+    url = publish["environment"]["url"]
+    assert "inputs.environment == 'testpypi'" in url
+    assert f"'https://test.pypi.org/p/{name}'" in url
+    assert f"'https://pypi.org/p/{name}'" in url
 
 
-def test_the_upload_uses_trusted_publishing_and_no_secret() -> None:
-    text = PUBLISH_FILE.read_text(encoding="utf-8")
-    assert "uv publish --trusted-publishing always" in text
-    assert "secrets." not in text
+def test_each_index_has_its_own_upload_and_only_testpypi_names_another_address() -> None:
+    steps = uploads()
+    assert len(steps) == 2
+    command = {step["if"]: step["run"] for step in steps}
+    assert command == {
+        "inputs.environment == 'pypi'": "uv publish --trusted-publishing always dist/*",
+        "inputs.environment == 'testpypi'": (
+            "uv publish --trusted-publishing always"
+            " --publish-url https://test.pypi.org/legacy/ dist/*"
+        ),
+    }
+
+
+def test_the_uploads_use_trusted_publishing_and_no_secret() -> None:
+    assert all("--trusted-publishing always" in step["run"] for step in uploads())
+    assert "secrets." not in PUBLISH_FILE.read_text(encoding="utf-8")
 
 
 def test_the_build_checks_the_files_the_way_pypi_will_show_them() -> None:

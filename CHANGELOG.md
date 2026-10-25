@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A workflow to publish to PyPI (`.github/workflows/publish.yml`). It runs only when someone starts
   it by hand on the tag of a release, and stops unless that tag is `v` plus the version in
   `pyproject.toml`. It builds the wheel and the source distribution, checks them with
-  `twine check --strict` and uploads them with PyPI's Trusted Publishing, so the repository stores
-  no token.
+  `twine check --strict` and uploads them with Trusted Publishing, so the repository stores no
+  token. When it is started it asks which index to upload to: PyPI (the default) or TestPyPI, to
+  try an upload first. Each index has its own publisher and its own environment of the same name.
 
 ### Changed
 

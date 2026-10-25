@@ -1,16 +1,26 @@
 name: Publish to PyPI
 
 # Nothing here runs by itself: a release made on GitHub does not publish anything. To publish, open
-# Actions > Publish to PyPI > Run workflow and choose the tag of the release (for example v0.2.4)
-# in "Use workflow from". The run stops at once if it is not on the tag of the version that
-# pyproject.toml declares.
+# Actions > Publish to PyPI > Run workflow, choose the tag of the release (for example v0.2.4) in
+# "Use workflow from" and the index in "environment": pypi (the default) uploads to PyPI, testpypi
+# to TestPyPI, the place to try an upload first. The run stops at once if it is not on the tag of
+# the version that pyproject.toml declares.
 #
-# It uses PyPI's Trusted Publishing, so this repository stores no token. PyPI has to trust the
-# workflow first: on pypi.org add a publisher (a "pending publisher" for the first upload) with
-# owner IzanVil, repository RippleRack, workflow publish.yml and environment pypi.
+# It uses Trusted Publishing, so this repository stores no token. Each index has to trust the
+# workflow first: on pypi.org and on test.pypi.org add a publisher (a "pending publisher" for the
+# first upload) with owner IzanVil, repository RippleRack, workflow publish.yml and the environment
+# of that index: pypi on PyPI, testpypi on TestPyPI.
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: The index to upload to. TestPyPI is for trying an upload first.
+        type: choice
+        options:
+          - pypi
+          - testpypi
+        default: pypi
 
 permissions:
   contents: read
@@ -46,12 +56,12 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Upload to PyPI
+    name: Upload to ${{ inputs.environment }}
     needs: build
     runs-on: ubuntu-latest
     environment:
-      name: pypi
-      url: https://pypi.org/p/ripplerack
+      name: ${{ inputs.environment }}
+      url: ${{ inputs.environment == 'testpypi' && 'https://test.pypi.org/p/ripplerack' || 'https://pypi.org/p/ripplerack' }}
     permissions:
       id-token: write # Trusted Publishing: PyPI accepts the identity of this run, not a token
     steps:
@@ -63,5 +73,10 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
-      - name: Upload
+      - name: Upload to PyPI
+        if: inputs.environment == 'pypi'
         run: uv publish --trusted-publishing always dist/*
+
+      - name: Upload to TestPyPI
+        if: inputs.environment == 'testpypi'
+        run: uv publish --trusted-publishing always --publish-url https://test.pypi.org/legacy/ dist/*
