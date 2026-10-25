@@ -39,7 +39,7 @@ In a pull request the base is the file as it is in the branch the pull request g
 checkout of the pull request does not have that commit, so ask for it:
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     fetch-depth: 0          # or fetch just the base commit with git fetch --depth=1 origin <sha>
 - run: |
@@ -116,7 +116,7 @@ jobs:
   impact:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: IzanVil/RippleRack/action@v0.2.3
         with:
           head: datacenter.yaml

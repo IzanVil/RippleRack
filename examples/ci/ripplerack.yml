@@ -22,7 +22,7 @@ jobs:
     name: What does this change break?
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: ripplerack
         uses: IzanVil/RippleRack/action@v0.2.3   # a tag or a commit: never a branch
