@@ -5,7 +5,7 @@
 [![CI](https://github.com/IzanVil/RippleRack/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/IzanVil/RippleRack/actions/workflows/ci.yml)
 [![Python versions](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://github.com/IzanVil/RippleRack/blob/main/pyproject.toml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/IzanVil/RippleRack/blob/main/LICENSE)
-[![Version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2FIzanVil%2FRippleRack%2Fmain%2Fpyproject.toml&query=%24.project.version&label=version)](https://github.com/IzanVil/RippleRack/blob/main/CHANGELOG.md)
+[![PyPI](https://img.shields.io/pypi/v/ripplerack)](https://pypi.org/project/ripplerack/)
 
 RippleRack is a local-first simulator for datacenters and data pipelines. You
 describe your racks, servers, services and pipelines in a single YAML file and
