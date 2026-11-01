@@ -62,6 +62,16 @@ def test_the_readme_and_the_ci_guide_install_the_package_by_its_name() -> None:
     assert f"https://pypi.org/project/{name}/" in readme
 
 
+def test_the_version_badge_of_the_readme_shows_what_pypi_has() -> None:
+    name = PROJECT["name"]
+    readme = README.read_text(encoding="utf-8")
+    badge = f"![PyPI](https://img.shields.io/pypi/v/{name})"
+    assert f"[{badge}](https://pypi.org/project/{name}/)" in readme
+    assert "dynamic/toml" not in readme, (
+        "a badge that reads pyproject.toml shows an unpublished version"
+    )
+
+
 def test_the_other_guides_keep_their_relative_links() -> None:
     """The other guides are read on GitHub, where a relative link is the right one."""
     guide = Path(ROOT / "docs" / "ci.md")

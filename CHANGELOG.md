@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The version badge of the README shows the version published on PyPI and links to the page of the
+  package, instead of reading the version from `pyproject.toml` on `main`.
+
 ## [0.2.4] - 2026-10-25
 
 ### Added
