@@ -100,3 +100,32 @@ command you ran, and the expected vs. actual output.
 **Features**: describe the problem you want to solve before the solution, and
 include a small example of the YAML or command you would like to write. Open an
 issue to discuss larger changes before starting work on them.
+
+## Releasing
+
+This section is for maintainers. A release is a version bump, a changelog section, a tag and an
+upload. Making the tag or a GitHub release publishes nothing: the upload is always started by
+hand, and no token is stored, because each index trusts the workflow (see the comment at the top
+of [`publish.yml`](.github/workflows/publish.yml)).
+
+1. Bump `version` in `pyproject.toml` and run `uv lock`. The diff of `uv.lock` must show only
+   that version.
+2. Name the new version where the documentation shows it: the three `"version"` examples in
+   [docs/output-formats.md](docs/output-formats.md) and the `@vX.Y.Z` of the action in
+   [docs/ci.md](docs/ci.md), [action/README.md](action/README.md) and
+   [examples/ci/ripplerack.yml](examples/ci/ripplerack.yml).
+3. Cut the changelog: move what is under `[Unreleased]` into a new `[X.Y.Z] - date` section and
+   leave `[Unreleased]` empty.
+4. Run the four checks on every Python version CI runs.
+5. Tag the commit that cuts the changelog (`git tag -a vX.Y.Z -m "RippleRack X.Y.Z"`), push
+   `main` and the tag, and create a GitHub release with the notes of that changelog section. While
+   the project is in alpha, mark it as a pre-release.
+6. Open Actions > Publish to PyPI > Run workflow. In "Use workflow from" open the Tag tab and
+   choose `vX.Y.Z`: on a branch the run stops, by design. Choose the `testpypi` environment first,
+   look at the page on TestPyPI and install the package in a clean virtual environment with
+   `pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ ripplerack==X.Y.Z`.
+   Then run it again with the `pypi` environment, which is the default.
+7. Check the page on PyPI and `pip install ripplerack==X.Y.Z` in a clean environment.
+
+An index does not accept a file again once it has one with that name, so a mistake that reaches
+it means a new version.

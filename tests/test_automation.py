@@ -26,6 +26,7 @@ PYPROJECT = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 DEPENDABOT = yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8"))
 PUBLISH_FILE = ROOT / ".github" / "workflows" / "publish.yml"
 PUBLISH = yaml.safe_load(PUBLISH_FILE.read_text(encoding="utf-8"))
+CONTRIBUTING = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
 NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
@@ -179,3 +180,26 @@ def test_the_build_stops_unless_it_runs_on_the_tag_of_the_declared_version(
     assert (result.returncode == 0) is passes, result.stdout + result.stderr
     if not passes:
         assert "::error::Run this workflow on the tag v1.2.3" in result.stdout
+
+
+def releasing() -> str:
+    [section] = re.findall(
+        r"^## Releasing\n(.*?)(?=^## |\Z)", CONTRIBUTING, re.MULTILINE | re.DOTALL
+    )
+    return " ".join(section.split())
+
+
+def test_the_contributing_guide_says_how_to_start_the_publish_workflow() -> None:
+    steps = releasing()
+    triggers = PUBLISH["on"] if "on" in PUBLISH else PUBLISH[True]
+    options = triggers["workflow_dispatch"]["inputs"]["environment"]["options"]
+    assert f"Actions > {PUBLISH['name']} > Run workflow" in steps
+    assert "Use workflow from" in steps
+    assert ".github/workflows/publish.yml" in steps
+    for option in options:
+        assert f"`{option}`" in steps, f"the guide does not name the environment {option}"
+
+
+def test_the_contributing_guide_tries_testpypi_before_pypi() -> None:
+    steps = releasing()
+    assert steps.index("`testpypi`") < steps.index("`pypi`")
