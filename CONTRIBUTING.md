@@ -110,10 +110,11 @@ of [`publish.yml`](.github/workflows/publish.yml)).
 
 1. Bump `version` in `pyproject.toml` and run `uv lock`. The diff of `uv.lock` must show only
    that version.
-2. Name the new version where the documentation shows it: the three `"version"` examples in
-   [docs/output-formats.md](docs/output-formats.md) and the `@vX.Y.Z` of the action in
-   [docs/ci.md](docs/ci.md), [action/README.md](action/README.md) and
-   [examples/ci/ripplerack.yml](examples/ci/ripplerack.yml).
+2. Name the new version where the documentation shows it, in the same commit as the bump: the
+   `"version"` examples in [docs/output-formats.md](docs/output-formats.md) and the `@vX.Y.Z` of
+   the action in [docs/ci.md](docs/ci.md), [action/README.md](action/README.md) and
+   [examples/ci/ripplerack.yml](examples/ci/ripplerack.yml). A test fails if one of them names
+   another version.
 3. Cut the changelog: move what is under `[Unreleased]` into a new `[X.Y.Z] - date` section and
    leave `[Unreleased]` empty.
 4. Run the four checks on every Python version CI runs.
