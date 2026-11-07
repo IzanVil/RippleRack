@@ -5,7 +5,7 @@ import pytest
 from ripplerack.capacity import ResourceUsage, Status, classify
 from ripplerack.parser import LoadedDatacenter
 from ripplerack.simulate import simulate
-from tests.helpers import add_flow_numbers, load_variant
+from tests.helpers import load_variant, without_flow
 
 
 @pytest.mark.parametrize(
@@ -30,8 +30,9 @@ def test_nominal_load_is_healthy(mini_dc: LoadedDatacenter) -> None:
     assert srv_a1.memory.used == 80
 
 
-def test_load_surge_overloads(mini_dc: LoadedDatacenter) -> None:
-    report = simulate(mini_dc.datacenter, mini_dc.graph, load_factor=1.5)
+def test_load_surge_overloads() -> None:
+    without = load_variant(without_flow)
+    report = simulate(without.datacenter, without.graph, load_factor=1.5)
     assert set(report.overloaded) == {"rack-a", "srv-a2"}
     assert not report.healthy
 
@@ -68,12 +69,13 @@ def test_negative_load(mini_dc: LoadedDatacenter) -> None:
         simulate(mini_dc.datacenter, mini_dc.graph, load_factor=-1)
 
 
-def test_no_flow_without_declared_fields(mini_dc: LoadedDatacenter) -> None:
-    assert simulate(mini_dc.datacenter, mini_dc.graph).flow is None
+def test_no_flow_without_declared_fields() -> None:
+    without = load_variant(without_flow)
+    assert simulate(without.datacenter, without.graph).flow is None
 
 
-def test_flow_follows_the_load_and_the_failures() -> None:
-    flowing = load_variant(add_flow_numbers)
+def test_flow_follows_the_load_and_the_failures(mini_dc: LoadedDatacenter) -> None:
+    flowing = mini_dc
     surge = simulate(flowing.datacenter, flowing.graph, load_factor=1.5).flow
     assert surge is not None
     assert {flow.id: flow.status for flow in surge.pipelines}["orders-ingest"] is Status.OVERLOADED
@@ -84,15 +86,15 @@ def test_flow_follows_the_load_and_the_failures() -> None:
     assert failed <= {node.id for node in report.unavailable}
 
 
-def test_overloaded_pipelines_make_the_report_unhealthy() -> None:
-    flowing = load_variant(add_flow_numbers)
+def test_overloaded_pipelines_make_the_report_unhealthy(mini_dc: LoadedDatacenter) -> None:
+    flowing = mini_dc
     report = simulate(flowing.datacenter, flowing.graph, load_factor=1.5)
     assert report.overloaded == ["rack-a", "srv-a2", "orders-ingest", "orders-enriched"]
     assert not report.healthy
 
 
-def test_a_pipeline_at_warning_is_still_healthy() -> None:
-    flowing = load_variant(add_flow_numbers)
+def test_a_pipeline_at_warning_is_still_healthy(mini_dc: LoadedDatacenter) -> None:
+    flowing = mini_dc
     report = simulate(flowing.datacenter, flowing.graph)
     assert report.flow is not None
     assert Status.WARNING in {flow.status for flow in report.flow.pipelines}

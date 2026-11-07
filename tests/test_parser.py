@@ -13,6 +13,7 @@ from ripplerack.parser import (
     load_schema,
     parse_datacenter,
 )
+from tests.helpers import without_flow
 
 
 def test_example_builds_graph(raw_mini: dict[str, Any]) -> None:
@@ -73,6 +74,7 @@ def test_invalid_documents(raw_mini: dict[str, Any], mutate: Any, message: str) 
 
 def test_flow_fields_are_optional_and_loaded(raw_mini: dict[str, Any]) -> None:
     data = copy.deepcopy(raw_mini)
+    without_flow(data)
     data["pipelines"][0].update(arrival=400, throughput=500, latency=2)
     data["pipelines"][2].update(output_ratio=0.001)
     pipelines = {p.id: p for p in parse_datacenter(data).datacenter.pipelines}

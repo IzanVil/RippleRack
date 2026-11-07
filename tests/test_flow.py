@@ -19,13 +19,14 @@ from ripplerack.capacity import Status
 from ripplerack.flow import FlowReport, PipelineFlow, SlowestPath, analyze_flow
 from ripplerack.models import Datacenter
 from ripplerack.parser import parse_datacenter
-from tests.helpers import FLOW_NUMBERS, add_flow_numbers
+from tests.helpers import without_flow
 
 
 def example(raw_mini: dict[str, Any], drop: tuple[str, ...] = ()) -> Datacenter:
     """The mini datacenter with the numbers of the example, minus the fields in ``drop``."""
     data = copy.deepcopy(raw_mini)
-    add_flow_numbers(data, drop)
+    if drop:
+        without_flow(data, *drop)
     return parse_datacenter(data).datacenter
 
 
@@ -92,13 +93,14 @@ def test_example_under_surge(raw_mini: dict[str, Any]) -> None:
 
 
 def test_nothing_declared_gives_no_report(raw_mini: dict[str, Any]) -> None:
-    assert analyze_flow(parse_datacenter(raw_mini).datacenter, 1.0, ()) is None
+    data = copy.deepcopy(raw_mini)
+    without_flow(data)
+    assert analyze_flow(parse_datacenter(data).datacenter, 1.0, ()) is None
 
 
 def test_the_pipelines_come_in_the_order_the_data_flows(raw_mini: dict[str, Any]) -> None:
     data = copy.deepcopy(raw_mini)
     data["pipelines"].reverse()
-    add_flow_numbers(data)
     report = analyze_flow(parse_datacenter(data).datacenter, 1.0, ())
     assert report is not None
     ids = [flow.id for flow in report.pipelines]
@@ -293,7 +295,7 @@ def test_the_bottleneck_is_the_busiest_pipeline(raw_mini: dict[str, Any]) -> Non
 
 
 def test_with_every_pipeline_down_there_is_nothing_to_point_at(raw_mini: dict[str, Any]) -> None:
-    report = reported(example(raw_mini), down=tuple(FLOW_NUMBERS))
+    report = reported(example(raw_mini), down=tuple(p["id"] for p in raw_mini["pipelines"]))
     assert report.bottleneck is None
     assert report.slowest_path is None
     assert {flow.status for flow in report.pipelines} == {Status.FAILED}

@@ -51,7 +51,7 @@ def printed(name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     ("name", "lines"),
     [
         (
-            "simulate_flow_nominal",
+            "simulate_default",
             [
                 "Pipelines",
                 "Bottleneck: orders-enriched at 89% (400 of 450 records/s)",
@@ -83,7 +83,7 @@ def test_the_simulation_says_where_the_data_piles_up_and_how_slow_it_is(
     [
         ("simulate_flow_everything_down", ["Bottleneck", "Slowest path"]),
         ("simulate_flow_without_arrival", ["Bottleneck"]),
-        ("simulate_default", ["Pipelines", "Bottleneck", "Slowest path"]),
+        ("simulate_without_flow_numbers", ["Pipelines", "Bottleneck", "Slowest path"]),
     ],
 )
 def test_what_cannot_be_known_or_is_not_declared_is_not_printed(

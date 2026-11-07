@@ -14,15 +14,4 @@ Servers
 │ srv-a2 │ rack-a │ 12 / 16 (75%) │  40 / 64 (62%) │ ok     │
 │ srv-b1 │ rack-b │ 10 / 24 (42%) │  24 / 96 (25%) │ ok     │
 └────────┴────────┴───────────────┴────────────────┴────────┘
-Pipelines                                                              
-┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┓
-┃ pipeline        ┃ in (rec/s) ┃ capacity ┃ usage ┃ status  ┃ latency ┃
-┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━╇━━━━━━━━━┩
-│ orders-ingest   │        400 │      500 │   80% │ warning │     2 s │
-│ orders-enriched │        400 │      450 │   89% │ warning │    32 s │
-│ revenue-daily   │        400 │      600 │   67% │ ok      │   332 s │
-│ customer-360    │        400 │      800 │   50% │ ok      │     7 s │
-└─────────────────┴────────────┴──────────┴───────┴─────────┴─────────┘
-Bottleneck: orders-enriched at 89% (400 of 450 records/s)
-Slowest path: orders-ingest → orders-enriched → revenue-daily, 332 s
 ✓ All components within capacity.
