@@ -16,7 +16,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from ripplerack.capacity import Status
-from ripplerack.flow import FlowReport, PipelineFlow, analyze_flow
+from ripplerack.flow import FlowReport, PipelineFlow, SlowestPath, analyze_flow
 from ripplerack.models import Datacenter
 from ripplerack.parser import parse_datacenter
 
@@ -232,6 +232,82 @@ def test_a_pipeline_without_throughput_has_no_capacity_and_passes_everything() -
     assert flow.processed == flow.offered == 100
 
 
+def reported(datacenter: Datacenter, load: float = 1.0, down: tuple[str, ...] = ()) -> FlowReport:
+    report = analyze_flow(datacenter, load, down)
+    assert report is not None
+    return report
+
+
+def test_end_to_end_latency_of_the_example(raw_mini: dict[str, Any]) -> None:
+    report = reported(example(raw_mini))
+    assert [flow.latency for flow in report.pipelines] == [2, 32, 332, 7]
+    assert report.slowest_path == SlowestPath(
+        ["orders-ingest", "orders-enriched", "revenue-daily"], 332
+    )
+
+
+def test_latency_does_not_need_any_rate() -> None:
+    report = reported(small({"id": "a", "latency": 3}, {"id": "b", "inputs": ["a"], "latency": 4}))
+    assert [flow.latency for flow in report.pipelines] == [3, 7]
+    assert [flow.offered for flow in report.pipelines] == [None, None]
+    assert report.bottleneck is None
+    assert report.slowest_path == SlowestPath(["a", "b"], 7)
+
+
+def test_a_diamond_takes_the_longest_path() -> None:
+    report = reported(
+        small(
+            {"id": "source", "latency": 1},
+            {"id": "left", "inputs": ["source"], "latency": 10},
+            {"id": "right", "inputs": ["source"], "latency": 40},
+            {"id": "sink", "inputs": ["left", "right"], "latency": 1},
+        )
+    )
+    assert report.slowest_path == SlowestPath(["source", "right", "sink"], 42)
+
+
+def test_a_tie_goes_to_the_input_declared_first() -> None:
+    report = reported(
+        small(
+            {"id": "a", "latency": 5},
+            {"id": "b", "latency": 5},
+            {"id": "c", "inputs": ["a", "b"], "latency": 1},
+        )
+    )
+    assert report.slowest_path == SlowestPath(["a", "c"], 6)
+
+
+def test_the_slowest_path_leaves_out_what_failed(raw_mini: dict[str, Any]) -> None:
+    report = reported(example(raw_mini), down=("orders-enriched", "revenue-daily"))
+    assert report.slowest_path == SlowestPath(["orders-ingest", "customer-360"], 7)
+    latencies = {flow.id: flow.latency for flow in report.pipelines}
+    assert latencies["orders-enriched"] is None
+    assert latencies["revenue-daily"] is None
+
+
+def test_without_latency_there_is_no_slowest_path() -> None:
+    report = reported(small({"id": "a", "arrival": 10, "throughput": 20}))
+    assert report.slowest_path is None
+
+
+def test_the_bottleneck_is_the_busiest_pipeline(raw_mini: dict[str, Any]) -> None:
+    datacenter = example(raw_mini)
+    nominal = reported(datacenter).bottleneck
+    assert nominal is not None
+    assert nominal.id == "orders-enriched"
+    surge = reported(datacenter, load=1.5).bottleneck
+    assert surge is not None
+    assert surge.id == "orders-ingest"
+    assert surge.utilization == pytest.approx(1.2)
+
+
+def test_with_every_pipeline_down_there_is_nothing_to_point_at(raw_mini: dict[str, Any]) -> None:
+    report = reported(example(raw_mini), down=tuple(NUMBERS))
+    assert report.bottleneck is None
+    assert report.slowest_path is None
+    assert {flow.status for flow in report.pipelines} == {Status.FAILED}
+
+
 # ----------------------------------------------------------------------------- properties
 
 RATE = st.floats(min_value=0, max_value=1e6)
@@ -291,3 +367,22 @@ def test_more_load_never_offers_less(
         assert before.offered is not None
         assert after.offered is not None
         assert before.offered <= after.offered
+
+
+@given(latencies=st.lists(st.floats(min_value=0, max_value=1e4), min_size=1, max_size=6))
+def test_latency_never_drops_below_the_own_one_or_the_one_of_an_input(
+    latencies: list[float],
+) -> None:
+    pipelines: list[dict[str, Any]] = [
+        {"id": f"p{index}", "latency": seconds, **({"inputs": [f"p{index - 1}"]} if index else {})}
+        for index, seconds in enumerate(latencies)
+    ]
+    reached = [flow.latency for flow in reported(small(*pipelines)).pipelines]
+    for index, seconds in enumerate(latencies):
+        latency = reached[index]
+        assert latency is not None
+        assert latency >= seconds
+        if index:
+            before = reached[index - 1]
+            assert before is not None
+            assert latency >= before

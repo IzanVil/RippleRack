@@ -5,12 +5,16 @@ one receive ``arrival`` records per second (times the load factor); each pipelin
 ``throughput`` of what it is offered, and what it processes (times ``output_ratio``) is what the
 pipelines that read it are offered. What a pipeline cannot process piles up as a queue and never
 reaches the next one, so a bottleneck shows where it is and does not spread downstream.
+
+Latency adds up along the way: a pipeline delivers ``latency`` seconds after the slowest of the
+pipelines it reads, so the figure of each pipeline is the time since the data entered the origin of
+its slowest path.
 """
 
 from __future__ import annotations
 
 from collections.abc import Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from ripplerack.capacity import ResourceUsage, Status, classify
 from ripplerack.models import Datacenter, Pipeline
@@ -26,13 +30,24 @@ class PipelineFlow:
     capacity: float | None
     utilization: float | None
     status: Status | None
+    latency: float | None = None
+
+
+@dataclass(frozen=True)
+class SlowestPath:
+    """The pipelines a record crosses from the origin of the slowest path, and the seconds."""
+
+    pipelines: list[str]
+    seconds: float
 
 
 @dataclass(frozen=True)
 class FlowReport:
-    """The flow of every pipeline, in the order the data flows."""
+    """The flow of every pipeline, in the order the data flows, and what stands out."""
 
     pipelines: list[PipelineFlow]
+    bottleneck: PipelineFlow | None = None
+    slowest_path: SlowestPath | None = None
 
 
 def analyze_flow(
@@ -44,12 +59,17 @@ def analyze_flow(
     """
     if not any(_declares_flow(pipeline) for pipeline in datacenter.pipelines):
         return None
+    ordered = _in_flow_order(datacenter.pipelines)
     emitted: dict[str, float | None] = {}
     flows: list[PipelineFlow] = []
-    for pipeline in _in_flow_order(datacenter.pipelines):
+    for pipeline in ordered:
         flow, emitted[pipeline.id] = _flow_of(pipeline, load_factor, pipeline.id in down, emitted)
         flows.append(flow)
-    return FlowReport(flows)
+    reached = _latencies(ordered, down)
+    flows = [
+        replace(flow, latency=reached[flow.id][0]) if flow.id in reached else flow for flow in flows
+    ]
+    return FlowReport(flows, _bottleneck(flows), _slowest_path(flows, reached))
 
 
 def _declares_flow(pipeline: Pipeline) -> bool:
@@ -115,3 +135,50 @@ def _offered(
 def _scaled(rate: float, factor: float) -> float:
     """``rate * factor``, where nothing times anything, even infinity, is nothing."""
     return 0.0 if rate == 0 or factor == 0 else rate * factor
+
+
+def _latencies(
+    pipelines: list[Pipeline], down: Collection[str]
+) -> dict[str, tuple[float, str | None]]:
+    """For each pipeline still up, the seconds since its slowest path began and the pipeline before.
+
+    A pipeline delivers ``latency`` seconds after the slowest of the pipelines it reads; when two
+    are equally slow, the one declared first is the one before.
+    """
+    reached: dict[str, tuple[float, str | None]] = {}
+    for pipeline in pipelines:
+        if pipeline.id in down:
+            continue
+        before, via = 0.0, None
+        for upstream in dict.fromkeys(item.pipeline for item in pipeline.inputs):
+            if upstream in reached and (via is None or reached[upstream][0] > before):
+                before, via = reached[upstream][0], upstream
+        reached[pipeline.id] = ((pipeline.latency or 0.0) + before, via)
+    return reached
+
+
+def _bottleneck(flows: list[PipelineFlow]) -> PipelineFlow | None:
+    """The pipeline using the largest part of its capacity, the first one if several tie."""
+    busiest: PipelineFlow | None = None
+    for flow in flows:
+        if flow.utilization is None or flow.status is Status.FAILED:
+            continue
+        if busiest is None or (busiest.utilization or 0.0) < flow.utilization:
+            busiest = flow
+    return busiest
+
+
+def _slowest_path(
+    flows: list[PipelineFlow], reached: dict[str, tuple[float, str | None]]
+) -> SlowestPath | None:
+    """The slowest path to any pipeline still up; ``None`` when nothing adds any latency."""
+    last: str | None = None
+    for flow in flows:
+        if flow.latency is not None and (last is None or reached[last][0] < flow.latency):
+            last = flow.id
+    if last is None or reached[last][0] <= 0:
+        return None
+    path = [last]
+    while (before := reached[path[-1]][1]) is not None:
+        path.append(before)
+    return SlowestPath(path[::-1], reached[last][0])
