@@ -427,7 +427,9 @@ record in, 1 when not given). With those numbers `simulate` adds a table of the 
 with what each one is offered, how much of its throughput that is, its status and the
 seconds since its slowest path began, and names the bottleneck and the slowest path.
 `--load` scales `arrival`, `--fail` cuts the pipelines that go down, and a pipeline offered
-more than it can process counts as `overloaded`.
+more than it can process counts as `overloaded`. The
+[concepts guide](https://github.com/IzanVil/RippleRack/blob/main/docs/concepts.md#throughput-and-latency)
+has the rules.
 
 ## How it works
 
@@ -462,6 +464,8 @@ Each module has one job; the [concepts guide](https://github.com/IzanVil/RippleR
 | `diff.py` | Comparison of two datacenter files: components, dependencies, schema impact |
 | `importers/` | Schema importers (JSON Schema, Avro and SQL) and the YAML writer for what they read |
 | `report.py` | Versioned JSON documents for CI (impact and diff results, errors) |
+| `capacity.py` | Usage against capacity and the thresholds that read it: `ok`, `warning`, `overloaded` |
+| `flow.py` | Rates, load, latency, bottleneck and slowest path of the pipelines |
 | `simulate.py` | Capacity and failure simulation |
 | `display.py` | Rich tables and trees for the text output of the commands |
 | `cli.py` | Typer command line: loads the input, calls the engine, prints the result |
