@@ -19,21 +19,13 @@ from ripplerack.capacity import Status
 from ripplerack.flow import FlowReport, PipelineFlow, SlowestPath, analyze_flow
 from ripplerack.models import Datacenter
 from ripplerack.parser import parse_datacenter
-
-NUMBERS: dict[str, dict[str, float]] = {
-    "orders-ingest": {"arrival": 400, "throughput": 500, "latency": 2},
-    "orders-enriched": {"throughput": 450, "latency": 30},
-    "revenue-daily": {"throughput": 600, "latency": 300, "output_ratio": 0.001},
-    "customer-360": {"throughput": 800, "latency": 5},
-}
+from tests.helpers import FLOW_NUMBERS, add_flow_numbers
 
 
 def example(raw_mini: dict[str, Any], drop: tuple[str, ...] = ()) -> Datacenter:
     """The mini datacenter with the numbers of the example, minus the fields in ``drop``."""
     data = copy.deepcopy(raw_mini)
-    for pipeline in data["pipelines"]:
-        numbers = NUMBERS[pipeline["id"]]
-        pipeline.update({key: value for key, value in numbers.items() if key not in drop})
+    add_flow_numbers(data, drop)
     return parse_datacenter(data).datacenter
 
 
@@ -106,8 +98,7 @@ def test_nothing_declared_gives_no_report(raw_mini: dict[str, Any]) -> None:
 def test_the_pipelines_come_in_the_order_the_data_flows(raw_mini: dict[str, Any]) -> None:
     data = copy.deepcopy(raw_mini)
     data["pipelines"].reverse()
-    for pipeline in data["pipelines"]:
-        pipeline.update(NUMBERS[pipeline["id"]])
+    add_flow_numbers(data)
     report = analyze_flow(parse_datacenter(data).datacenter, 1.0, ())
     assert report is not None
     ids = [flow.id for flow in report.pipelines]
@@ -302,7 +293,7 @@ def test_the_bottleneck_is_the_busiest_pipeline(raw_mini: dict[str, Any]) -> Non
 
 
 def test_with_every_pipeline_down_there_is_nothing_to_point_at(raw_mini: dict[str, Any]) -> None:
-    report = reported(example(raw_mini), down=tuple(NUMBERS))
+    report = reported(example(raw_mini), down=tuple(FLOW_NUMBERS))
     assert report.bottleneck is None
     assert report.slowest_path is None
     assert {flow.status for flow in report.pipelines} == {Status.FAILED}

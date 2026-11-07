@@ -49,6 +49,11 @@ class FlowReport:
     bottleneck: PipelineFlow | None = None
     slowest_path: SlowestPath | None = None
 
+    @property
+    def overloaded(self) -> list[str]:
+        """Ids of the pipelines offered more than they can process."""
+        return [flow.id for flow in self.pipelines if flow.status is Status.OVERLOADED]
+
 
 def analyze_flow(
     datacenter: Datacenter, load_factor: float, down: Collection[str]

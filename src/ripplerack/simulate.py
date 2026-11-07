@@ -2,7 +2,8 @@
 
 The simulation is deliberately static and deterministic: it scales service
 resource demands by a load factor, compares them with server and rack capacity,
-and optionally marks components as failed to see what goes down with them.
+and optionally marks components as failed to see what goes down with them. When the pipelines
+declare how much data flows through them, the same load and failures are applied to that flow too.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from dataclasses import dataclass, field
 import networkx as nx
 
 from ripplerack.capacity import ResourceUsage, Status, classify
+from ripplerack.flow import FlowReport, analyze_flow
 from ripplerack.impact import AffectedNode, blast_radius
 from ripplerack.models import Datacenter, Rack, Server
 
@@ -45,13 +47,15 @@ class SimulationReport:
     racks: list[RackReport] = field(default_factory=list)
     failed: list[str] = field(default_factory=list)
     unavailable: list[AffectedNode] = field(default_factory=list)
+    flow: FlowReport | None = None
 
     @property
     def overloaded(self) -> list[str]:
-        """Ids of servers and racks running above capacity."""
+        """Ids of racks, servers and pipelines running above capacity."""
         racks = [rack.id for rack in self.racks if rack.status is Status.OVERLOADED]
         servers = [server.id for server in self.servers if server.status is Status.OVERLOADED]
-        return racks + servers
+        pipelines = [] if self.flow is None else self.flow.overloaded
+        return racks + servers + pipelines
 
     @property
     def healthy(self) -> bool:
@@ -86,6 +90,7 @@ def simulate(
         racks=[_rack_report(rack, down, load_factor) for rack in datacenter.racks],
         failed=list(failures),
         unavailable=sorted(unavailable.values(), key=lambda item: (item.distance, item.id)),
+        flow=analyze_flow(datacenter, load_factor, down),
     )
 
 

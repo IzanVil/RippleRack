@@ -35,6 +35,23 @@ def raw_datacenter() -> dict[str, Any]:
     return data
 
 
+# The numbers the example datacenter gets once pipelines can declare their flow. Until it does,
+# the tests that need them add them to the raw data with ``add_flow_numbers``.
+FLOW_NUMBERS: dict[str, dict[str, float]] = {
+    "orders-ingest": {"arrival": 400, "throughput": 500, "latency": 2},
+    "orders-enriched": {"throughput": 450, "latency": 30},
+    "revenue-daily": {"throughput": 600, "latency": 300, "output_ratio": 0.001},
+    "customer-360": {"throughput": 800, "latency": 5},
+}
+
+
+def add_flow_numbers(data: dict[str, Any], drop: tuple[str, ...] = ()) -> None:
+    """Give the raw mini datacenter's pipelines their flow numbers, except those in ``drop``."""
+    for pipeline in data["pipelines"]:
+        numbers = FLOW_NUMBERS[pipeline["id"]]
+        pipeline.update({key: value for key, value in numbers.items() if key not in drop})
+
+
 def load_variant(mutate: Callable[[dict[str, Any]], None]) -> LoadedDatacenter:
     """Load the mini datacenter after applying ``mutate`` to its raw YAML data."""
     data = raw_datacenter()
