@@ -199,6 +199,16 @@ def test_a_failed_pipeline_emits_nothing_and_the_others_are_still_computed(
     assert result["customer-360"].offered == 400
 
 
+def test_what_reads_a_failed_pipeline_is_offered_nothing() -> None:
+    result = flows(
+        small({"id": "a", "arrival": 100}, {"id": "b", "inputs": ["a"], "throughput": 10}),
+        down=("a",),
+    )
+    assert result["a"].status is Status.FAILED
+    assert result["b"].offered == 0
+    assert result["b"].utilization == 0
+
+
 def test_no_load_is_a_known_zero() -> None:
     result = flows(small({"id": "a", "arrival": 100, "throughput": 50}), load=0)
     assert (result["a"].offered, result["a"].utilization) == (0, 0)
