@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+from ripplerack.capacity import ResourceUsage, Status, classify
 from ripplerack.parser import LoadedDatacenter
-from ripplerack.simulate import ResourceUsage, Status, classify, simulate
+from ripplerack.simulate import simulate
 
 
 @pytest.mark.parametrize(

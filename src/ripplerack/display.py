@@ -14,6 +14,7 @@ from rich.markup import escape
 from rich.table import Table
 from rich.tree import Tree
 
+from ripplerack.capacity import Status
 from ripplerack.describe import PARENT_LABELS, describe_change, diff_counts
 from ripplerack.diff import AttributeChange, ComponentRef, DatacenterDiff
 from ripplerack.graph import NodeKind
@@ -21,7 +22,7 @@ from ripplerack.impact import ImpactReport, NodeStatus, Severity
 from ripplerack.models import Datacenter
 from ripplerack.parser import LoadedDatacenter
 from ripplerack.semver import ChangeLevel, SchemaDiff
-from ripplerack.simulate import SimulationReport, Status
+from ripplerack.simulate import SimulationReport
 
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)

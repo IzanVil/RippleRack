@@ -8,35 +8,12 @@ and optionally marks components as failed to see what goes down with them.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import StrEnum
 
 import networkx as nx
 
+from ripplerack.capacity import ResourceUsage, Status, classify
 from ripplerack.impact import AffectedNode, blast_radius
 from ripplerack.models import Datacenter, Rack, Server
-
-WARNING_THRESHOLD = 0.8
-
-
-class Status(StrEnum):
-    """How a component fares under the simulation."""
-
-    OK = "ok"
-    WARNING = "warning"
-    OVERLOADED = "overloaded"
-    FAILED = "failed"
-
-
-@dataclass(frozen=True)
-class ResourceUsage:
-    """Usage of one resource against its capacity."""
-
-    used: float
-    capacity: float
-
-    @property
-    def ratio(self) -> float:
-        return self.used / self.capacity if self.capacity else 0.0
 
 
 @dataclass(frozen=True)
@@ -79,16 +56,6 @@ class SimulationReport:
     @property
     def healthy(self) -> bool:
         return not self.overloaded and not self.failed
-
-
-def classify(*usages: ResourceUsage) -> Status:
-    """Return the worst status among the given resource usages."""
-    worst = max((usage.ratio for usage in usages), default=0.0)
-    if worst > 1.0:
-        return Status.OVERLOADED
-    if worst >= WARNING_THRESHOLD:
-        return Status.WARNING
-    return Status.OK
 
 
 def simulate(
