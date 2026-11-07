@@ -53,6 +53,15 @@ def test_inputs_shorthand(raw_mini: dict[str, Any]) -> None:
             lambda d: d["dependencies"].append({"source": "kafka", "target": "dashboard"}),
             "dependency cycle",
         ),
+        (
+            lambda d: d["pipelines"][1].update(arrival=10),
+            "'orders-enriched': arrival is only allowed on a pipeline that reads no other pipeline",
+        ),
+        (lambda d: d["pipelines"][0].update(throughput=0), "greater than 0"),
+        (lambda d: d["pipelines"][0].update(throughput=-1), "greater than 0"),
+        (lambda d: d["pipelines"][0].update(latency=-1), "greater than or equal to 0"),
+        (lambda d: d["pipelines"][0].update(arrival=-1), "greater than or equal to 0"),
+        (lambda d: d["pipelines"][0].update(output_ratio=-0.1), "greater than or equal to 0"),
     ],
 )
 def test_invalid_documents(raw_mini: dict[str, Any], mutate: Any, message: str) -> None:
@@ -60,6 +69,19 @@ def test_invalid_documents(raw_mini: dict[str, Any], mutate: Any, message: str) 
     mutate(data)
     with pytest.raises(RippleRackError, match=message):
         parse_datacenter(data)
+
+
+def test_flow_fields_are_optional_and_loaded(raw_mini: dict[str, Any]) -> None:
+    data = copy.deepcopy(raw_mini)
+    data["pipelines"][0].update(arrival=400, throughput=500, latency=2)
+    data["pipelines"][2].update(output_ratio=0.001)
+    pipelines = {p.id: p for p in parse_datacenter(data).datacenter.pipelines}
+    ingest = pipelines["orders-ingest"]
+    assert (ingest.arrival, ingest.throughput, ingest.latency) == (400, 500, 2)
+    assert ingest.output_ratio is None
+    assert pipelines["revenue-daily"].output_ratio == 0.001
+    plain = pipelines["customer-360"]
+    assert (plain.arrival, plain.throughput, plain.latency, plain.output_ratio) == (None,) * 4
 
 
 def test_non_mapping_document() -> None:
