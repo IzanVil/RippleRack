@@ -1,0 +1,28 @@
+─────────────────────────────────────────── Simulation (load xinf) ───────────────────────────────────────────
+Racks                                       
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┓
+┃ rack   ┃ power (kW) ┃ usage ┃ status     ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━┩
+│ rack-a │  inf / 2.8 │  inf% │ overloaded │
+│ rack-b │    inf / 4 │  inf% │ overloaded │
+└────────┴────────────┴───────┴────────────┘
+Servers                                                              
+┏━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┓
+┃ server ┃ rack   ┃     cpu (cores) ┃      memory (GB) ┃ status     ┃
+┡━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━┩
+│ srv-a1 │ rack-a │ inf / 32 (inf%) │ inf / 128 (inf%) │ overloaded │
+│ srv-a2 │ rack-a │ inf / 16 (inf%) │  inf / 64 (inf%) │ overloaded │
+│ srv-b1 │ rack-b │ inf / 24 (inf%) │  inf / 96 (inf%) │ overloaded │
+└────────┴────────┴─────────────────┴──────────────────┴────────────┘
+Pipelines                                                             
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━━┓
+┃ pipeline        ┃ in (rec/s) ┃ capacity ┃ usage ┃ status ┃ latency ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━━┩
+│ orders-ingest   │          0 │      500 │    0% │ ok     │     2 s │
+│ orders-enriched │          0 │      450 │    0% │ ok     │    32 s │
+│ revenue-daily   │          0 │      600 │    0% │ ok     │   332 s │
+│ customer-360    │          0 │      800 │    0% │ ok     │     7 s │
+└─────────────────┴────────────┴──────────┴───────┴────────┴─────────┘
+No bottleneck (busiest: orders-ingest at 0%)
+Slowest path: orders-ingest → orders-enriched → revenue-daily, 332 s
+✗ Overloaded: rack-a, rack-b, srv-a1, srv-a2, srv-b1

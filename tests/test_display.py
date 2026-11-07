@@ -38,6 +38,67 @@ def test_what_the_command_prints(
     assert_text_golden(f"display_{name}.txt", ANSI.sub("", result.stdout))
 
 
+def printed(name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
+    files, args = SCENARIOS[name]()
+    write_files(files, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, args, env={"COLUMNS": "110"})
+    assert result.exit_code == 0, result.output
+    return ANSI.sub("", result.stdout)
+
+
+@pytest.mark.parametrize(
+    ("name", "lines"),
+    [
+        (
+            "simulate_flow_nominal",
+            [
+                "Pipelines",
+                "Bottleneck: orders-enriched at 89% (400 of 450 records/s)",
+                "Slowest path: orders-ingest → orders-enriched → revenue-daily, 332 s",
+            ],
+        ),
+        ("simulate_flow_light_load", ["No bottleneck (busiest: orders-enriched at 44%)"]),
+        (
+            "simulate_flow_surge",
+            [
+                "Bottleneck: orders-ingest at 120% (600 of 500 records/s)",
+                "✗ Overloaded: rack-a, srv-a2, orders-ingest, orders-enriched",
+            ],
+        ),
+        ("simulate_flow_failure", ["Slowest path: orders-ingest → customer-360, 7 s"]),
+        ("simulate_flow_without_arrival", ["Pipelines", "Slowest path:"]),
+    ],
+)
+def test_the_simulation_says_where_the_data_piles_up_and_how_slow_it_is(
+    name: str, lines: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    text = printed(name, tmp_path, monkeypatch)
+    for line in lines:
+        assert line in text
+
+
+@pytest.mark.parametrize(
+    ("name", "missing"),
+    [
+        ("simulate_flow_everything_down", ["Bottleneck", "Slowest path"]),
+        ("simulate_flow_without_arrival", ["Bottleneck"]),
+        ("simulate_default", ["Pipelines", "Bottleneck", "Slowest path"]),
+    ],
+)
+def test_what_cannot_be_known_or_is_not_declared_is_not_printed(
+    name: str, missing: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    text = printed(name, tmp_path, monkeypatch)
+    for line in missing:
+        assert line not in text
+
+
+def test_an_infinite_load_prints_no_nan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    text = printed("simulate_flow_infinite_load_on_an_idle_source", tmp_path, monkeypatch)
+    assert "nan" not in text.lower()
+
+
 @pytest.mark.parametrize(
     ("attribute", "before", "after", "expected"),
     [
