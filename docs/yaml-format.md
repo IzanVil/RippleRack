@@ -66,6 +66,27 @@ dependencies:
 other change to a schema, is classified by the
 [SemVer rules](concepts.md#schema-semver-rules).
 
+## Pipeline flow
+
+A pipeline can say how much data flows through it. The four numbers are optional, and
+[`ripplerack simulate`](concepts.md#throughput-and-latency) uses them.
+
+| key            | meaning |
+|----------------|---------|
+| `arrival`      | Records per second entering from outside. Zero or more, and only on a pipeline that reads no other pipeline. |
+| `throughput`   | Records per second the pipeline can process. Greater than zero. Without it the pipeline has no limit. |
+| `latency`      | Seconds the pipeline adds between a record entering and leaving. Zero or more; 0 when not given. |
+| `output_ratio` | Records that leave for every record that enters. Zero or more; 1 when not given, and below 1 for a pipeline that aggregates. |
+
+```yaml
+  - id: orders-ingest
+    runs_on: kafka
+    arrival: 400        # records per second
+    throughput: 500
+    latency: 2          # seconds
+    schema: { ... }
+```
+
 ## Validation rules
 
 * All ids (racks, servers, services, pipelines) are unique.
@@ -74,6 +95,8 @@ other change to a schema, is classified by the
   exists in that pipeline's schema.
 * Dependencies reference existing components and are not self-referencing.
 * The resulting graph has no cycles.
+* `arrival` appears only on a pipeline that reads no other pipeline, and none of the
+  [flow numbers](#pipeline-flow) is negative (`throughput` is greater than zero).
 
 ## Standalone schema files
 

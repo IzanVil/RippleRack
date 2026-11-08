@@ -105,6 +105,35 @@ every server's power draw) by `--load`, then compares them with capacity:
 are taken down together with their whole blast radius; their resources are
 released.
 
+## Throughput and latency
+
+When pipelines declare `arrival`, `throughput`, `latency` and `output_ratio` (see
+[the file format](yaml-format.md#pipeline-flow)), `simulate` follows the data through them. It
+is static and deterministic like the rest of the simulation: nothing is measured, it works with
+the numbers in the file.
+
+* **What a pipeline is offered.** A pipeline that reads no other receives `arrival` times
+  `--load`. Any other receives what the pipelines it reads emit, each counted once, and every
+  reader gets the whole stream, as from a topic. When one of those rates is not known (an origin
+  without `arrival`), neither is this one, and its row shows a dash.
+* **What it processes.** At most `throughput`. What does not fit piles up as a queue and never
+  reaches the next pipeline, so a bottleneck shows where it is and the pipelines after it see only
+  what got through. What a pipeline emits is what it processes times `output_ratio`.
+* **Status.** What it is offered divided by `throughput`, with the thresholds of the
+  [capacity simulation](#capacity-simulation): `ok` below 80%, `warning` up to 100%, `overloaded`
+  above. A pipeline offered more than it can process counts as overloaded in the report.
+* **Latency.** A pipeline delivers `latency` seconds after the slowest of the pipelines it reads,
+  so the figure of each one is the time since the data entered the origin of its slowest path. It
+  does not need any rate.
+* **Bottleneck and slowest path.** The bottleneck is the pipeline using the largest part of its
+  throughput, and it is named as such from 80%. The slowest path is the one with the largest
+  latency. Neither counts what has failed.
+* **Failures.** `--fail` takes down the pipelines that run on a failed component and everything
+  that reads them. They emit nothing and their rows say `failed`.
+
+The numbers are not derived from the resources of the server a pipeline runs on: an overloaded
+server does not slow its pipelines down.
+
 ## Comparing two datacenters
 
 `ripplerack diff BASE HEAD` answers "what does this change do to my datacenter?". It

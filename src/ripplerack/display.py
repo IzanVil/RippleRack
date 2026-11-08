@@ -14,14 +14,16 @@ from rich.markup import escape
 from rich.table import Table
 from rich.tree import Tree
 
+from ripplerack.capacity import WARNING_THRESHOLD, Status
 from ripplerack.describe import PARENT_LABELS, describe_change, diff_counts
 from ripplerack.diff import AttributeChange, ComponentRef, DatacenterDiff
+from ripplerack.flow import FlowReport
 from ripplerack.graph import NodeKind
 from ripplerack.impact import ImpactReport, NodeStatus, Severity
 from ripplerack.models import Datacenter
 from ripplerack.parser import LoadedDatacenter
 from ripplerack.semver import ChangeLevel, SchemaDiff
-from ripplerack.simulate import SimulationReport, Status
+from ripplerack.simulate import SimulationReport
 
 console = Console(highlight=False)
 err_console = Console(stderr=True, highlight=False)
@@ -269,6 +271,9 @@ def print_simulation(report: SimulationReport) -> None:
     console.rule(f"[bold]Simulation[/] (load x{report.load_factor:g})")
     console.print(_racks_table(report))
     console.print(_servers_table(report))
+    if report.flow is not None:
+        console.print(_pipelines_table(report.flow))
+        _print_flow_summary(report.flow)
     if report.failed:
         console.print(f"[bold]Failed:[/] {', '.join(report.failed)}")
         if report.unavailable:
@@ -311,6 +316,49 @@ def _servers_table(report: SimulationReport) -> Table:
             _status(server.status),
         )
     return servers
+
+
+def _pipelines_table(flow: FlowReport) -> Table:
+    pipelines = _table("Pipelines")
+    pipelines.add_column("pipeline")
+    pipelines.add_column("in (rec/s)", justify="right")
+    pipelines.add_column("capacity", justify="right")
+    pipelines.add_column("usage", justify="right")
+    pipelines.add_column("status")
+    pipelines.add_column("latency", justify="right")
+    for item in flow.pipelines:
+        pipelines.add_row(
+            item.id,
+            _number(item.offered),
+            _number(item.capacity),
+            _number(item.utilization, "{:.0%}"),
+            "—" if item.status is None else _status(item.status),
+            _number(item.latency, "{:g} s"),
+        )
+    return pipelines
+
+
+def _number(value: float | None, pattern: str = "{:g}") -> str:
+    """``value`` as the pattern says, or a dash when it is not known."""
+    return "—" if value is None else pattern.format(value)
+
+
+def _print_flow_summary(flow: FlowReport) -> None:
+    """Where the data piles up, if anywhere, and the slowest way through the pipelines."""
+    busiest = flow.bottleneck
+    if busiest is not None and (busiest.utilization or 0.0) >= WARNING_THRESHOLD:
+        console.print(
+            f"[bold]Bottleneck:[/] {busiest.id} at {_number(busiest.utilization, '{:.0%}')} "
+            f"({_number(busiest.offered)} of {_number(busiest.capacity)} records/s)"
+        )
+    elif busiest is not None:
+        console.print(
+            f"[bold]No bottleneck[/] (busiest: {busiest.id} at "
+            f"{_number(busiest.utilization, '{:.0%}')})"
+        )
+    if flow.slowest_path is not None:
+        path = " → ".join(flow.slowest_path.pipelines)
+        console.print(f"[bold]Slowest path:[/] {path}, {flow.slowest_path.seconds:g} s")
 
 
 def _unavailable_table(report: SimulationReport) -> Table:
