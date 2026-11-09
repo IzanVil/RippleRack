@@ -16,10 +16,12 @@ import yaml
 
 from tests.helpers import (
     EXAMPLES,
+    FLOW_FIELDS,
     pipeline_of,
     rack_of,
     raw_datacenter,
     server_of,
+    without_flow,
 )
 
 Files = dict[str, Any]
@@ -204,9 +206,16 @@ def diff(head: dict[str, Any], base: dict[str, Any] | None = None) -> Scenario:
     return build
 
 
-def simulate(*options: str) -> Scenario:
+def simulate(*options: str, drop: tuple[str, ...] = (), arrival: float | None = None) -> Scenario:
+    """``simulate`` on the example, minus the flow fields in ``drop``, with another arrival."""
+
     def build() -> tuple[Files, list[str]]:
-        return {"base.yaml": raw_datacenter()}, ["simulate", "base.yaml", *options]
+        data = raw_datacenter()
+        if drop:
+            without_flow(data, *drop)
+        if arrival is not None:
+            pipeline_of(data, "orders-ingest")["arrival"] = arrival
+        return {"base.yaml": data}, ["simulate", "base.yaml", *options]
 
     return build
 
@@ -237,6 +246,15 @@ SCENARIOS: dict[str, Scenario] = {
     ),
     "simulate_failure_without_consequences": simulate("--load", "0.1", "--fail", "api"),
     "simulate_a_failure_inside_another": simulate("--fail", "srv-a2", "--fail", "spark"),
+    "simulate_without_flow_numbers": simulate(drop=FLOW_FIELDS),
+    "simulate_flow_light_load": simulate("--load", "0.5"),
+    "simulate_flow_surge": simulate("--load", "1.5"),
+    "simulate_flow_failure": simulate("--fail", "srv-a2"),
+    "simulate_flow_everything_down": simulate(
+        "--fail", "kafka", "--fail", "spark", "--fail", "postgres"
+    ),
+    "simulate_flow_without_arrival": simulate(drop=("arrival",)),
+    "simulate_flow_infinite_load_on_an_idle_source": simulate("--load", "inf", arrival=0),
     "diff_identical": diff(raw_datacenter()),
     "diff_example_v2": example_v2,
     "diff_everything": diff(renamed_and_edited()),

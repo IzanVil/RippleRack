@@ -112,12 +112,22 @@ class PipelineInput(StrictModel):
 
 
 class Pipeline(StrictModel):
-    """A data pipeline that runs on a service and produces a schema."""
+    """A data pipeline that runs on a service and produces a schema.
+
+    The four optional numbers describe how much data flows through it: ``arrival`` (records per
+    second entering from outside, only for a pipeline that reads no other), ``throughput``
+    (records per second it can process), ``latency`` (seconds it adds) and ``output_ratio``
+    (records out per record in, 1 when not given).
+    """
 
     id: Identifier
     runs_on: Identifier
     schema_: Schema = Field(alias="schema")
     inputs: list[PipelineInput] = Field(default_factory=list)
+    arrival: float | None = Field(default=None, ge=0)
+    throughput: float | None = Field(default=None, gt=0)
+    latency: float | None = Field(default=None, ge=0)
+    output_ratio: float | None = Field(default=None, ge=0)
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -131,6 +141,16 @@ class Pipeline(StrictModel):
                 {"pipeline": item} if isinstance(item, str) else item for item in data["inputs"]
             ]
         return data
+
+    @model_validator(mode="after")
+    def _arrival_only_where_data_enters(self) -> Pipeline:
+        """Data enters from outside only at a pipeline that reads no other pipeline."""
+        if self.arrival is not None and self.inputs:
+            raise ValueError(
+                f"pipeline '{self.id}': arrival is only allowed on a pipeline "
+                "that reads no other pipeline"
+            )
+        return self
 
 
 class DependencyKind(StrEnum):

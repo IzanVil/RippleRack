@@ -1,0 +1,37 @@
+──────────────────────────────────────────── Simulation (load x1) ────────────────────────────────────────────
+Racks                                   
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┓
+┃ rack   ┃ power (kW) ┃ usage ┃ status ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━┩
+│ rack-a │  2.0 / 2.8 │   71% │ ok     │
+│ rack-b │    1.0 / 4 │   25% │ ok     │
+└────────┴────────────┴───────┴────────┘
+Servers                                                  
+┏━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━┓
+┃ server ┃ rack   ┃ cpu (cores) ┃  memory (GB) ┃ status ┃
+┡━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━┩
+│ srv-a1 │ rack-a │ 0 / 32 (0%) │ 0 / 128 (0%) │ ok     │
+│ srv-a2 │ rack-a │ 0 / 16 (0%) │  0 / 64 (0%) │ ok     │
+│ srv-b1 │ rack-b │ 0 / 24 (0%) │  0 / 96 (0%) │ ok     │
+└────────┴────────┴─────────────┴──────────────┴────────┘
+Pipelines                                                             
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━━┓
+┃ pipeline        ┃ in (rec/s) ┃ capacity ┃ usage ┃ status ┃ latency ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━━┩
+│ orders-ingest   │          — │      500 │     — │ failed │       — │
+│ orders-enriched │          — │      450 │     — │ failed │       — │
+│ revenue-daily   │          — │      600 │     — │ failed │       — │
+│ customer-360    │          — │      800 │     — │ failed │       — │
+└─────────────────┴────────────┴──────────┴───────┴────────┴─────────┘
+Failed: kafka, spark, postgres
+Unavailable as a consequence                                      
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ component       ┃ kind     ┃ via                               ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ api             │ service  │ postgres → api                    │
+│ customer-360    │ pipeline │ postgres → customer-360           │
+│ orders-enriched │ pipeline │ spark → orders-enriched           │
+│ orders-ingest   │ pipeline │ kafka → orders-ingest             │
+│ revenue-daily   │ pipeline │ spark → revenue-daily             │
+│ dashboard       │ service  │ spark → revenue-daily → dashboard │
+└─────────────────┴──────────┴───────────────────────────────────┘

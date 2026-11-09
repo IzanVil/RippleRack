@@ -35,6 +35,16 @@ def raw_datacenter() -> dict[str, Any]:
     return data
 
 
+FLOW_FIELDS = ("arrival", "throughput", "latency", "output_ratio")
+
+
+def without_flow(data: dict[str, Any], *fields: str) -> None:
+    """Take ``fields`` (every flow field when none is named) off the pipelines of raw data."""
+    for pipeline in data["pipelines"]:
+        for name in fields or FLOW_FIELDS:
+            pipeline.pop(name, None)
+
+
 def load_variant(mutate: Callable[[dict[str, Any]], None]) -> LoadedDatacenter:
     """Load the mini datacenter after applying ``mutate`` to its raw YAML data."""
     data = raw_datacenter()

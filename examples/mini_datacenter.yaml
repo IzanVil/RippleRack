@@ -4,6 +4,8 @@
 #   ripplerack graph    examples/mini_datacenter.yaml
 #   ripplerack impact   examples/mini_datacenter.yaml -p orders-ingest -s examples/changes/orders_v2.yaml
 #   ripplerack simulate examples/mini_datacenter.yaml --load 1.5 --fail srv-a2
+#
+# The pipelines also say how much data flows through them, so that simulate can show where it piles up.
 
 name: mini-datacenter
 description: Two racks running an e-commerce order analytics stack.
@@ -55,6 +57,9 @@ racks:
 pipelines:
   - id: orders-ingest
     runs_on: kafka
+    arrival: 400        # records per second entering from outside (only if it reads no pipeline)
+    throughput: 500     # records per second it can process
+    latency: 2          # seconds it adds
     schema:
       name: orders
       version: 1.2.0
@@ -68,6 +73,8 @@ pipelines:
 
   - id: orders-enriched
     runs_on: spark
+    throughput: 450
+    latency: 30
     inputs:
       - pipeline: orders-ingest
         fields: [order_id, customer_id, amount, currency, created_at]
@@ -82,6 +89,9 @@ pipelines:
 
   - id: revenue-daily
     runs_on: spark
+    throughput: 600
+    latency: 300
+    output_ratio: 0.001 # records out per record in (1 when not given): it aggregates
     inputs:
       - pipeline: orders-enriched
         fields: [customer_segment, amount_eur, created_date]
@@ -95,6 +105,8 @@ pipelines:
 
   - id: customer-360
     runs_on: postgres
+    throughput: 800
+    latency: 5
     inputs: [orders-ingest]   # reads every field
     schema:
       name: customer_profile
