@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `simulate` counts a pipeline offered more than it can process as overloaded, so the report is no
   longer healthy with one of them saturated. A datacenter whose pipelines declare none of those
   numbers prints what it printed before.
+- The SQL importer refuses the `REF` type that sqlglot adds from 30.27 (a reference to a row of
+  another table has no equivalent), like the other types with no equivalent. The minimum sqlglot is
+  now 30.27, and the lock is on 30.30.0.
 
 ## [0.2.4] - 2026-10-25
 

@@ -733,7 +733,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.7" },
-    { name = "sqlglot", specifier = ">=30.23,<31" },
+    { name = "sqlglot", specifier = ">=30.27,<31" },
     { name = "typer", specifier = ">=0.12" },
 ]
 
@@ -792,11 +792,11 @@ wheels = [
 
 [[package]]
 name = "sqlglot"
-version = "30.25.0"
+version = "30.30.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ff/bd/3885516929bfea13c635d5721c468e664defe56a89c073ecf8640f5a5c8a/sqlglot-30.25.0.tar.gz", hash = "sha256:d2d6e4d4865a210b1e33a801b105a6782ef12280cc2b6d0969bdc2634aef427a", size = 6154689, upload-time = "2026-10-26T15:11:29.706Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b8/93/cedd3e86d49841c9509979dce3f4470243691fbd5c5227d2988d4903531e/sqlglot-30.30.0.tar.gz", hash = "sha256:b8e344042c85d7baa1d0d827127dfe1611ce9ac59bceab6fe370665baeb14ce7", size = 6186227, upload-time = "2026-11-06T13:54:57.133Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5f/44/a510d696c082e245832348bcfca5de9adfefd65829cd96fa5bf39244ca7b/sqlglot-30.25.0-py3-none-any.whl", hash = "sha256:7d5a292d5f61b7fc860e65a8fa41083c726db0e27fb6efb224cca63c3a5980f7", size = 798009, upload-time = "2026-10-26T15:11:27.897Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/1f/2472bab660417265daa9cf6baf7870583bfbd447608b525b0071cc4c5448/sqlglot-30.30.0-py3-none-any.whl", hash = "sha256:06c4c212a7868c7dcff0fd0fda348dd3c5cbad40137b3083a70ecdfe22921cf9", size = 807597, upload-time = "2026-11-06T13:54:54.435Z" },
 ]
 
 [[package]]
