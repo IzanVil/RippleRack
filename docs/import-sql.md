@@ -296,7 +296,7 @@ In words:
 ### What is refused
 
 A few types have no equivalent in a schema made of strings, numbers, booleans, dates and
-JSON. They are 34 in all (geometries, ranges, vectors, `hstore`...), and so is a type that the
+JSON. They are 35 in all (geometries, ranges, vectors, `hstore`...), and so is a type that the
 file does not define (`hierarchyid`, `tsvector`) or a column that has no type, which SQLite
 allows. Every one is an error in strict mode and a `json` field with `--lenient`:
 
