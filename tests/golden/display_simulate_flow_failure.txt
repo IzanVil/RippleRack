@@ -1,0 +1,37 @@
+──────────────────────────────────────────── Simulation (load x1) ────────────────────────────────────────────
+Racks                                   
+┏━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┓
+┃ rack   ┃ power (kW) ┃ usage ┃ status ┃
+┡━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━┩
+│ rack-a │  1.2 / 2.8 │   43% │ ok     │
+│ rack-b │    1.0 / 4 │   25% │ ok     │
+└────────┴────────────┴───────┴────────┘
+Servers                                                      
+┏━━━━━━━━┳━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━┓
+┃ server ┃ rack   ┃   cpu (cores) ┃    memory (GB) ┃ status ┃
+┡━━━━━━━━╇━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━┩
+│ srv-a1 │ rack-a │ 20 / 32 (62%) │ 80 / 128 (62%) │ ok     │
+│ srv-a2 │ rack-a │   0 / 16 (0%) │    0 / 64 (0%) │ failed │
+│ srv-b1 │ rack-b │  6 / 24 (25%) │  16 / 96 (17%) │ ok     │
+└────────┴────────┴───────────────┴────────────────┴────────┘
+Pipelines                                                              
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┓
+┃ pipeline        ┃ in (rec/s) ┃ capacity ┃ usage ┃ status  ┃ latency ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━╇━━━━━━━━━┩
+│ orders-ingest   │        400 │      500 │   80% │ warning │     2 s │
+│ orders-enriched │          — │      450 │     — │ failed  │       — │
+│ revenue-daily   │          — │      600 │     — │ failed  │       — │
+│ customer-360    │        400 │      800 │   50% │ ok      │     7 s │
+└─────────────────┴────────────┴──────────┴───────┴─────────┴─────────┘
+Bottleneck: orders-ingest at 80% (400 of 500 records/s)
+Slowest path: orders-ingest → customer-360, 7 s
+Failed: srv-a2
+Unavailable as a consequence                                               
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ component       ┃ kind     ┃ via                                        ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ spark           │ service  │ srv-a2 → spark                             │
+│ orders-enriched │ pipeline │ srv-a2 → spark → orders-enriched           │
+│ revenue-daily   │ pipeline │ srv-a2 → spark → revenue-daily             │
+│ dashboard       │ service  │ srv-a2 → spark → revenue-daily → dashboard │
+└─────────────────┴──────────┴────────────────────────────────────────────┘

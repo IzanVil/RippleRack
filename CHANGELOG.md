@@ -7,10 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Pipelines can declare how much data flows through them: `arrival` (records per second entering
+  from outside), `throughput` (records per second they can process), `latency` (seconds they add)
+  and `output_ratio` (records out per record in). When they do, `ripplerack simulate` adds a table
+  of the pipelines with what each is offered, its usage, its status and its latency, names the
+  bottleneck and the slowest path, and applies `--load` and `--fail` to them. The example
+  datacenter declares them.
+
 ### Changed
 
 - The version badge of the README shows the version published on PyPI and links to the page of the
   package, instead of reading the version from `pyproject.toml` on `main`.
+- `simulate` counts a pipeline offered more than it can process as overloaded, so the report is no
+  longer healthy with one of them saturated. A datacenter whose pipelines declare none of those
+  numbers prints what it printed before.
 
 ## [0.2.4] - 2026-10-25
 

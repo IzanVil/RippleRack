@@ -413,12 +413,23 @@ uv run ripplerack simulate examples/mini_datacenter.yaml --load 1.5 --fail srv-a
 
 The second command, with `srv-a2` taken down:
 
-![Terminal: ripplerack simulate with the load at 1.5 and srv-a2 failed. srv-a1 is at warning with 94% of its CPU and memory, srv-a2 is failed, and spark, orders-enriched, revenue-daily and dashboard are unavailable as a consequence.](https://raw.githubusercontent.com/IzanVil/RippleRack/main/docs/images/simulate.svg)
+![Terminal: ripplerack simulate with the load at 1.5 and srv-a2 failed. srv-a1 is at warning with 94% of its CPU and memory, srv-a2 is failed, orders-ingest is overloaded at 120% of its throughput and is the bottleneck, and spark, orders-enriched, revenue-daily and dashboard are unavailable as a consequence.](https://raw.githubusercontent.com/IzanVil/RippleRack/main/docs/images/simulate.svg)
 
 `--load` scales every service's CPU/memory demand and every server's power draw.
 `--fail` (repeatable) takes a component down along with everything that depends
 on it. Each rack and server is then reported as `ok`, `warning` (≥ 80%),
 `overloaded` (> 100%) or `failed`.
+
+Pipelines can also say how much data flows through them: `arrival` (records per second
+entering from outside, only on a pipeline that reads no other), `throughput` (records per
+second it can process), `latency` (seconds it adds) and `output_ratio` (records out per
+record in, 1 when not given). With those numbers `simulate` adds a table of the pipelines,
+with what each one is offered, how much of its throughput that is, its status and the
+seconds since its slowest path began, and names the bottleneck and the slowest path.
+`--load` scales `arrival`, `--fail` cuts the pipelines that go down, and a pipeline offered
+more than it can process counts as `overloaded`. The
+[concepts guide](https://github.com/IzanVil/RippleRack/blob/main/docs/concepts.md#throughput-and-latency)
+has the rules.
 
 ## How it works
 
@@ -453,6 +464,8 @@ Each module has one job; the [concepts guide](https://github.com/IzanVil/RippleR
 | `diff.py` | Comparison of two datacenter files: components, dependencies, schema impact |
 | `importers/` | Schema importers (JSON Schema, Avro and SQL) and the YAML writer for what they read |
 | `report.py` | Versioned JSON documents for CI (impact and diff results, errors) |
+| `capacity.py` | Usage against capacity and the thresholds that read it: `ok`, `warning`, `overloaded` |
+| `flow.py` | Rates, load, latency, bottleneck and slowest path of the pipelines |
 | `simulate.py` | Capacity and failure simulation |
 | `display.py` | Rich tables and trees for the text output of the commands |
 | `cli.py` | Typer command line: loads the input, calls the engine, prints the result |

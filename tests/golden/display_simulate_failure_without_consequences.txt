@@ -14,4 +14,15 @@ Servers
 │ srv-a2 │ rack-a │ 1.2 / 16 (8%) │   4 / 64 (6%) │ ok     │
 │ srv-b1 │ rack-b │ 0.4 / 24 (2%) │ 0.8 / 96 (1%) │ ok     │
 └────────┴────────┴───────────────┴───────────────┴────────┘
+Pipelines                                                             
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━━┓
+┃ pipeline        ┃ in (rec/s) ┃ capacity ┃ usage ┃ status ┃ latency ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━━┩
+│ orders-ingest   │         40 │      500 │    8% │ ok     │     2 s │
+│ orders-enriched │         40 │      450 │    9% │ ok     │    32 s │
+│ revenue-daily   │         40 │      600 │    7% │ ok     │   332 s │
+│ customer-360    │         40 │      800 │    5% │ ok     │     7 s │
+└─────────────────┴────────────┴──────────┴───────┴────────┴─────────┘
+No bottleneck (busiest: orders-enriched at 9%)
+Slowest path: orders-ingest → orders-enriched → revenue-daily, 332 s
 Failed: api
