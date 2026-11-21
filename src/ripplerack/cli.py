@@ -471,7 +471,13 @@ def import_command(
 def simulate_command(
     file: DatacenterFile,
     load: Annotated[
-        float, typer.Option("--load", "-l", min=0.0, help="Multiplier applied to service demand.")
+        float,
+        typer.Option(
+            "--load",
+            "-l",
+            min=0.0,
+            help="Multiplier of the demand of the services and the arrival of the pipelines.",
+        ),
     ] = 1.0,
     fail: Annotated[
         list[str] | None,

@@ -484,7 +484,6 @@ CI runs all of the above on Python 3.11, 3.12, 3.13 and 3.14.
 
 ## Roadmap
 
-- Throughput and latency modelling for pipelines
 - Web UI to explore the graph
 
 Ideas and contributions are welcome. Please open an issue to discuss them.

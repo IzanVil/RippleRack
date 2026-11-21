@@ -249,6 +249,7 @@ SCENARIOS: dict[str, Scenario] = {
     "simulate_without_flow_numbers": simulate(drop=FLOW_FIELDS),
     "simulate_flow_light_load": simulate("--load", "0.5"),
     "simulate_flow_surge": simulate("--load", "1.5"),
+    "simulate_flow_large_rates": simulate("--load", "5000"),
     "simulate_flow_failure": simulate("--fail", "srv-a2"),
     "simulate_flow_everything_down": simulate(
         "--fail", "kafka", "--fail", "spark", "--fail", "postgres"

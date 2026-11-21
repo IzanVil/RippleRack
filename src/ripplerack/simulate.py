@@ -73,7 +73,7 @@ def simulate(
     ``Server.power_kw`` is treated as the draw at nominal load (factor 1.0) and
     scales linearly with ``load_factor``. Failed servers draw no power.
     """
-    if load_factor < 0:
+    if not load_factor >= 0:  # also true of NaN
         raise ValueError("load_factor must be non-negative")
     failures = failures or []
     unknown = [node for node in failures if node not in graph]
