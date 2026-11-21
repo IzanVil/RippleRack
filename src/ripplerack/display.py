@@ -331,16 +331,31 @@ def _pipelines_table(flow: FlowReport) -> Table:
             item.id,
             _number(item.offered),
             _number(item.capacity),
-            _number(item.utilization, "{:.0%}"),
+            _percent(item.utilization),
             "—" if item.status is None else _status(item.status),
-            _number(item.latency, "{:g} s"),
+            _seconds(item.latency),
         )
     return pipelines
 
 
-def _number(value: float | None, pattern: str = "{:g}") -> str:
-    """``value`` as the pattern says, or a dash when it is not known."""
-    return "—" if value is None else pattern.format(value)
+def _plain(value: float) -> str:
+    """``value`` as ``{:g}`` writes it, but in digits and not as ``1.5e+06`` below a quadrillion."""
+    return f"{value:.0f}" if 1e6 <= abs(value) < 1e15 else f"{value:g}"
+
+
+def _number(value: float | None) -> str:
+    """A rate, or a dash when it is not known."""
+    return "—" if value is None else _plain(value)
+
+
+def _percent(value: float | None) -> str:
+    """A part of a capacity, or a dash when it is not known."""
+    return "—" if value is None else f"{value:.0%}"
+
+
+def _seconds(value: float | None) -> str:
+    """A time in seconds, or a dash when it is not known."""
+    return "—" if value is None else f"{_plain(value)} s"
 
 
 def _print_flow_summary(flow: FlowReport) -> None:
@@ -348,17 +363,16 @@ def _print_flow_summary(flow: FlowReport) -> None:
     busiest = flow.bottleneck
     if busiest is not None and (busiest.utilization or 0.0) >= WARNING_THRESHOLD:
         console.print(
-            f"[bold]Bottleneck:[/] {busiest.id} at {_number(busiest.utilization, '{:.0%}')} "
+            f"[bold]Bottleneck:[/] {busiest.id} at {_percent(busiest.utilization)} "
             f"({_number(busiest.offered)} of {_number(busiest.capacity)} records/s)"
         )
     elif busiest is not None:
         console.print(
-            f"[bold]No bottleneck[/] (busiest: {busiest.id} at "
-            f"{_number(busiest.utilization, '{:.0%}')})"
+            f"[bold]No bottleneck[/] (busiest: {busiest.id} at {_percent(busiest.utilization)})"
         )
     if flow.slowest_path is not None:
         path = " → ".join(flow.slowest_path.pipelines)
-        console.print(f"[bold]Slowest path:[/] {path}, {flow.slowest_path.seconds:g} s")
+        console.print(f"[bold]Slowest path:[/] {path}, {_seconds(flow.slowest_path.seconds)}")
 
 
 def _unavailable_table(report: SimulationReport) -> Table:

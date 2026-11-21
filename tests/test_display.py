@@ -47,6 +47,14 @@ def printed(name: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     return ANSI.sub("", result.stdout)
 
 
+def test_rates_of_a_million_are_written_in_digits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out = printed("simulate_flow_large_rates", tmp_path, monkeypatch)
+    assert "2000000" in out
+    assert "e+" not in out
+
+
 @pytest.mark.parametrize(
     ("name", "lines"),
     [

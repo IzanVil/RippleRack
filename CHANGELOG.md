@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The help of `simulate --load` says that it scales the arrival of the pipelines as well as the
+  demand of the services.
+- `simulate` writes the rates and the times of a million or more in digits (`2000000`) and not as
+  `2e+06`.
+
+### Fixed
+
+- `simulate()` refuses a load factor that is NaN, as it refuses a negative one, instead of
+  computing with it.
+
 ## [0.2.5] - 2026-11-19
 
 ### Added

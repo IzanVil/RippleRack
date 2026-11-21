@@ -69,6 +69,11 @@ def test_negative_load(mini_dc: LoadedDatacenter) -> None:
         simulate(mini_dc.datacenter, mini_dc.graph, load_factor=-1)
 
 
+def test_load_that_is_not_a_number(mini_dc: LoadedDatacenter) -> None:
+    with pytest.raises(ValueError, match="non-negative"):
+        simulate(mini_dc.datacenter, mini_dc.graph, load_factor=float("nan"))
+
+
 def test_no_flow_without_declared_fields() -> None:
     without = load_variant(without_flow)
     assert simulate(without.datacenter, without.graph).flow is None

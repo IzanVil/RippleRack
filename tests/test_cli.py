@@ -89,6 +89,21 @@ def test_simulate_unknown_component(examples_dir: Path) -> None:
     assert result.stdout == ""
 
 
+@pytest.mark.parametrize("load", ["nan", "-1"])
+def test_simulate_rejects_a_load_that_is_not_zero_or_more(examples_dir: Path, load: str) -> None:
+    result = runner.invoke(
+        app, ["simulate", str(examples_dir / "mini_datacenter.yaml"), "--load", load]
+    )
+    assert result.exit_code == 2
+    assert "--load" in plain(result.stderr)
+    assert result.stdout == ""
+
+
+def test_the_help_of_load_names_what_it_scales() -> None:
+    result = runner.invoke(app, ["simulate", "--help"], env={"COLUMNS": "200"})
+    assert "arrival of the pipelines" in " ".join(plain(result.stdout).split())
+
+
 def test_graph_json(examples_dir: Path, tmp_path: Path) -> None:
     out = tmp_path / "graph.json"
     result = runner.invoke(
