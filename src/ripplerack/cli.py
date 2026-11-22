@@ -51,7 +51,7 @@ from ripplerack.parser import (
     load_datacenter,
     load_schema,
 )
-from ripplerack.report import diff_to_dict, dumps, error_to_dict, impact_to_dict
+from ripplerack.report import diff_to_dict, dumps, error_to_dict, impact_to_dict, simulate_to_dict
 from ripplerack.simulate import simulate
 
 app = typer.Typer(
@@ -84,6 +84,11 @@ class DiffFormat(StrEnum):
     TEXT = "text"
     JSON = "json"
     MARKDOWN = "markdown"
+
+
+class SimulateFormat(StrEnum):
+    TEXT = "text"
+    JSON = "json"
 
 
 MaxItems = Annotated[
@@ -483,15 +488,37 @@ def simulate_command(
         list[str] | None,
         typer.Option("--fail", "-f", help="Component id to take down (repeatable)."),
     ] = None,
+    output_format: Annotated[
+        SimulateFormat,
+        typer.Option(
+            "--format", "-F", help="Output format: text, or json (documented, versioned)."
+        ),
+    ] = SimulateFormat.TEXT,
+    fail_on_overloaded: Annotated[
+        bool,
+        typer.Option(
+            "--fail-on-overloaded", help="Exit with code 2 if anything is above its capacity."
+        ),
+    ] = False,
 ) -> None:
     """Simulate capacity under load and the cascade of component failures."""
-    loaded = _load(file, command="simulate")
+    json_mode = output_format is SimulateFormat.JSON
+    loaded = _load(file, command="simulate", json_mode=json_mode)
     try:
         report = simulate(loaded.datacenter, loaded.graph, load_factor=load, failures=fail)
     except KeyError as exc:
-        err_console.print(f"[bold red]error:[/] unknown component(s): {escape(exc.args[0])}")
-        raise typer.Exit(code=1) from exc
-    print_simulation(report)
+        _fail(
+            f"unknown component(s): {exc.args[0]}",
+            code=ErrorCode.UNKNOWN_COMPONENT,
+            command="simulate",
+            json_mode=json_mode,
+        )
+    if json_mode:
+        typer.echo(dumps(simulate_to_dict(loaded.datacenter.name, report)), nl=False)
+    else:
+        print_simulation(report)
+    if fail_on_overloaded and report.overloaded:
+        raise typer.Exit(code=2)
 
 
 @app.command()

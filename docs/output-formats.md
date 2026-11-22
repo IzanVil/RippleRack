@@ -364,6 +364,7 @@ object:
 | `validation_failed` | A datacenter or schema file does not satisfy the model: unknown keys, wrong types, duplicate ids, references to missing components or fields. |
 | `dependency_cycle`  | The dependency graph contains a cycle. |
 | `unknown_pipeline`  | `--pipeline` names a pipeline that does not exist. |
+| `unknown_component` | `simulate`: `--fail` names a component that does not exist. |
 | `invalid_json`      | `import`: the input file is not valid JSON. |
 | `invalid_json_schema` | `import`: the input is JSON, but not a well-formed JSON Schema. |
 | `unsupported_json_schema` | `import`: the input is a JSON Schema that cannot be imported as it is. |

@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "ripplerack",
+    "version": "<version>"
+  },
+  "command": "simulate",
+  "datacenter": "mini-datacenter",
+  "loadFactor": null,
+  "healthy": false,
+  "overloaded": [
+    "rack-a",
+    "rack-b",
+    "srv-a1",
+    "srv-a2",
+    "srv-b1",
+    "orders-ingest",
+    "orders-enriched"
+  ],
+  "failed": [],
+  "unavailable": [],
+  "racks": [
+    {
+      "id": "rack-a",
+      "power": {
+        "used": null,
+        "capacity": 2.8,
+        "ratio": null
+      },
+      "status": "overloaded"
+    },
+    {
+      "id": "rack-b",
+      "power": {
+        "used": null,
+        "capacity": 4.0,
+        "ratio": null
+      },
+      "status": "overloaded"
+    }
+  ],
+  "servers": [
+    {
+      "id": "srv-a1",
+      "rack": "rack-a",
+      "cpu": {
+        "used": null,
+        "capacity": 32.0,
+        "ratio": null
+      },
+      "memory": {
+        "used": null,
+        "capacity": 128.0,
+        "ratio": null
+      },
+      "status": "overloaded"
+    },
+    {
+      "id": "srv-a2",
+      "rack": "rack-a",
+      "cpu": {
+        "used": null,
+        "capacity": 16.0,
+        "ratio": null
+      },
+      "memory": {
+        "used": null,
+        "capacity": 64.0,
+        "ratio": null
+      },
+      "status": "overloaded"
+    },
+    {
+      "id": "srv-b1",
+      "rack": "rack-b",
+      "cpu": {
+        "used": null,
+        "capacity": 24.0,
+        "ratio": null
+      },
+      "memory": {
+        "used": null,
+        "capacity": 96.0,
+        "ratio": null
+      },
+      "status": "overloaded"
+    }
+  ],
+  "pipelines": {
+    "items": [
+      {
+        "id": "orders-ingest",
+        "offered": null,
+        "processed": 500.0,
+        "capacity": 500.0,
+        "utilization": null,
+        "status": "overloaded",
+        "latency": 2.0
+      },
+      {
+        "id": "orders-enriched",
+        "offered": 500.0,
+        "processed": 450.0,
+        "capacity": 450.0,
+        "utilization": 1.1111111111111112,
+        "status": "overloaded",
+        "latency": 32.0
+      },
+      {
+        "id": "revenue-daily",
+        "offered": 450.0,
+        "processed": 450.0,
+        "capacity": 600.0,
+        "utilization": 0.75,
+        "status": "ok",
+        "latency": 332.0
+      },
+      {
+        "id": "customer-360",
+        "offered": 500.0,
+        "processed": 500.0,
+        "capacity": 800.0,
+        "utilization": 0.625,
+        "status": "ok",
+        "latency": 7.0
+      }
+    ],
+    "bottleneck": {
+      "id": "orders-ingest",
+      "utilization": null,
+      "offered": null,
+      "capacity": 500.0
+    },
+    "slowestPath": {
+      "pipelines": [
+        "orders-ingest",
+        "orders-enriched",
+        "revenue-daily"
+      ],
+      "seconds": 332.0
+    }
+  }
+}

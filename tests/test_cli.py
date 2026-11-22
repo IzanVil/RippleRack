@@ -11,7 +11,12 @@ from typer.testing import CliRunner
 
 from ripplerack.cli import app
 from ripplerack.report import dumps
-from tests.helpers import assert_json_golden, assert_text_golden, raw_datacenter
+from tests.helpers import (
+    assert_json_golden,
+    assert_text_golden,
+    raw_datacenter,
+    without_flow,
+)
 
 runner = CliRunner()
 CHANGE_FILES = ["orders_v1_3_0", "orders_v2", "orders_sneaky_patch"]
@@ -529,3 +534,119 @@ class TestMermaid:
         dc = str(examples_dir / "mini_datacenter.yaml")
         assert runner.invoke(app, ["graph", dc, "-F", "dot"]).stdout.startswith("digraph")
         assert "nodes" in json.loads(runner.invoke(app, ["graph", dc, "-F", "json"]).stdout)
+
+
+def simulate_args(examples_dir: Path, *extra: str) -> list[str]:
+    return ["simulate", str(examples_dir / "mini_datacenter.yaml"), *extra]
+
+
+class TestSimulateJson:
+    def test_stdout_is_pure_json_and_stderr_is_empty(self, examples_dir: Path) -> None:
+        result = runner.invoke(app, simulate_args(examples_dir, "--format", "json"))
+        assert result.exit_code == 0, result.output
+        assert result.stderr == ""
+        assert json.loads(result.stdout)["command"] == "simulate"
+
+    @pytest.mark.parametrize(
+        ("name", "extra"),
+        [
+            ("simulate_default.json", []),
+            ("simulate_surge.json", ["--load", "1.5"]),
+            ("simulate_fail_srv_a2.json", ["--fail", "srv-a2"]),
+            ("simulate_infinite_load.json", ["--load", "inf"]),
+        ],
+    )
+    def test_golden(self, examples_dir: Path, name: str, extra: list[str]) -> None:
+        result = runner.invoke(app, simulate_args(examples_dir, *extra, "-F", "json"))
+        assert result.exit_code == 0, result.output
+        assert_json_golden(name, json.loads(result.stdout))
+
+    def test_golden_without_flow_numbers(self, tmp_path: Path) -> None:
+        data = raw_datacenter()
+        without_flow(data)
+        path = write(tmp_path / "dc.yaml", yaml.safe_dump(data))
+        result = runner.invoke(app, ["simulate", str(path), "-F", "json"])
+        assert result.exit_code == 0, result.output
+        assert_json_golden("simulate_without_flow_numbers.json", json.loads(result.stdout))
+
+    def test_output_is_canonical_and_deterministic(self, examples_dir: Path) -> None:
+        args = simulate_args(examples_dir, "--load", "1.5", "--format", "json")
+        first = runner.invoke(app, args).stdout
+        assert first == runner.invoke(app, args).stdout
+        assert first == dumps(json.loads(first))
+
+    def test_text_is_the_default_format(self, examples_dir: Path) -> None:
+        default = runner.invoke(app, simulate_args(examples_dir))
+        explicit = runner.invoke(app, simulate_args(examples_dir, "--format", "text"))
+        assert default.exit_code == 0
+        assert default.stdout == explicit.stdout
+        with pytest.raises(json.JSONDecodeError):
+            json.loads(default.stdout)
+
+    def test_unknown_format_is_a_usage_error(self, examples_dir: Path) -> None:
+        result = runner.invoke(app, simulate_args(examples_dir, "--format", "xml"))
+        assert result.exit_code == 2
+        assert result.stdout == ""
+
+
+class TestSimulateGate:
+    def test_fail_on_overloaded_still_prints_the_document(self, examples_dir: Path) -> None:
+        args = simulate_args(examples_dir, "--load", "1.5", "-F", "json", "--fail-on-overloaded")
+        result = runner.invoke(app, args)
+        assert result.exit_code == 2
+        assert json.loads(result.stdout)["healthy"] is False
+
+    def test_fail_on_overloaded_passes_when_nothing_saturates(self, examples_dir: Path) -> None:
+        result = runner.invoke(
+            app, simulate_args(examples_dir, "-F", "json", "--fail-on-overloaded")
+        )
+        assert result.exit_code == 0
+        assert json.loads(result.stdout)["overloaded"] == []
+
+    def test_a_hypothetical_failure_does_not_trip_the_gate(self, examples_dir: Path) -> None:
+        args = simulate_args(examples_dir, "--fail", "srv-a2", "-F", "json", "--fail-on-overloaded")
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0
+        payload = json.loads(result.stdout)
+        assert payload["failed"] == ["srv-a2"]
+        assert payload["overloaded"] == []
+
+    def test_the_gate_works_in_text_too(self, examples_dir: Path) -> None:
+        result = runner.invoke(
+            app, simulate_args(examples_dir, "--load", "1.5", "--fail-on-overloaded")
+        )
+        assert result.exit_code == 2
+        assert "Pipelines" in result.stdout
+
+
+class TestSimulateJsonErrors:
+    """With --format json every failure is a JSON document on stderr and stdout stays empty."""
+
+    def assert_error(self, args: list[str], code: str) -> dict[str, Any]:
+        result = runner.invoke(app, [*args, "--format", "json"])
+        assert result.exit_code == 1, result.output
+        assert result.stdout == ""
+        document: dict[str, Any] = json.loads(result.stderr)
+        assert list(document) == ["schemaVersion", "tool", "command", "error"]
+        assert document["command"] == "simulate"
+        assert document["error"]["code"] == code
+        return document
+
+    def test_missing_file(self, tmp_path: Path) -> None:
+        self.assert_error(["simulate", str(tmp_path / "nope.yaml")], "file_not_found")
+
+    def test_unknown_component(self, examples_dir: Path) -> None:
+        document = self.assert_error(
+            simulate_args(examples_dir, "--fail", "ghost"), "unknown_component"
+        )
+        assert "ghost" in document["error"]["message"]
+
+    def test_several_unknown_components(self, examples_dir: Path) -> None:
+        args = simulate_args(examples_dir, "--fail", "ghost", "--fail", "phantom")
+        message = self.assert_error(args, "unknown_component")["error"]["message"]
+        assert "ghost" in message
+        assert "phantom" in message
+
+    def test_cycle(self, tmp_path: Path) -> None:
+        path = cyclic_datacenter(tmp_path / "cycle.yaml")
+        self.assert_error(["simulate", str(path)], "dependency_cycle")
