@@ -14,9 +14,11 @@ Conventions:
 from __future__ import annotations
 
 import json
+import math
 from typing import Any
 
 from ripplerack import __version__
+from ripplerack.capacity import ResourceUsage
 from ripplerack.diff import (
     AttributeChange,
     ComponentChange,
@@ -28,8 +30,10 @@ from ripplerack.diff import (
     PossibleRename,
     RemovedWithDependents,
 )
+from ripplerack.flow import FlowReport, PipelineFlow
 from ripplerack.impact import AffectedNode, BrokenConsumer, ImpactReport, NodeStatus
 from ripplerack.semver import SchemaChange, SchemaDiff
+from ripplerack.simulate import SimulationReport
 
 SCHEMA_VERSION = 1
 TOOL_NAME = "ripplerack"
@@ -228,3 +232,82 @@ def _change_to_dict(change: SchemaChange) -> dict[str, Any]:
 
 def _change_order(change: SchemaChange) -> tuple[str, str]:
     return (change.field or "", str(change.kind))
+
+
+def simulate_to_dict(datacenter_name: str, report: SimulationReport) -> dict[str, Any]:
+    """Build the ``simulate`` document for ``report``.
+
+    JSON has no infinity, so a number that is not finite (a load of ``inf``) is written as ``null``.
+    """
+    return {
+        **envelope("simulate"),
+        "datacenter": datacenter_name,
+        "loadFactor": _finite(report.load_factor),
+        "healthy": report.healthy,
+        "overloaded": report.overloaded,
+        "failed": list(report.failed),
+        "unavailable": [_unavailable_to_dict(node) for node in report.unavailable],
+        "racks": [
+            {"id": rack.id, "power": _usage_to_dict(rack.power), "status": str(rack.status)}
+            for rack in report.racks
+        ],
+        "servers": [
+            {
+                "id": server.id,
+                "rack": server.rack,
+                "cpu": _usage_to_dict(server.cpu),
+                "memory": _usage_to_dict(server.memory),
+                "status": str(server.status),
+            }
+            for server in report.servers
+        ],
+        "pipelines": None if report.flow is None else _flow_to_dict(report.flow),
+    }
+
+
+def _finite(value: float | None) -> float | None:
+    """``value``, or ``None`` when it is unknown or not a finite number."""
+    return None if value is None or not math.isfinite(value) else value
+
+
+def _usage_to_dict(usage: ResourceUsage) -> dict[str, Any]:
+    return {
+        "used": _finite(usage.used),
+        "capacity": _finite(usage.capacity),
+        "ratio": _finite(usage.ratio),
+    }
+
+
+def _unavailable_to_dict(node: AffectedNode) -> dict[str, Any]:
+    return {"id": node.id, "kind": node.kind, "distance": node.distance, "path": list(node.path)}
+
+
+def _flow_to_dict(flow: FlowReport) -> dict[str, Any]:
+    named = flow.named_bottleneck
+    path = flow.slowest_path
+    return {
+        "items": [_pipeline_flow_to_dict(item) for item in flow.pipelines],
+        "bottleneck": None
+        if named is None
+        else {
+            "id": named.id,
+            "utilization": _finite(named.utilization),
+            "offered": _finite(named.offered),
+            "capacity": _finite(named.capacity),
+        },
+        "slowestPath": None
+        if path is None
+        else {"pipelines": list(path.pipelines), "seconds": _finite(path.seconds)},
+    }
+
+
+def _pipeline_flow_to_dict(item: PipelineFlow) -> dict[str, Any]:
+    return {
+        "id": item.id,
+        "offered": _finite(item.offered),
+        "processed": _finite(item.processed),
+        "capacity": _finite(item.capacity),
+        "utilization": _finite(item.utilization),
+        "status": None if item.status is None else str(item.status),
+        "latency": _finite(item.latency),
+    }

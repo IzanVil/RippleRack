@@ -389,3 +389,14 @@ def test_latency_never_drops_below_the_own_one_or_the_one_of_an_input(
             before = reached[index - 1]
             assert before is not None
             assert latency >= before
+
+
+def test_named_bottleneck_needs_eighty_percent(raw_mini: dict[str, Any]) -> None:
+    full = analyze_flow(example(raw_mini), 1.0, [])
+    light = analyze_flow(example(raw_mini), 0.5, [])
+    assert full is not None
+    assert light is not None
+    assert full.named_bottleneck is not None
+    assert full.named_bottleneck.id == "orders-enriched"
+    assert light.bottleneck is not None  # the busiest is still known...
+    assert light.named_bottleneck is None  # ...but at 45% it is not a bottleneck

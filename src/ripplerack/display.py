@@ -14,7 +14,7 @@ from rich.markup import escape
 from rich.table import Table
 from rich.tree import Tree
 
-from ripplerack.capacity import WARNING_THRESHOLD, Status
+from ripplerack.capacity import Status
 from ripplerack.describe import PARENT_LABELS, describe_change, diff_counts
 from ripplerack.diff import AttributeChange, ComponentRef, DatacenterDiff
 from ripplerack.flow import FlowReport
@@ -361,10 +361,11 @@ def _seconds(value: float | None) -> str:
 def _print_flow_summary(flow: FlowReport) -> None:
     """Where the data piles up, if anywhere, and the slowest way through the pipelines."""
     busiest = flow.bottleneck
-    if busiest is not None and (busiest.utilization or 0.0) >= WARNING_THRESHOLD:
+    named = flow.named_bottleneck
+    if named is not None:
         console.print(
-            f"[bold]Bottleneck:[/] {busiest.id} at {_percent(busiest.utilization)} "
-            f"({_number(busiest.offered)} of {_number(busiest.capacity)} records/s)"
+            f"[bold]Bottleneck:[/] {named.id} at {_percent(named.utilization)} "
+            f"({_number(named.offered)} of {_number(named.capacity)} records/s)"
         )
     elif busiest is not None:
         console.print(
