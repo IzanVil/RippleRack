@@ -25,6 +25,7 @@ class ErrorCode(StrEnum):
     VALIDATION_FAILED = "validation_failed"
     DEPENDENCY_CYCLE = "dependency_cycle"
     UNKNOWN_PIPELINE = "unknown_pipeline"
+    UNKNOWN_COMPONENT = "unknown_component"
     INVALID_JSON = "invalid_json"
     INVALID_JSON_SCHEMA = "invalid_json_schema"
     UNSUPPORTED_JSON_SCHEMA = "unsupported_json_schema"

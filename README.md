@@ -431,6 +431,21 @@ more than it can process counts as `overloaded`. The
 [concepts guide](https://github.com/IzanVil/RippleRack/blob/main/docs/concepts.md#throughput-and-latency)
 has the rules.
 
+`--fail-on-overloaded` exits with code 2 when a rack, a server or a pipeline is above its
+capacity, to gate a CI job, and `--format json` writes the simulation as a versioned JSON document
+(the
+[reference](https://github.com/IzanVil/RippleRack/blob/main/docs/output-formats.md#simulate)):
+
+```bash
+# Gate: exit code 2 if anything is above its capacity
+uv run ripplerack simulate examples/mini_datacenter.yaml --load 1.5 --fail-on-overloaded
+
+# What is above its capacity, as JSON
+uv run ripplerack simulate examples/mini_datacenter.yaml --load 1.5 --format json \
+  | jq -c '{healthy, overloaded}'
+# {"healthy":false,"overloaded":["rack-a","srv-a2","orders-ingest","orders-enriched"]}
+```
+
 ## How it works
 
 ```mermaid

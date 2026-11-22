@@ -20,8 +20,10 @@ from ripplerack.report import (
     error_to_dict,
     impact_to_dict,
     schema_diff_to_dict,
+    simulate_to_dict,
 )
 from ripplerack.semver import ChangeKind, diff_schemas
+from ripplerack.simulate import simulate
 from tests.helpers import (
     EXAMPLES,
     assert_json_golden,
@@ -31,6 +33,7 @@ from tests.helpers import (
     rename_kafka,
     server_of,
     set_orders_schema,
+    without_flow,
 )
 
 CAMEL_CASE = re.compile(r"^[a-z][a-zA-Z0-9]*$")
@@ -395,3 +398,123 @@ class TestDiffPayload:
 
     def test_golden_kitchen_sink(self, sink_diff: DatacenterDiff) -> None:
         assert_json_golden("diff_kitchen_sink.json", diff_to_dict(sink_diff))
+
+
+SIMULATIONS: list[tuple[float, list[str]]] = [
+    (1.0, []),
+    (1.5, []),
+    (1.5, ["srv-a2"]),
+    (float("inf"), []),
+]
+SIMULATION_STATUSES = {"ok", "warning", "overloaded", "failed"}
+
+
+def simulation_payload(
+    dc: LoadedDatacenter, load: float = 1.0, failures: list[str] | None = None
+) -> dict[str, Any]:
+    report = simulate(dc.datacenter, dc.graph, load_factor=load, failures=failures)
+    return simulate_to_dict(dc.datacenter.name, report)
+
+
+def raise_(constant: str) -> None:
+    raise AssertionError(f"{constant} is not valid JSON")
+
+
+class TestSimulatePayload:
+    def test_top_level_keys_are_exact(self, mini_dc: LoadedDatacenter) -> None:
+        payload = simulation_payload(mini_dc)
+        assert list(payload) == [
+            "schemaVersion",
+            "tool",
+            "command",
+            "datacenter",
+            "loadFactor",
+            "healthy",
+            "overloaded",
+            "failed",
+            "unavailable",
+            "racks",
+            "servers",
+            "pipelines",
+        ]
+        assert payload["command"] == "simulate"
+        assert payload["schemaVersion"] == SCHEMA_VERSION == 1
+
+    def test_nested_keys_are_exact(self, mini_dc: LoadedDatacenter) -> None:
+        payload = simulation_payload(mini_dc)
+        assert list(payload["racks"][0]) == ["id", "power", "status"]
+        assert list(payload["servers"][0]) == ["id", "rack", "cpu", "memory", "status"]
+        for usage in (payload["racks"][0]["power"], payload["servers"][0]["cpu"]):
+            assert list(usage) == ["used", "capacity", "ratio"]
+        assert list(payload["pipelines"]) == ["items", "bottleneck", "slowestPath"]
+        assert list(payload["pipelines"]["items"][0]) == [
+            "id",
+            "offered",
+            "processed",
+            "capacity",
+            "utilization",
+            "status",
+            "latency",
+        ]
+        assert list(payload["pipelines"]["bottleneck"]) == [
+            "id",
+            "utilization",
+            "offered",
+            "capacity",
+        ]
+        assert list(payload["pipelines"]["slowestPath"]) == ["pipelines", "seconds"]
+        failed = simulation_payload(mini_dc, 1.0, ["srv-a2"])
+        assert list(failed["unavailable"][0]) == ["id", "kind", "distance", "path"]
+
+    @pytest.mark.parametrize(("load", "failures"), SIMULATIONS[:3])
+    def test_it_says_what_the_report_says(
+        self, mini_dc: LoadedDatacenter, load: float, failures: list[str]
+    ) -> None:
+        report = simulate(mini_dc.datacenter, mini_dc.graph, load_factor=load, failures=failures)
+        payload = simulation_payload(mini_dc, load, failures)
+        assert payload["healthy"] is report.healthy
+        assert payload["overloaded"] == report.overloaded
+        assert payload["failed"] == report.failed
+        assert payload["loadFactor"] == load
+
+    def test_the_bottleneck_is_named_from_eighty_percent(self, mini_dc: LoadedDatacenter) -> None:
+        assert simulation_payload(mini_dc, 0.5)["pipelines"]["bottleneck"] is None
+        named = simulation_payload(mini_dc, 1.0)["pipelines"]["bottleneck"]
+        assert named["id"] == "orders-enriched"
+
+    def test_a_datacenter_without_flow_numbers_has_no_pipelines(self) -> None:
+        payload = simulation_payload(load_variant(without_flow))
+        assert payload["pipelines"] is None
+        assert list(payload)[-2:] == ["servers", "pipelines"]
+
+    def test_a_failed_pipeline_has_nulls(self, mini_dc: LoadedDatacenter) -> None:
+        items = simulation_payload(mini_dc, 1.0, ["srv-a2"])["pipelines"]["items"]
+        enriched = next(item for item in items if item["id"] == "orders-enriched")
+        assert enriched["status"] == "failed"
+        for key in ("offered", "processed", "utilization", "latency"):
+            assert enriched[key] is None, key
+        assert enriched["capacity"] == 450
+
+    def test_what_is_not_finite_is_null(self, mini_dc: LoadedDatacenter) -> None:
+        payload = simulation_payload(mini_dc, float("inf"))
+        json.loads(dumps(payload), parse_constant=raise_)
+        assert payload["loadFactor"] is None
+        assert any(
+            server["cpu"]["used"] is None and server["status"] == "overloaded"
+            for server in payload["servers"]
+        )
+
+    @pytest.mark.parametrize(("load", "failures"), SIMULATIONS)
+    def test_every_key_is_camel_case_and_every_status_is_known(
+        self, mini_dc: LoadedDatacenter, load: float, failures: list[str]
+    ) -> None:
+        payload = simulation_payload(mini_dc, load, failures)
+        assert all(CAMEL_CASE.match(key) for key in all_keys(payload)), set(all_keys(payload))
+        statuses = [row["status"] for row in payload["racks"] + payload["servers"]]
+        statuses += [item["status"] for item in payload["pipelines"]["items"]]
+        assert set(statuses) - {None} <= SIMULATION_STATUSES
+
+    def test_the_document_is_deterministic(self, mini_dc: LoadedDatacenter) -> None:
+        assert dumps(simulation_payload(mini_dc, 1.5, ["srv-a2"])) == dumps(
+            simulation_payload(mini_dc, 1.5, ["srv-a2"])
+        )

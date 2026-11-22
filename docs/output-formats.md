@@ -11,6 +11,7 @@ paste in the comment of a pull request. [RippleRack in CI](ci.md) puts them to w
 |-------------------------------------------|------------------------------------|
 | `ripplerack impact ... --format json`     | [impact document](#impact)         |
 | `ripplerack diff BASE HEAD --format json` | [diff document](#diff)             |
+| `ripplerack simulate ... --format json`   | [simulate document](#simulate)     |
 | `ripplerack graph ... -F json`            | [graph export](#graph-json-export) |
 
 `ripplerack import` writes YAML, not JSON: see [import.md](import.md).
@@ -43,7 +44,7 @@ These rules apply to **every** JSON document RippleRack produces.
 |-----------------|---------|-------------|
 | `schemaVersion` | integer | Version of **this JSON contract** (currently `1`). Not the version of any data schema. |
 | `tool`          | object  | `{"name": "ripplerack", "version": "<release>"}` |
-| `command`       | string  | The command that produced the document: `impact` or `diff`. |
+| `command`       | string  | The command that produced the document: `impact`, `diff` or `simulate`. |
 
 ### Stability policy
 
@@ -337,6 +338,83 @@ Lists are sorted by `source`, then `target`.
   Warnings come in this order: name, then kind changes by `id`, then versions by
   `pipeline`. New codes may be added without bumping `schemaVersion`.
 
+## Simulate
+
+`ripplerack simulate FILE --format json` runs the capacity and failure simulation and writes what
+it finds, with the same `--load` and `--fail` as the text output. [Exit codes](#exit-codes) tells
+how `--fail-on-overloaded` turns it into a gate.
+
+```json
+{
+  "schemaVersion": 1,
+  "tool": { "name": "ripplerack", "version": "0.2.5" },
+  "command": "simulate",
+  "datacenter": "mini-datacenter",
+  "loadFactor": 1.5,
+  "healthy": false,
+  "overloaded": ["rack-a", "srv-a2", "orders-ingest", "orders-enriched"],
+  "failed": [],
+  "unavailable": [],
+  "racks": [
+    {
+      "id": "rack-a",
+      "power": { "used": 3.0, "capacity": 2.8, "ratio": 1.0714285714285714 },
+      "status": "overloaded"
+    }
+  ],
+  "servers": [
+    {
+      "id": "srv-a1",
+      "rack": "rack-a",
+      "cpu": { "used": 30.0, "capacity": 32.0, "ratio": 0.9375 },
+      "memory": { "used": 120.0, "capacity": 128.0, "ratio": 0.9375 },
+      "status": "warning"
+    }
+  ],
+  "pipelines": {
+    "items": [
+      {
+        "id": "orders-ingest",
+        "offered": 600.0, "processed": 500.0, "capacity": 500.0,
+        "utilization": 1.2, "status": "overloaded", "latency": 2.0
+      }
+    ],
+    "bottleneck": { "id": "orders-ingest", "utilization": 1.2, "offered": 600.0, "capacity": 500.0 },
+    "slowestPath": { "pipelines": ["orders-ingest", "orders-enriched", "revenue-daily"], "seconds": 332.0 }
+  }
+}
+```
+
+(Abbreviated; see [`tests/golden/`](../tests/golden) for complete documents.)
+
+### Top-level keys
+
+| key          | type            | description |
+|--------------|-----------------|-------------|
+| `datacenter` | string          | The `name` of the datacenter file. |
+| `loadFactor` | number or null  | The `--load` that was used. |
+| `healthy`    | boolean         | `true` when nothing is overloaded and nothing is failed. |
+| `overloaded` | array of string | Ids of the racks, servers and pipelines above their capacity (more than 100%): racks first, then servers, then pipelines. |
+| `failed`     | array of string | The components taken down with `--fail`. |
+| `unavailable`| array           | What goes down with them: `{id, kind, distance, path}`, as in `affected` of [impact](#brokenconsumers-and-affected). |
+| `racks`      | array           | One entry per rack: `{id, power, status}`. |
+| `servers`    | array           | One entry per server: `{id, rack, cpu, memory, status}`. |
+| `pipelines`  | object or null  | `null` when no pipeline declares how much data flows through it (see [the YAML format](yaml-format.md#pipeline-flow)). |
+
+### Usage, status and pipelines
+
+* `power`, `cpu` and `memory` are `{used, capacity, ratio}`, where `ratio` is `used` divided by
+  `capacity`.
+* `status` is `ok` (below 80%), `warning` (80% to 100%), `overloaded` (above 100%) or `failed`.
+* `pipelines.items` has one entry per pipeline, in the order the data flows:
+  `{id, offered, processed, capacity, utilization, status, latency}`. What is not known is `null`:
+  a pipeline that is failed has `status: "failed"` and `null` for everything but `capacity`.
+* `pipelines.bottleneck` is `{id, utilization, offered, capacity}` for the busiest pipeline when it
+  uses 80% or more of its capacity, as the text output names it, and `null` otherwise.
+* `pipelines.slowestPath` is `{pipelines, seconds}`, or `null` when nothing adds any latency.
+* JSON has no infinity: a number that is not finite (with `--load inf`) is written as `null`, and
+  `status` still says `overloaded`.
+
 ## Errors
 
 When `--format json` is requested and the command fails, **stdout stays empty**
@@ -364,6 +442,7 @@ object:
 | `validation_failed` | A datacenter or schema file does not satisfy the model: unknown keys, wrong types, duplicate ids, references to missing components or fields. |
 | `dependency_cycle`  | The dependency graph contains a cycle. |
 | `unknown_pipeline`  | `--pipeline` names a pipeline that does not exist. |
+| `unknown_component` | `simulate`: `--fail` names a component that does not exist. |
 | `invalid_json`      | `import`: the input file is not valid JSON. |
 | `invalid_json_schema` | `import`: the input is JSON, but not a well-formed JSON Schema. |
 | `unsupported_json_schema` | `import`: the input is a JSON Schema that cannot be imported as it is. |
@@ -376,7 +455,7 @@ object:
 For file-related codes `error.message` names the offending file, and for
 `validation_failed` it lists every problem found. `diff` reads two files, so its
 message tells you whether `BASE` or `HEAD` was the problem. `unknown_pipeline` only
-applies to `impact`.
+applies to `impact` and `unknown_component` only to `simulate`.
 
 The last six codes come from `ripplerack import`. It writes YAML and has no
 `--format json`, so for now they are not printed in a JSON document; they identify the error
@@ -397,11 +476,11 @@ Without `--format json`, errors are a single human-readable line on stderr.
 | code | meaning |
 |------|---------|
 | `0`  | Success. |
-| `1`  | The command failed: unreadable or invalid input, unknown pipeline. |
-| `2`  | `--fail-on-breaking` was given and at least one consumer breaks (for `diff`: `summary.brokenConsumers` is greater than zero), **or** the command line was invalid. |
+| `1`  | The command failed: unreadable or invalid input, unknown pipeline or component. |
+| `2`  | `--fail-on-breaking` was given and at least one consumer breaks (for `diff`: `summary.brokenConsumers` is greater than zero), **or** `simulate` was given `--fail-on-overloaded` and `overloaded` is not empty, **or** the command line was invalid. |
 
 Status `2` has two meanings. To tell them apart in a script, look at stdout: with
-`--format json` a breaking-change result always leaves a JSON document there,
+`--format json` a breaking-change or overloaded result always leaves a JSON document there,
 whereas a usage error leaves it empty. The same goes for `--format markdown`.
 
 ```bash

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "ripplerack",
+    "version": "<version>"
+  },
+  "command": "simulate",
+  "datacenter": "mini-datacenter",
+  "loadFactor": 1.0,
+  "healthy": false,
+  "overloaded": [],
+  "failed": [
+    "srv-a2"
+  ],
+  "unavailable": [
+    {
+      "id": "spark",
+      "kind": "service",
+      "distance": 1,
+      "path": [
+        "srv-a2",
+        "spark"
+      ]
+    },
+    {
+      "id": "orders-enriched",
+      "kind": "pipeline",
+      "distance": 2,
+      "path": [
+        "srv-a2",
+        "spark",
+        "orders-enriched"
+      ]
+    },
+    {
+      "id": "revenue-daily",
+      "kind": "pipeline",
+      "distance": 2,
+      "path": [
+        "srv-a2",
+        "spark",
+        "revenue-daily"
+      ]
+    },
+    {
+      "id": "dashboard",
+      "kind": "service",
+      "distance": 3,
+      "path": [
+        "srv-a2",
+        "spark",
+        "revenue-daily",
+        "dashboard"
+      ]
+    }
+  ],
+  "racks": [
+    {
+      "id": "rack-a",
+      "power": {
+        "used": 1.2,
+        "capacity": 2.8,
+        "ratio": 0.4285714285714286
+      },
+      "status": "ok"
+    },
+    {
+      "id": "rack-b",
+      "power": {
+        "used": 1.0,
+        "capacity": 4.0,
+        "ratio": 0.25
+      },
+      "status": "ok"
+    }
+  ],
+  "servers": [
+    {
+      "id": "srv-a1",
+      "rack": "rack-a",
+      "cpu": {
+        "used": 20.0,
+        "capacity": 32.0,
+        "ratio": 0.625
+      },
+      "memory": {
+        "used": 80.0,
+        "capacity": 128.0,
+        "ratio": 0.625
+      },
+      "status": "ok"
+    },
+    {
+      "id": "srv-a2",
+      "rack": "rack-a",
+      "cpu": {
+        "used": 0.0,
+        "capacity": 16.0,
+        "ratio": 0.0
+      },
+      "memory": {
+        "used": 0.0,
+        "capacity": 64.0,
+        "ratio": 0.0
+      },
+      "status": "failed"
+    },
+    {
+      "id": "srv-b1",
+      "rack": "rack-b",
+      "cpu": {
+        "used": 6.0,
+        "capacity": 24.0,
+        "ratio": 0.25
+      },
+      "memory": {
+        "used": 16.0,
+        "capacity": 96.0,
+        "ratio": 0.16666666666666666
+      },
+      "status": "ok"
+    }
+  ],
+  "pipelines": {
+    "items": [
+      {
+        "id": "orders-ingest",
+        "offered": 400.0,
+        "processed": 400.0,
+        "capacity": 500.0,
+        "utilization": 0.8,
+        "status": "warning",
+        "latency": 2.0
+      },
+      {
+        "id": "orders-enriched",
+        "offered": null,
+        "processed": null,
+        "capacity": 450.0,
+        "utilization": null,
+        "status": "failed",
+        "latency": null
+      },
+      {
+        "id": "revenue-daily",
+        "offered": null,
+        "processed": null,
+        "capacity": 600.0,
+        "utilization": null,
+        "status": "failed",
+        "latency": null
+      },
+      {
+        "id": "customer-360",
+        "offered": 400.0,
+        "processed": 400.0,
+        "capacity": 800.0,
+        "utilization": 0.5,
+        "status": "ok",
+        "latency": 7.0
+      }
+    ],
+    "bottleneck": {
+      "id": "orders-ingest",
+      "utilization": 0.8,
+      "offered": 400.0,
+      "capacity": 500.0
+    },
+    "slowestPath": {
+      "pipelines": [
+        "orders-ingest",
+        "customer-360"
+      ],
+      "seconds": 7.0
+    }
+  }
+}

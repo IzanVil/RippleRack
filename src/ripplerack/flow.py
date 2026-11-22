@@ -16,7 +16,7 @@ from __future__ import annotations
 from collections.abc import Collection
 from dataclasses import dataclass, replace
 
-from ripplerack.capacity import ResourceUsage, Status, classify
+from ripplerack.capacity import WARNING_THRESHOLD, ResourceUsage, Status, classify
 from ripplerack.models import Datacenter, Pipeline
 
 
@@ -53,6 +53,14 @@ class FlowReport:
     def overloaded(self) -> list[str]:
         """Ids of the pipelines offered more than they can process."""
         return [flow.id for flow in self.pipelines if flow.status is Status.OVERLOADED]
+
+    @property
+    def named_bottleneck(self) -> PipelineFlow | None:
+        """The busiest pipeline when it uses ``WARNING_THRESHOLD`` of its capacity or more."""
+        busiest = self.bottleneck
+        if busiest is None or (busiest.utilization or 0.0) < WARNING_THRESHOLD:
+            return None
+        return busiest
 
 
 def analyze_flow(

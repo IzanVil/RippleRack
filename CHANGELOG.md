@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ripplerack simulate --format json` writes the simulation as a JSON document, with the same
+  envelope as `impact` and `diff` (`command` is `simulate`) and the reference in
+  `docs/output-formats.md`. `--fail-on-overloaded` exits with code 2 when a rack, a server or a
+  pipeline is above its capacity, and a `--fail` that names no component is reported with the
+  error code `unknown_component`.
+
 ### Changed
 
 - The help of `simulate --load` says that it scales the arrival of the pipelines as well as the
