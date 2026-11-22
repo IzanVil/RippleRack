@@ -477,8 +477,7 @@ Without `--format json`, errors are a single human-readable line on stderr.
 |------|---------|
 | `0`  | Success. |
 | `1`  | The command failed: unreadable or invalid input, unknown pipeline or component. |
-| `2`  | `--fail-on-breaking` was given and at least one consumer breaks (for `diff`: `summary.brokenConsumers` is greater than zero), **or** `simulate` was given
-  `--fail-on-overloaded` and `overloaded` is not empty, **or** the command line was invalid. |
+| `2`  | `--fail-on-breaking` was given and at least one consumer breaks (for `diff`: `summary.brokenConsumers` is greater than zero), **or** `simulate` was given `--fail-on-overloaded` and `overloaded` is not empty, **or** the command line was invalid. |
 
 Status `2` has two meanings. To tell them apart in a script, look at stdout: with
 `--format json` a breaking-change or overloaded result always leaves a JSON document there,

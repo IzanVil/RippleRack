@@ -12,7 +12,7 @@ import re
 from ripplerack.parser import load_datacenter
 from ripplerack.report import simulate_to_dict
 from ripplerack.simulate import simulate
-from tests.markdown import ROOT
+from tests.markdown import ROOT, table_under
 
 GUIDE = (ROOT / "docs" / "output-formats.md").read_text(encoding="utf-8")
 SECTION = re.compile(r"^## Simulate\n(.*?)(?=^## |\Z)", re.MULTILINE | re.DOTALL)
@@ -30,6 +30,7 @@ def test_the_documented_keys_are_the_ones_of_the_document_in_its_order() -> None
     assert ROW.findall(table) == list(payload)[ENVELOPE:]
 
 
-def test_the_exit_codes_name_the_gate() -> None:
-    codes = GUIDE[GUIDE.index("## Exit codes") : GUIDE.index("## Graph JSON export")]
-    assert "--fail-on-overloaded" in codes
+def test_the_exit_code_two_names_the_gate() -> None:
+    """In the cell of the row, so a row broken over two lines of the source does not count."""
+    [two] = [cells for cells in table_under(GUIDE, "## Exit codes") if cells[0] == "`2`"]
+    assert "--fail-on-overloaded" in two[1]
