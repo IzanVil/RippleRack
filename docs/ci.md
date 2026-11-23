@@ -119,14 +119,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: IzanVil/RippleRack/action@v0.2.5
+      - uses: IzanVil/RippleRack/action@v0.2.6
         with:
           head: datacenter.yaml
           fail-on-breaking: "true"
 ```
 
 A copy to start from is in [`examples/ci/ripplerack.yml`](../examples/ci/ripplerack.yml). The
-action is versioned with RippleRack: `@v0.2.5` is the action of the release `v0.2.5` and installs
+action is versioned with RippleRack: `@v0.2.6` is the action of the release `v0.2.6` and installs
 that release, so pin a tag or a commit. It needs Python 3.11 or newer on the runner, which the
 `ubuntu-latest` image has, and it is written with `bash` and `python3`, so it is meant for Linux
 and macOS runners.
@@ -156,7 +156,7 @@ Use them in the steps that follow:
 
 ```yaml
       - id: ripplerack
-        uses: IzanVil/RippleRack/action@v0.2.5
+        uses: IzanVil/RippleRack/action@v0.2.6
         with:
           head: datacenter.yaml
       - if: steps.ripplerack.outputs.severity == 'critical'
