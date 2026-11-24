@@ -117,7 +117,7 @@ ripplerack graph dc.yaml -F json | jq -r '.nodes[] | select(.kind == "pipeline")
 ```json
 {
   "schemaVersion": 1,
-  "tool": { "name": "ripplerack", "version": "0.2.5" },
+  "tool": { "name": "ripplerack", "version": "0.2.6" },
   "command": "impact",
   "datacenter": "mini-datacenter",
   "pipeline": "orders-ingest",
@@ -223,7 +223,7 @@ Each entry of `changes`:
 ```json
 {
   "schemaVersion": 1,
-  "tool": { "name": "ripplerack", "version": "0.2.5" },
+  "tool": { "name": "ripplerack", "version": "0.2.6" },
   "command": "diff",
   "base": { "name": "mini-datacenter" },
   "head": { "name": "mini-datacenter" },
@@ -347,7 +347,7 @@ how `--fail-on-overloaded` turns it into a gate.
 ```json
 {
   "schemaVersion": 1,
-  "tool": { "name": "ripplerack", "version": "0.2.5" },
+  "tool": { "name": "ripplerack", "version": "0.2.6" },
   "command": "simulate",
   "datacenter": "mini-datacenter",
   "loadFactor": 1.5,
@@ -424,7 +424,7 @@ object:
 ```json
 {
   "schemaVersion": 1,
-  "tool": { "name": "ripplerack", "version": "0.2.5" },
+  "tool": { "name": "ripplerack", "version": "0.2.6" },
   "command": "impact",
   "error": {
     "code": "unknown_pipeline",
