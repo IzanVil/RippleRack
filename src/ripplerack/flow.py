@@ -16,7 +16,7 @@ from __future__ import annotations
 from collections.abc import Collection
 from dataclasses import dataclass, replace
 
-from ripplerack.capacity import WARNING_THRESHOLD, ResourceUsage, Status, classify
+from ripplerack.capacity import WARNING_THRESHOLD, ResourceUsage, Status, classify, scaled
 from ripplerack.models import Datacenter, Pipeline
 
 
@@ -126,7 +126,7 @@ def _flow_of(
         usage = ResourceUsage(offered, capacity)
         utilization, status = usage.ratio, classify(usage)
     ratio = 1.0 if pipeline.output_ratio is None else pipeline.output_ratio
-    emits = None if processed is None else _scaled(processed, ratio)
+    emits = None if processed is None else scaled(processed, ratio)
     return PipelineFlow(pipeline.id, offered, processed, capacity, utilization, status), emits
 
 
@@ -135,7 +135,7 @@ def _offered(
 ) -> float | None:
     """What reaches ``pipeline``: its arrival if it reads no other one, else what those emit."""
     if not pipeline.inputs:
-        return None if pipeline.arrival is None else _scaled(pipeline.arrival, load_factor)
+        return None if pipeline.arrival is None else scaled(pipeline.arrival, load_factor)
     total = 0.0
     for upstream in dict.fromkeys(item.pipeline for item in pipeline.inputs):
         rate = emitted[upstream]
@@ -143,11 +143,6 @@ def _offered(
             return None
         total += rate
     return total
-
-
-def _scaled(rate: float, factor: float) -> float:
-    """``rate * factor``, where nothing times anything, even infinity, is nothing."""
-    return 0.0 if rate == 0 or factor == 0 else rate * factor
 
 
 def _latencies(
