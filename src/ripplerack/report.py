@@ -49,8 +49,12 @@ def envelope(command: str) -> dict[str, Any]:
 
 
 def dumps(payload: dict[str, Any]) -> str:
-    """Serialize ``payload`` as canonical JSON: 2-space indent, ASCII only, trailing newline."""
-    return json.dumps(payload, indent=2, ensure_ascii=True) + "\n"
+    """Serialize ``payload`` as canonical JSON: 2-space indent, ASCII only, trailing newline.
+
+    JSON has no NaN or infinity, and the documents write such a number as ``null``; one that reaches
+    this point raises ``ValueError`` instead of producing a document that strict readers refuse.
+    """
+    return json.dumps(payload, indent=2, ensure_ascii=True, allow_nan=False) + "\n"
 
 
 def error_to_dict(command: str, code: str, message: str) -> dict[str, Any]:

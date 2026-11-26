@@ -33,6 +33,11 @@ class ResourceUsage:
         return self.used / self.capacity if self.capacity else 0.0
 
 
+def scaled(amount: float, factor: float) -> float:
+    """``amount * factor``, where nothing times anything, even infinity, is nothing."""
+    return 0.0 if amount == 0 or factor == 0 else amount * factor
+
+
 def classify(*usages: ResourceUsage) -> Status:
     """Return the worst status among the given resource usages."""
     worst = max((usage.ratio for usage in usages), default=0.0)

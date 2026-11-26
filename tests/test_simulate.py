@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import math
+from typing import Any
+
 import pytest
 
 from ripplerack.capacity import ResourceUsage, Status, classify
 from ripplerack.parser import LoadedDatacenter
 from ripplerack.simulate import simulate
-from tests.helpers import load_variant, without_flow
+from tests.helpers import load_variant, server_of, without_flow
 
 
 @pytest.mark.parametrize(
@@ -104,3 +107,39 @@ def test_a_pipeline_at_warning_is_still_healthy(mini_dc: LoadedDatacenter) -> No
     assert report.flow is not None
     assert Status.WARNING in {flow.status for flow in report.flow.pipelines}
     assert report.healthy
+
+
+# An infinite load scales every demand to infinity, but no demand at all stays at nothing:
+# 0 * inf is NaN, and a NaN usage compares false with every threshold, so it used to read as "ok".
+
+
+def _service_without_cpu(data: dict[str, Any]) -> None:
+    server_of(data, "srv-a2")["services"][0]["cpu_cores"] = 0
+
+
+def _server_without_power(data: dict[str, Any]) -> None:
+    server_of(data, "srv-a2")["power_kw"] = 0
+
+
+def test_infinite_load_overloads_a_server_whose_services_ask_for_no_cpu() -> None:
+    loaded = load_variant(_service_without_cpu)
+    report = simulate(loaded.datacenter, loaded.graph, load_factor=math.inf)
+    srv_a2 = next(s for s in report.servers if s.id == "srv-a2")
+    assert srv_a2.cpu.used == 0
+    assert srv_a2.memory.used == math.inf
+    assert srv_a2.status is Status.OVERLOADED
+
+
+def test_infinite_load_overloads_a_rack_with_a_server_that_draws_no_power() -> None:
+    loaded = load_variant(_server_without_power)
+    report = simulate(loaded.datacenter, loaded.graph, load_factor=math.inf)
+    rack_a = next(r for r in report.racks if r.id == "rack-a")
+    assert rack_a.power.used == math.inf
+    assert rack_a.status is Status.OVERLOADED
+
+
+def test_infinite_load_leaves_a_server_with_nothing_running_idle(mini_dc: LoadedDatacenter) -> None:
+    report = simulate(mini_dc.datacenter, mini_dc.graph, load_factor=math.inf, failures=["spark"])
+    srv_a2 = next(s for s in report.servers if s.id == "srv-a2")
+    assert (srv_a2.cpu.used, srv_a2.memory.used) == (0, 0)
+    assert srv_a2.status is Status.OK

@@ -478,7 +478,7 @@ Each module has one job; the [concepts guide](https://github.com/IzanVil/RippleR
 | `impact.py` | Blast radius, broken consumers, severity |
 | `diff.py` | Comparison of two datacenter files: components, dependencies, schema impact |
 | `importers/` | Schema importers (JSON Schema, Avro and SQL) and the YAML writer for what they read |
-| `report.py` | Versioned JSON documents for CI (impact and diff results, errors) |
+| `report.py` | Versioned JSON documents for CI (impact, diff and simulate results, errors) |
 | `capacity.py` | Usage against capacity and the thresholds that read it: `ok`, `warning`, `overloaded` |
 | `flow.py` | Rates, load, latency, bottleneck and slowest path of the pipelines |
 | `simulate.py` | Capacity and failure simulation |

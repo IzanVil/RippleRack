@@ -392,13 +392,13 @@ how `--fail-on-overloaded` turns it into a gate.
 | key          | type            | description |
 |--------------|-----------------|-------------|
 | `datacenter` | string          | The `name` of the datacenter file. |
-| `loadFactor` | number or null  | The `--load` that was used. |
+| `loadFactor` | number or null  | The `--load` that was used, or `null` when it is `inf`. |
 | `healthy`    | boolean         | `true` when nothing is overloaded and nothing is failed. |
 | `overloaded` | array of string | Ids of the racks, servers and pipelines above their capacity (more than 100%): racks first, then servers, then pipelines. |
-| `failed`     | array of string | The components taken down with `--fail`. |
-| `unavailable`| array           | What goes down with them: `{id, kind, distance, path}`, as in `affected` of [impact](#brokenconsumers-and-affected). |
-| `racks`      | array           | One entry per rack: `{id, power, status}`. |
-| `servers`    | array           | One entry per server: `{id, rack, cpu, memory, status}`. |
+| `failed`     | array of string | The components named with `--fail`, in the order given. What goes down with them is in `unavailable`. |
+| `unavailable`| array           | What goes down with them: `{id, kind, distance, path}`, as in `affected` of [impact](#brokenconsumers-and-affected), counted from the closest failed component and sorted by `distance`, then by `id`. |
+| `racks`      | array           | One entry per rack, in the order of the file: `{id, power, status}`. |
+| `servers`    | array           | One entry per server, in the order of the file, rack by rack: `{id, rack, cpu, memory, status}`. |
 | `pipelines`  | object or null  | `null` when no pipeline declares how much data flows through it (see [the YAML format](yaml-format.md#pipeline-flow)). |
 
 ### Usage, status and pipelines
@@ -406,6 +406,7 @@ how `--fail-on-overloaded` turns it into a gate.
 * `power`, `cpu` and `memory` are `{used, capacity, ratio}`, where `ratio` is `used` divided by
   `capacity`.
 * `status` is `ok` (below 80%), `warning` (80% to 100%), `overloaded` (above 100%) or `failed`.
+  `failed` is for everything that is down: what `--fail` names and what goes down with it.
 * `pipelines.items` has one entry per pipeline, in the order the data flows:
   `{id, offered, processed, capacity, utilization, status, latency}`. What is not known is `null`:
   a pipeline that is failed has `status: "failed"` and `null` for everything but `capacity`.
@@ -413,7 +414,7 @@ how `--fail-on-overloaded` turns it into a gate.
   uses 80% or more of its capacity, as the text output names it, and `null` otherwise.
 * `pipelines.slowestPath` is `{pipelines, seconds}`, or `null` when nothing adds any latency.
 * JSON has no infinity: a number that is not finite (with `--load inf`) is written as `null`, and
-  `status` still says `overloaded`.
+  `status` still says `overloaded`. A demand of zero stays `0` under any load, `inf` included.
 
 ## Errors
 
@@ -457,7 +458,7 @@ For file-related codes `error.message` names the offending file, and for
 message tells you whether `BASE` or `HEAD` was the problem. `unknown_pipeline` only
 applies to `impact` and `unknown_component` only to `simulate`.
 
-The last six codes come from `ripplerack import`. It writes YAML and has no
+The last eight codes come from `ripplerack import`. It writes YAML and has no
 `--format json`, so for now they are not printed in a JSON document; they identify the error
 in the Python API (`RippleRackError.code`) and are explained in [import.md](import.md#errors).
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections.abc import Iterator
 from typing import Any
@@ -518,3 +519,14 @@ class TestSimulatePayload:
         assert dumps(simulation_payload(mini_dc, 1.5, ["srv-a2"])) == dumps(
             simulation_payload(mini_dc, 1.5, ["srv-a2"])
         )
+
+
+# JSON has no NaN or infinity: the simulation writes such a number as null on purpose, so one that
+# reaches the writer is a mistake upstream, and it must fail loudly instead of writing a document
+# that strict readers refuse.
+
+
+@pytest.mark.parametrize("value", [math.nan, math.inf, -math.inf])
+def test_dumps_refuses_a_number_json_cannot_hold(value: float) -> None:
+    with pytest.raises(ValueError, match="JSON compliant"):
+        dumps({"ratio": value})

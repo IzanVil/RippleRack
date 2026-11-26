@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 import networkx as nx
 
-from ripplerack.capacity import ResourceUsage, Status, classify
+from ripplerack.capacity import ResourceUsage, Status, classify, scaled
 from ripplerack.flow import FlowReport, analyze_flow
 from ripplerack.impact import AffectedNode, blast_radius
 from ripplerack.models import Datacenter, Rack, Server
@@ -119,15 +119,15 @@ def _cascade(
 def _server_report(rack: Rack, server: Server, down: set[str], load_factor: float) -> ServerReport:
     """Usage of a server by the services that are still running on it."""
     running = [service for service in server.services if service.id not in down]
-    cpu = ResourceUsage(sum(s.cpu_cores for s in running) * load_factor, server.cpu_cores)
-    memory = ResourceUsage(sum(s.memory_gb for s in running) * load_factor, server.memory_gb)
+    cpu = ResourceUsage(scaled(sum(s.cpu_cores for s in running), load_factor), server.cpu_cores)
+    memory = ResourceUsage(scaled(sum(s.memory_gb for s in running), load_factor), server.memory_gb)
     status = Status.FAILED if server.id in down else classify(cpu, memory)
     return ServerReport(server.id, rack.id, cpu, memory, status)
 
 
 def _rack_report(rack: Rack, down: set[str], load_factor: float) -> RackReport:
     """Power drawn from a rack by the servers that are still up."""
-    drawn = sum((s.power_kw * load_factor for s in rack.servers if s.id not in down), 0.0)
+    drawn = sum((scaled(s.power_kw, load_factor) for s in rack.servers if s.id not in down), 0.0)
     power = ResourceUsage(drawn, rack.power_capacity_kw)
     status = Status.FAILED if rack.id in down else classify(power)
     return RackReport(rack.id, power, status)
