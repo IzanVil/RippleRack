@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The JSON documents are written with no `NaN` or `Infinity` in them, which are not JSON: a number
   like that raises an error instead. Every number they hold is already finite or `null`, so no
   output changes.
+- The reference of the `simulate` JSON says in which order `racks`, `servers`, `failed` and
+  `unavailable` come, that `failed` lists only what `--fail` names, and that `loadFactor` is `null`
+  for `--load inf`.
 
 ## [0.2.6] - 2026-11-23
 
